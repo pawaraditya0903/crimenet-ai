@@ -1,4 +1,1 @@
-﻿export const cn = (...c: any[]) => c.filter(Boolean).join(' ')
-export const riskBadge = (s?: number) => s >= 80 ? 'bg-red-900 text-red-300 border border-red-700 px-2 py-0.5 rounded text-xs font-bold' : s >= 60 ? 'bg-orange-900 text-orange-300 border border-orange-700 px-2 py-0.5 rounded text-xs font-bold' : 'bg-yellow-900 text-yellow-300 border border-yellow-700 px-2 py-0.5 rounded text-xs font-bold'
-export const riskLabel = (s?: number) => s >= 80 ? 'CRITICAL' : s >= 60 ? 'HIGH' : s >= 40 ? 'MEDIUM' : 'LOW'
-export const sevBadge = (s: string) => s === 'critical' ? 'bg-red-900 text-red-300 border border-red-700 px-2 py-0.5 rounded text-xs font-bold uppercase' : s === 'high' ? 'bg-orange-900 text-orange-300 border border-orange-700 px-2 py-0.5 rounded text-xs font-bold uppercase' : 'bg-yellow-900 text-yellow-300 border border-yellow-700 px-2 py-0.5 rounded text-xs font-bold uppercase'
+export function cn(...classes: (string | undefined | null | boolean)[]) { return classes.filter(Boolean).join(' ') }

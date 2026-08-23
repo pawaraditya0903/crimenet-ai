@@ -119,8 +119,6 @@ export default function App() {
   const streamRef = useRef<MediaStream | null>(null)
 
   const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'alerts' | 'cases' | 'reports' | 'settings'>('graph')
-  const [spotlightOpen, setSpotlightOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
 
   // Sync profile from server on load
   useEffect(() => {
