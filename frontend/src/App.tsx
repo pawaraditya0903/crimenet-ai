@@ -145,9 +145,17 @@ export default function App() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return []
 
+    const vid = videoRef.current
+    const vW = vid.videoWidth || 480
+    const vH = vid.videoHeight || 480
+    // Center crop 70% of video to focus purely on face
+    const cropSize = Math.min(vW, vH) * 0.7
+    const startX = (vW - cropSize) / 2
+    const startY = (vH - cropSize) / 2
+
     canvas.width = 12
     canvas.height = 12
-    ctx.drawImage(videoRef.current, 0, 0, 12, 12)
+    ctx.drawImage(vid, startX, startY, cropSize, cropSize, 0, 0, 12, 12)
     const imgData = ctx.getImageData(0, 0, 12, 12)
     const descriptor: number[] = []
 
@@ -216,7 +224,7 @@ export default function App() {
         const znccScore = saved ? computeZNCC(liveVec, saved) : 0
         setSimilarityScore(znccScore)
 
-        if (saved && znccScore >= 65) {
+        if (saved && znccScore >= 45) {
           if (soundEnabled) playCyberSound('grant')
           setScanStatus('verified')
           setFailedAttempts(0)
