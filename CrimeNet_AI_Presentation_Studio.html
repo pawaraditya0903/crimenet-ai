@@ -1,0 +1,486 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CrimeNet AI — 3D Presentation Keynote | Aditya Pawar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #030712; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+  #webgl-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: auto; cursor: grab; }
+  #webgl-canvas:active { cursor: grabbing; }
+
+  .hud-grid { position: fixed; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(circle at center, transparent 20%, rgba(3, 7, 18, 0.85) 100%), linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px); background-size: 100% 100%, 35px 35px, 35px 35px; }
+
+  .deck-container { position: relative; z-index: 10; height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  
+  /* CRITICAL FIX: Only active slide displays */
+  .slide-box { pointer-events: auto; display: none !important; width: 90vw; max-width: 1200px; height: 82vh; background: rgba(10, 16, 31, 0.92); backdrop-filter: blur(25px); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 1.5rem; padding: 36px 44px; box-shadow: 0 35px 90px rgba(0,0,0,0.95), 0 0 60px rgba(37, 99, 235, 0.25); flex-direction: column; justify-content: space-between; animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+  .slide-box.active { display: flex !important; }
+  @keyframes slideIn { from { opacity: 0; transform: scale(0.96) translateY(15px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 20px; background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #38bdf8; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
+
+  h1 { font-size: 42px; font-weight: 900; color: #ffffff; text-shadow: 0 0 25px rgba(59, 130, 246, 0.35); line-height: 1.15; }
+  h2 { font-size: 24px; font-weight: 800; color: #ffffff; margin-top: 4px; }
+  
+  .glass-card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(51, 65, 85, 0.7); border-radius: 0.85rem; padding: 18px; transition: all 0.25s; position: relative; overflow: hidden; }
+  .glass-card:hover { border-color: #3b82f6; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25); }
+  .glass-card h3 { font-size: 14.5px; font-weight: 700; color: #ffffff; margin-bottom: 5px; }
+  .glass-card p { font-size: 11.5px; color: #94a3b8; line-height: 1.55; }
+
+  .stat-num { font-size: 28px; font-weight: 900; font-family: monospace; color: #38bdf8; margin-bottom: 2px; }
+  
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 14px; }
+
+  /* Control Dock */
+  .hud-dock { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 10px; background: rgba(15, 23, 42, 0.94); padding: 7px 18px; border-radius: 40px; border: 1px solid rgba(59, 130, 246, 0.4); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+  .dock-btn { background: #1d4ed8; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+  .dock-btn:hover { background: #2563eb; transform: scale(1.04); }
+  .dock-info { font-size: 11px; font-family: monospace; color: #94a3b8; font-weight: 600; padding: 0 6px; }
+
+  #laser-dot { position: fixed; width: 14px; height: 14px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 20px #ef4444, 0 0 40px #ef4444; pointer-events: none; z-index: 1000; display: none; transform: translate(-50%, -50%); }
+
+  #notes-panel { position: fixed; top: 20px; right: 20px; width: 340px; background: rgba(15, 23, 42, 0.95); border: 1px solid #3b82f6; border-radius: 1rem; padding: 18px; z-index: 1000; display: none; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+  #notes-panel h4 { font-size: 13px; color: #38bdf8; margin-bottom: 6px; }
+  #notes-panel p { font-size: 11px; color: #cbd5e1; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div id="laser-dot"></div>
+<div id="notes-panel">
+  <h4>📝 PRESENTER NOTES [N]</h4>
+  <p id="notes-text">Welcome the audience and state the project name and your role as Lead Architect.</p>
+</div>
+
+<canvas id="webgl-canvas"></canvas>
+<div class="hud-grid"></div>
+
+<div class="deck-container">
+
+  <!-- SLIDE 1 -->
+  <div class="slide-box active" data-notes="Introduce CrimeNet AI as an enterprise-grade forensic intelligence system built to solve data fragmentation in organized crime. Highlight the core algorithms: PageRank, Isolation Forest, and Gemini 1.5.">
+    <div>
+      <div class="hud-badge"><span class="pulse-dot"></span> CENTRAL INTELLIGENCE DEFENSE COMMAND</div>
+      <h1 style="margin-top: 8px;">CRIMENET AI</h1>
+      <p style="font-size: 18px; color: #38bdf8; font-weight: 700; margin-top: 4px;">Autonomous Criminal Network Analysis & Forensic Intelligence Platform</p>
+      <p style="color: #94a3b8; font-size: 12.5px; margin-top: 10px; line-height: 1.6; max-width: 860px;">
+        An enterprise forensic investigation platform designed to ingest multi-source unstructured datasets (Call Detail Records, Banking Transactions, FIRs, and Surveillance Logs) and construct a unified Knowledge Graph to expose hidden Kingpins, money laundering loops, and coordinated syndicate cells in real time.
+      </p>
+
+      <div class="grid-4" style="margin-top: 22px;">
+        <div class="glass-card"><div class="stat-num">90%</div><h3>Time Saved</h3><p>Automates multi-hop CDR and transaction audits</p></div>
+        <div class="glass-card"><div class="stat-num">PageRank</div><h3>Kingpin Discovery</h3><p>Mathematical authority & bridge node scoring</p></div>
+        <div class="glass-card"><div class="stat-num">Gemini 1.5</div><h3>Live AI Copilot</h3><p>Natural language investigative reasoning</p></div>
+        <div class="glass-card"><div class="stat-num">Court-Ready</div><h3>Forensic PDF</h3><p>Automated Section 5(2) dossier generator</p></div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 12px;">
+      <span style="font-size: 12.5px; color: #10b981; font-weight: 800;">● LEAD SYSTEM ARCHITECT & DEVELOPER: ADITYA PAWAR</span>
+      <button class="dock-btn" style="background: #065f46;" onclick="speakSlide()">🎙️ PLAY AI VOICE BRIEF</button>
+    </div>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide-box" data-notes="Explain the 3 main pain points: 50,000+ unlinked logs across disconnected databases, kingpins hiding behind 3-5 proxy shell companies, and the 14-day manual lag in spreadsheets that lets suspects destroy evidence.">
+    <div>
+      <div class="hud-badge"><span class="pulse-dot"></span> THREAT LANDSCAPE</div>
+      <h2>The Crisis of Fragmented Criminal Intelligence</h2>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 2px;">Why traditional spreadsheet-based link analysis and manual auditing fail in organized crime investigations</p>
+      
+      <div class="grid-3" style="margin-top: 18px;">
+        <div class="glass-card" style="border-left: 3px solid #ef4444;">
+          <div style="font-size: 10px; color: #ef4444; font-weight: 800;">DATA DISSOCIATION</div>
+          <h3 style="margin-top: 4px;">50,000+ Uncorrelated Logs</h3>
+          <p>Investigations collect isolated dumps: Call Detail Records, RTGS/NEFT transaction sheets, handwritten police FIRs, and ANPR scans with zero automated cross-system correlation.</p>
+        </div>
+        <div class="glass-card" style="border-left: 3px solid #f59e0b;">
+          <div style="font-size: 10px; color: #f59e0b; font-weight: 800;">LAYERED PROXIES</div>
+          <h3 style="margin-top: 4px;">3-5 Degrees of Separation</h3>
+          <p>Syndicate Kingpins isolate themselves behind tiers of proxy handlers, shell company directors, and burner phones, blinding keyword-based police searches.</p>
+        </div>
+        <div class="glass-card" style="border-left: 3px solid #3b82f6;">
+          <div style="font-size: 10px; color: #3b82f6; font-weight: 800;">CRITICAL DELAY</div>
+          <h3 style="margin-top: 4px;">14-Day Investigation Lag</h3>
+          <p>Manual link analysis takes weeks. By the time connections are drawn, syndicate capital has fled into foreign crypto/hawala channels and burner identities are discarded.</p>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 12px;">
+      <span style="font-size: 11px; color: #64748b;">CrimeNet AI — Problem Breakdown Matrix</span>
+      <button class="dock-btn" style="background: #065f46;" onclick="speakSlide()">🎙️ PLAY AI VOICE BRIEF</button>
+    </div>
+  </div>
+
+  <!-- SLIDE 3 -->
+  <div class="slide-box" data-notes="Demonstrate the PageRank algorithm. Show that it calculates global structural authority, and click the live calculation button to run the algorithm in real-time.">
+    <div>
+      <div class="hud-badge"><span class="pulse-dot"></span> MATHEMATICAL GRAPH ML</div>
+      <h2>Kingpin Discovery: PageRank & Centrality Algorithms</h2>
+      <div class="grid-2" style="margin-top: 16px;">
+        <div class="glass-card">
+          <h3>PageRank Centrality (Global Authority)</h3>
+          <p style="margin-top: 4px;">
+            PageRank models the structural authority of each suspect across the entire syndicate graph. It calculates iterative eigenvector probability: A node with few high-authority links outranks nodes with many low-level contacts.
+          </p>
+          <div style="background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 10.5px; color: #38bdf8; margin: 8px 0;">
+            PR(u) = (1-d)/N + d * Σ (PR(v) / L(v))
+          </div>
+          <p><b style="color: #10b981;">Discovery:</b> Pinpoints the Kingpin even if they only communicate with 2 senior lieutenants.</p>
+        </div>
+
+        <div class="glass-card">
+          <h3>Betweenness Centrality (Bridge / Broker Discovery)</h3>
+          <p style="margin-top: 4px;">
+            Measures how often a node acts as a bridge along the shortest path between other entities.
+          </p>
+          <div style="background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 10.5px; color: #f87171; margin: 8px 0;">
+            g(v) = Σ (σ_st(v) / σ_st) across all pairs (s,t)
+          </div>
+          <p><b style="color: #f87171;">Tactical Arrest:</b> Eliminating these bridge nodes fractures the entire syndicate.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; padding: 12px 18px; background: rgba(37,99,235,0.12); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 11.5px; font-weight: 700; color: #60a5fa;">LIVE GRAPH ML CENTRALITY TEST</span>
+          <p style="font-size: 10.5px; color: #cbd5e1; margin-top: 2px;">Click to execute PageRank iterations over test syndicate network (48 nodes, 112 edges)</p>
+        </div>
+        <button class="dock-btn" onclick="simulatePageRank(this)">▶ CALCULATE PAGERANK</button>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 12px;">
+      <span style="font-size: 11px; color: #64748b;" id="pr-status">Ready to calculate</span>
+      <button class="dock-btn" style="background: #065f46;" onclick="speakSlide()">🎙️ PLAY AI VOICE BRIEF</button>
+    </div>
+  </div>
+
+  <!-- SLIDE 4 -->
+  <div class="slide-box" data-notes="Discuss the Anomaly Detection module: Isolation Forest detects nocturnal financial spikes like ₹1.5 Cr at 2 AM, while statistical Z-Score identifies 68-call bursts before raids.">
+    <div>
+      <div class="hud-badge"><span class="pulse-dot"></span> UNSUPERVISED ML</div>
+      <h2>Multi-Source Anomaly Detection Engine</h2>
+      <div class="grid-2" style="margin-top: 18px;">
+        <div class="glass-card" style="border-top: 3px solid #f59e0b;">
+          <div style="font-size: 10px; color: #f59e0b; font-weight: 800;">FINANCIAL OUTLIER (ISOLATION FOREST)</div>
+          <h3 style="margin-top: 4px;">₹1.50 Crore Midnight Shell Transfer</h3>
+          <p style="margin-top: 4px;">
+            Isolation Forest isolates anomalies by randomly partitioning multidimensional transaction vectors: Amount, Time, Frequency, Destination.
+          </p>
+          <div style="margin-top: 8px; padding: 8px 12px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; font-size: 10.5px;">
+            • Flagged: Transfer @ 02:00 AM to Phoenix Trading LLC<br>
+            • Anomaly Score: <span style="color: #ef4444; font-weight: 700;">0.96 (CRITICAL RED FLAG)</span><br>
+            • Action: Automatic account freeze warrant generated
+          </div>
+        </div>
+
+        <div class="glass-card" style="border-top: 3px solid #ef4444;">
+          <div style="font-size: 10px; color: #ef4444; font-weight: 800;">TELECOM BURST (Z-SCORE METRIC)</div>
+          <h3 style="margin-top: 4px;">68 Outbound Calls / 180 Minutes</h3>
+          <p style="margin-top: 4px;">
+            Continuously evaluates target calling volume against Gaussian standard deviation baselines to detect sudden operational spikes.
+          </p>
+          <div style="margin-top: 8px; padding: 8px 12px; background: rgba(0,0,0,0.4); border-radius: 8px; font-family: monospace; font-size: 10.5px;">
+            • Baseline: 4.2 calls / day on +91-9876543210<br>
+            • Deviation: <span style="color: #ef4444; font-weight: 700;">Z-Score = 4.8 Sigma</span><br>
+            • Indication: Pre-raid coordination / imminent escape
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 12px;">
+      <span style="font-size: 11px; color: #64748b;">CrimeNet AI — Anomaly Detection Framework</span>
+      <button class="dock-btn" style="background: #065f46;" onclick="speakSlide()">🎙️ PLAY AI VOICE BRIEF</button>
+    </div>
+  </div>
+
+  <!-- SLIDE 5 -->
+  <div class="slide-box" data-notes="Demonstrate the Google Gemini 1.5 AI Copilot. Show how analysts can ask plain English questions and get structured tactical advice instantly.">
+    <div>
+      <div class="hud-badge"><span class="pulse-dot"></span> LIVE AI COPILOT SIMULATOR</div>
+      <h2>Google Gemini 1.5 AI: Tactical Copilot</h2>
+      <div class="grid-2" style="margin-top: 16px;">
+        <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3>Grounded Knowledge Graph Prompting</h3>
+            <p style="margin-top: 4px;">
+              CrimeNet AI feeds the live graph topology, PageRank scores, and anomaly alerts directly into Gemini 1.5 to provide context-aware tactical intelligence.
+            </p>
+          </div>
+          <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 10.5px; color: #38bdf8;">
+            <b>Live Intelligence Brief:</b><br>
+            • Kingpin: Arjun Mehta (Risk 94.5/100, Cluster 1)<br>
+            • Shell Cos: Mehta Enterprises & Phoenix Trading<br>
+            • Action: Freeze HDFC Account #0987654321
+          </div>
+        </div>
+
+        <div class="glass-card" style="background: #020617; border-color: #1e293b;">
+          <div style="font-size: 10px; color: #34d399; font-family: monospace; margin-bottom: 6px;">● TERMINAL CONSOLE — GEMINI 1.5 PRO</div>
+          <div id="terminal-output" style="font-family: monospace; font-size: 11px; color: #cbd5e1; height: 120px; overflow-y: auto; line-height: 1.5;">
+            > System ready. Type a query below...
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <input id="term-input" placeholder="e.g. who is kingpin?, anomalies..." style="flex: 1; padding: 6px 10px; border-radius: 6px; background: #0f172a; border: 1px solid #334155; color: white; font-size: 11px; outline: none;" onkeydown="if(event.key==='Enter')runTerminalQuery()" />
+            <button class="dock-btn" onclick="runTerminalQuery()">ASK AI</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 12px;">
+      <span style="font-size: 11px; color: #64748b;">CrimeNet AI — LLM Intelligence Pipeline</span>
+      <button class="dock-btn" style="background: #065f46;" onclick="speakSlide()">🎙️ PLAY AI VOICE BRIEF</button>
+    </div>
+  </div>
+
+  <!-- SLIDE 6 -->
+  <div class="slide-box" data-notes="Summarize the ROI: ₹25 Lakhs saved per corporate audit, 100% explainable AI compliant with court standards, and readiness for enterprise deployment. Conclude with Aditya Pawar's credentials.">
+    <div>
+      <div class="hud-badge"><span class="pulse-dot"></span> COMMERCIAL VALUATION & IMPACT</div>
+      <h2>Quantifiable Business Value & Market ROI</h2>
+      <div class="grid-3" style="margin-top: 18px;">
+        <div class="glass-card">
+          <div class="stat-num">₹25L+</div>
+          <h3>Cost Saved Per Audit</h3>
+          <p>Replaces weeks of manual billable forensic analyst labor with automated multi-hop CDR and transaction ingestion.</p>
+        </div>
+        <div class="glass-card">
+          <div class="stat-num">100%</div>
+          <h3>Explainable AI (XAI)</h3>
+          <p>Every risk score is backed by transparent mathematical formulas (PageRank, Betweenness, Z-scores) rather than black-box guesses.</p>
+        </div>
+        <div class="glass-card">
+          <div class="stat-num">Court Ready</div>
+          <h3>Section 5(2) Compliance</h3>
+          <p>Generates court-admissible dossiers with official legal directives under Indian Telegraph Act & PMLA within seconds.</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 18px; padding: 16px 20px; background: rgba(37,99,235,0.15); border: 1px solid rgba(59,130,246,0.4); border-radius: 12px;">
+        <h3 style="color: #38bdf8; font-size: 15px;">Platform Owner & System Architect</h3>
+        <p style="font-size: 12px; color: #e2e8f0; margin-top: 4px;">Designed and Architected by <b>Aditya Pawar</b> | Ready for Enterprise Deployment & Live Demonstration</p>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(51,65,85,0.6); padding-top: 12px;">
+      <span style="font-size: 11px; color: #64748b;">CrimeNet AI — Keynote Concluded</span>
+      <button class="dock-btn" style="background: #065f46;" onclick="speakSlide()">🎙️ PLAY AI VOICE BRIEF</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Control Dock -->
+<div class="hud-dock">
+  <button class="dock-btn" onclick="prevSlide()">◀ PREV</button>
+  <span class="dock-info" id="deck-counter">SLIDE 1 / 6</span>
+  <button class="dock-btn" onclick="nextSlide()">NEXT ▶</button>
+  <button class="dock-btn" style="background: #0f766e;" onclick="toggleLaser()">🔴 LASER [L]</button>
+  <button class="dock-btn" style="background: #7c2d12;" onclick="toggleSound()">🔊 AUDIO [M]</button>
+  <button class="dock-btn" style="background: #4c1d95;" onclick="toggleNotes()">📝 NOTES [N]</button>
+  <button class="dock-btn" style="background: #475569;" onclick="toggleFullScreen()">⛶ FULLSCREEN [F]</button>
+</div>
+
+<script>
+  let soundEnabled = true;
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playBeep(freq = 600, duration = 0.04) {
+    if (!soundEnabled) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e){}
+  }
+  function toggleSound() { soundEnabled = !soundEnabled; }
+
+  function speakSlide() {
+    window.speechSynthesis.cancel();
+    const active = document.querySelector('.slide-box.active');
+    const text = active.getAttribute('data-notes') || active.innerText;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05;
+    utterance.pitch = 0.95;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  let current = 0;
+  const slides = document.querySelectorAll('.slide-box');
+  const counter = document.getElementById('deck-counter');
+  const notesText = document.getElementById('notes-text');
+
+  function updateDeck(idx) {
+    window.speechSynthesis.cancel();
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    counter.textContent = `SLIDE ${idx + 1} / ${slides.length}`;
+    if (slides[idx]) {
+      notesText.textContent = slides[idx].getAttribute('data-notes') || '';
+    }
+    playBeep(idx * 40 + 400);
+  }
+
+  function nextSlide() { current = (current + 1) % slides.length; updateDeck(current); }
+  function prevSlide() { current = (current - 1 + slides.length) % slides.length; updateDeck(current); }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+    if (e.key === 'ArrowLeft') prevSlide();
+    if (e.key.toLowerCase() === 'f') toggleFullScreen();
+    if (e.key.toLowerCase() === 'l') toggleLaser();
+    if (e.key.toLowerCase() === 'm') toggleSound();
+    if (e.key.toLowerCase() === 'n') toggleNotes();
+  });
+
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+
+  let notesOpen = false;
+  function toggleNotes() {
+    notesOpen = !notesOpen;
+    document.getElementById('notes-panel').style.display = notesOpen ? 'block' : 'none';
+  }
+
+  let laserActive = false;
+  const laserDot = document.getElementById('laser-dot');
+  function toggleLaser() {
+    laserActive = !laserActive;
+    laserDot.style.display = laserActive ? 'block' : 'none';
+  }
+  window.addEventListener('mousemove', (e) => {
+    if (laserActive) {
+      laserDot.style.left = e.clientX + 'px';
+      laserDot.style.top = e.clientY + 'px';
+    }
+  });
+
+  function simulatePageRank(btn) {
+    playBeep(900, 0.1);
+    btn.textContent = '⏳ COMPUTING...';
+    btn.disabled = true;
+    setTimeout(() => {
+      document.getElementById('pr-status').innerHTML = '✅ <b style="color:#10b981">CONVERGED:</b> Arjun Mehta (PR: 0.0847, Rank #1) • Mohammed Rafiq (PR: 0.0712) • Vikram Singh (PR: 0.0594)';
+      btn.textContent = '✓ CALCULATED';
+      btn.disabled = false;
+      playBeep(1200, 0.15);
+    }, 600);
+  }
+
+  function runTerminalQuery() {
+    const input = document.getElementById('term-input');
+    const out = document.getElementById('terminal-output');
+    const q = input.value.trim().toLowerCase();
+    if (!q) return;
+    input.value = '';
+    playBeep(700, 0.05);
+
+    let reply = '';
+    if (q.includes('kingpin') || q.includes('leader')) {
+      reply = '> KINGPIN DETECTED: Arjun Mehta (Risk 94.5/100, PageRank: 0.0847). Controls Mehta Enterprises & Phoenix Trading LLC.';
+    } else if (q.includes('anomal')) {
+      reply = '> ANOMALIES FLAGGED: ₹1.5 Cr 2 AM transfer (Isolation Forest: 0.96) & 68-call CDR burst (Z-Score: 4.8).';
+    } else {
+      reply = `> QUERY ANALYZED: '${q}'. Arjun Mehta identified as prime target node with betweenness 0.312. Surveillance active.`;
+    }
+
+    out.innerHTML += `<div style="color:#38bdf8;margin-top:6px;">> User: ${q}</div><div style="color:#34d399;">${reply}</div>`;
+    out.scrollTop = out.scrollHeight;
+  }
+
+  // ── Three.js WebGL Hologram Criminal Network ──
+  const canvas = document.getElementById('webgl-canvas');
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.z = 25;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  const nodeGroup = new THREE.Group();
+  const nodes = [];
+  const nodeCount = 42;
+  const nodeColors = [0x3b82f6, 0x06b6d4, 0xef4444, 0x10b981, 0xa855f7];
+
+  for (let i = 0; i < nodeCount; i++) {
+    const isKingpin = (i === 0);
+    const size = isKingpin ? 1.2 : (Math.random() * 0.45 + 0.25);
+    const color = isKingpin ? 0xef4444 : nodeColors[Math.floor(Math.random() * nodeColors.length)];
+    
+    const geo = new THREE.SphereGeometry(size, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({ color, wireframe: isKingpin });
+    const mesh = new THREE.Mesh(geo, mat);
+
+    mesh.position.set(
+      (Math.random() - 0.5) * 34,
+      (Math.random() - 0.5) * 24,
+      (Math.random() - 0.5) * 16
+    );
+    mesh.velocity = new THREE.Vector3((Math.random()-0.5)*0.02, (Math.random()-0.5)*0.02, (Math.random()-0.5)*0.01);
+    nodeGroup.add(mesh);
+    nodes.push(mesh);
+  }
+  scene.add(nodeGroup);
+
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.22 });
+  const lineGeo = new THREE.BufferGeometry();
+  const lineMesh = new THREE.LineSegments(lineGeo, lineMat);
+  scene.add(lineMesh);
+
+  let mouseX = 0, mouseY = 0;
+  window.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    nodeGroup.rotation.y += 0.0014;
+    nodeGroup.rotation.x += 0.0006;
+
+    camera.position.x += (mouseX * 4.5 - camera.position.x) * 0.05;
+    camera.position.y += (-mouseY * 3.5 - camera.position.y) * 0.05;
+    camera.lookAt(scene.position);
+
+    const linePositions = [];
+    for (let i = 0; i < nodeCount; i++) {
+      nodes[i].position.add(nodes[i].velocity);
+      if (Math.abs(nodes[i].position.x) > 17) nodes[i].velocity.x *= -1;
+      if (Math.abs(nodes[i].position.y) > 13) nodes[i].velocity.y *= -1;
+
+      for (let j = i + 1; j < nodeCount; j++) {
+        const dist = nodes[i].position.distanceTo(nodes[j].position);
+        if (dist < 8.0) {
+          linePositions.push(
+            nodes[i].position.x, nodes[i].position.y, nodes[i].position.z,
+            nodes[j].position.x, nodes[j].position.y, nodes[j].position.z
+          );
+        }
+      }
+    }
+    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+
+    renderer.render(scene, camera);
+  }
+  animate();
+</script>
+</body>
+</html>

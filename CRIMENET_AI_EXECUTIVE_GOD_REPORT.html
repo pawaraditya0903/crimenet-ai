@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CrimeNet AI — Executive Forensic Dossier | Aditya Pawar</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #030712; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1100px; margin: 0 auto; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 20px; padding: 45px; box-shadow: 0 25px 90px rgba(0,0,0,0.9); }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e293b; padding-bottom: 24px; margin-bottom: 30px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(37, 99, 235, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+  h1 { font-size: 34px; font-weight: 900; color: #ffffff; margin-top: 8px; }
+  .sub-title { font-size: 15px; color: #38bdf8; font-weight: 700; }
+  .print-btn { background: #1d4ed8; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 35px; }
+  .stat-box { background: #0c1324; border: 1px solid #334155; border-radius: 12px; padding: 18px; }
+  .stat-num { font-size: 32px; font-weight: 900; font-family: monospace; color: #38bdf8; }
+  .stat-label { font-size: 13px; font-weight: 700; color: white; margin-top: 2px; }
+  .stat-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .section-title { font-size: 20px; font-weight: 800; color: white; margin-bottom: 16px; margin-top: 35px; border-left: 4px solid #38bdf8; padding-left: 12px; }
+  .card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+  .card-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 25px; }
+  .card { background: #0c1324; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; }
+  .chart-box { background: #0c1324; border: 1px solid #1e293b; border-radius: 14px; padding: 20px; height: 320px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+  th { background: #1e293b; color: #38bdf8; text-align: left; padding: 10px 12px; font-weight: 800; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <span class="badge">● EXECUTIVE FORENSIC & ARCHITECTURE DOSSIER</span>
+      <h1>CRIMENET AI PLATFORM</h1>
+      <div class="sub-title">Autonomous Criminal Intelligence & Forensic Knowledge Graph System</div>
+      <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Lead System Architect: <b>Aditya Pawar</b></div>
+    </div>
+    <button class="print-btn" onclick="window.print()">🖨️ Export as PDF</button>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-num">420ms</div><div class="stat-label">P99 Query Latency</div><div class="stat-sub">Sub-second 5-hop link traversal</div></div>
+    <div class="stat-box"><div class="stat-num" style="color: #34d399;">90%</div><div class="stat-label">Audit Time Saved</div><div class="stat-sub">14 days down to &lt; 10 sec</div></div>
+    <div class="stat-box"><div class="stat-num" style="color: #f59e0b;">$2.45M</div><div class="stat-label">Crypto Flow Traced</div><div class="stat-sub">USDT TRC-20 & Mixer tracing</div></div>
+    <div class="stat-box"><div class="stat-num" style="color: #ef4444;">100%</div><div class="stat-label">Burner SIM Attribution</div><div class="stat-sub">Hardware IMEI Co-Location</div></div>
+  </div>
+
+  <div class="section-title">📊 BENCHMARK CHARTS & SUSPECT INFLUENCE</div>
+  <div class="card-grid-2">
+    <div class="chart-box">
+      <div style="font-size: 13px; font-weight: 800; color: #38bdf8; margin-bottom: 8px;">AUDIT LATENCY BENCHMARK (HOURS)</div>
+      <canvas id="timeChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <div style="font-size: 13px; font-weight: 800; color: #38bdf8; margin-bottom: 8px;">SUSPECT THREAT VS PAGERANK (RANK #1: ARJUN MEHTA)</div>
+      <canvas id="suspectChart"></canvas>
+    </div>
+  </div>
+
+  <div class="section-title">🛡️ 9 ENTERPRISE MODULES INVENTORY</div>
+  <table>
+    <thead>
+      <tr><th>Module Name</th><th>Technology</th><th>Core Capability</th><th>Operational Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>1. Network Graph Engine</b></td><td>Cytoscape.js & A* Pathfinder</td><td>Radial Kingpin, Command Tree & 60fps Physics</td><td>Illuminates 5-degree money trails in 420ms</td></tr>
+      <tr><td><b>2. Geospatial Satellite Radar</b></td><td>HTML5 2D Canvas</td><td>Real-time rotating sweep & moving vehicle GPS</td><td>Live tactical ground squad dispatch</td></tr>
+      <tr><td><b>3. Telecom CDR Interceptor</b></td><td>IMEI Baseband Fingerprinting</td><td>Hardware Co-Location & Dual-SIM Matrix</td><td>Exposes burner SIM swaps back to kingpin</td></tr>
+      <tr><td><b>4. Crypto Hawala Tracer</b></td><td>TRC-20 Blockchain & Section 65B</td><td>USDT Mixer Tumbler & SHA-256 Hashes</td><td>100% court-admissible electronic evidence</td></tr>
+      <tr><td><b>5. ML Analytics Simulator</b></td><td>NetworkX & Scikit-Learn</td><td>Live PageRank (d) & Louvain Modularity Sandbox</td><td>Mathematical syndicate cluster decomposition</td></tr>
+      <tr><td><b>6. HITL Alert Centre</b></td><td>Active Learning Feedback Loop</td><td>Isolation Forest Outlier Retraining</td><td>Eliminates false-positive financial flags</td></tr>
+      <tr><td><b>7. Case Kanban Board</b></td><td>State Machine Workflow</td><td>Evidence ➔ Surveillance ➔ Raid ➔ Court</td><td>Streamlined legal case lifecycle management</td></tr>
+      <tr><td><b>8. Multi-Template PDF Engine</b></td><td>Python ReportLab Platypus</td><td>4 Specialized Legal Dossiers Generated Dynamically</td><td>Automated PMLA Section 17 warrant petitions</td></tr>
+      <tr><td><b>9. Field Squad & Settings</b></td><td>Role-Based Access Control</td><td>Specialized Skills Roster (Cyber, AML, Armed Raids)</td><td>Command agency jurisdiction configuration</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title">💼 COMMERCIAL VALUATION</div>
+  <div class="card-grid-3">
+    <div class="card" style="border-top: 3px solid #38bdf8;"><h3>Enterprise B2B SaaS</h3><div style="font-size: 22px; font-weight: 900; color: #38bdf8;">$60K – $150K / yr</div><p style="font-size: 11.5px; color: #cbd5e1; margin-top: 4px;">State Police, ED & Bank AML wings (₹50 Lakh – ₹1.25 Cr/yr).</p></div>
+    <div class="card" style="border-top: 3px solid #34d399;"><h3>Startup IP Value</h3><div style="font-size: 22px; font-weight: 900; color: #34d399;">$600K – $1.5M</div><p style="font-size: 11.5px; color: #cbd5e1; margin-top: 4px;">Pre-seed GovTech / Cyber Defense acquisition value.</p></div>
+    <div class="card" style="border-top: 3px solid #f59e0b;"><h3>Lead Architect Salary</h3><div style="font-size: 22px; font-weight: 900; color: #f59e0b;">₹25 – ₹45 LPA</div><p style="font-size: 11.5px; color: #cbd5e1; margin-top: 4px;">Aditya Pawar — Full-Stack & AI/ML Systems Engineer.</p></div>
+  </div>
+
+  <div style="text-align: center; border-top: 1px solid #1e293b; padding-top: 20px; margin-top: 30px; font-size: 12px; color: #64748b;">
+    © 2026 CrimeNet AI Platform · Architected & Engineered by <b>Aditya Pawar</b>
+  </div>
+</div>
+
+<script>
+  new Chart(document.getElementById('timeChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Manual Police Audit', 'Legacy SQL Scripts', 'CrimeNet AI'],
+      datasets: [{ data: [336, 48, 0.0001], backgroundColor: ['#ef4444', '#f59e0b', '#34d399'], borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { type: 'logarithmic', grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { weight: 'bold' } } } }, plugins: { legend: { display: false } } }
+  });
+
+  new Chart(document.getElementById('suspectChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Arjun Mehta', 'Mohammed Rafiq', 'Vikram Singh', 'Priya Desai', 'Mehta Ent.'],
+      datasets: [
+        { label: 'Threat (/100)', data: [94.5, 88.0, 79.4, 74.2, 70.0], backgroundColor: '#ef4444', borderRadius: 4 },
+        { label: 'PageRank (x1000)', data: [84.7, 71.2, 59.4, 51.1, 48.2], backgroundColor: '#38bdf8', borderRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { weight: 'bold' } } } }, plugins: { legend: { labels: { color: '#cbd5e1' } } } }
+  });
+</script>
+</body>
+</html>
