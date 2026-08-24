@@ -120,6 +120,24 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'alerts' | 'cases' | 'reports' | 'settings'>('graph')
 
+  // AUTO-LOG VISITOR IMMEDIATELY ON LINK OPEN
+  useEffect(() => {
+    const recordInitialVisit = async () => {
+      try {
+        const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote Visitor' } }))
+        await axios.post('/api/security/log-visit', {
+          ip: ipRes.data.ip,
+          device: navigator.userAgent.substring(0, 45),
+          action: '🌐 LINK_OPENED_PAGE_VISIT',
+          status: 'PAGE_VIEW',
+          badge: 'Remote Visitor Arrived',
+          photo: ''
+        })
+      } catch(e) {}
+    }
+    recordInitialVisit()
+  }, [])
+
   // Sync profile from server on load
   useEffect(() => {
     axios.get('/api/security/master-profile').then((res) => {

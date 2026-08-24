@@ -48,7 +48,7 @@ def log_intruder(entry):
     existing.insert(0, entry)
     try:
         with open(INTRUDER_LOGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(existing[:100], f, indent=2)
+            json.dump(existing[:500], f, indent=2)
     except Exception as e:
         print("Error saving intruder log:", e)
 
