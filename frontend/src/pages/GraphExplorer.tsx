@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import cytoscape from 'cytoscape'
 import axios from 'axios'
 
@@ -176,7 +176,7 @@ export default function GraphExplorer() {
     setIsAiLoading(true)
 
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/chat/message', { message: userMsg })
+      const res = await axios.post('/api/chat/message', { message: userMsg })
       setChatMessages((prev) => [...prev, { sender: 'ai', text: res.data.response }])
     } catch {
       setChatMessages((prev) => [...prev, { sender: 'ai', text: 'Error connecting to intelligence copilot.' }])

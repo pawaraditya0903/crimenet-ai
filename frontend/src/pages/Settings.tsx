@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import axios from 'axios'
 
 export default function Settings() {
@@ -30,7 +30,7 @@ export default function Settings() {
   ]
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/investigators').then(r => setInvestigators(r.data.investigators || []))
+    axios.get('/api/investigators').then(r => setInvestigators(r.data.investigators || []))
   }, [])
 
   const toggleSkill = (skill: string) => {
@@ -43,7 +43,7 @@ export default function Settings() {
 
   const handleAddInvestigator = async () => {
     if (!newName.trim()) return
-    const res = await axios.post('http://127.0.0.1:8000/api/investigators', {
+    const res = await axios.post('/api/investigators', {
       name: newName,
       email: newEmail || `${newName.toLowerCase().replace(/\s+/g, '')}@crimenet.ai`,
       role: newRole,
@@ -58,7 +58,7 @@ export default function Settings() {
   }
 
   const handleDeleteInvestigator = async (id: string) => {
-    await axios.delete(`http://127.0.0.1:8000/api/investigators/${id}`)
+    await axios.delete(`/api/investigators/${id}`)
     setInvestigators(investigators.filter(i => i.id !== id))
   }
 

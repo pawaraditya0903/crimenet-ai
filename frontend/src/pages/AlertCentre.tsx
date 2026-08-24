@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import axios from 'axios'
 
 export default function AlertCentre() {
@@ -7,18 +7,18 @@ export default function AlertCentre() {
   const [statusMsg, setStatusMsg] = useState('')
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/alerts').then(r => setAlerts(r.data.alerts || []))
+    axios.get('/api/alerts').then(r => setAlerts(r.data.alerts || []))
   }, [])
 
   const handleVerify = async (id: string) => {
-    await axios.post(`http://127.0.0.1:8000/api/alerts/${id}/verify`)
+    await axios.post(`/api/alerts/${id}/verify`)
     setStatusMsg(`✓ Alert ${id} confirmed as REAL THREAT. Isolation Forest weights updated!`)
     setTimeout(() => setStatusMsg(''), 3000)
     setSelAlert(null)
   }
 
   const handleFalsePositive = async (id: string) => {
-    await axios.post(`http://127.0.0.1:8000/api/alerts/${id}/false-positive`)
+    await axios.post(`/api/alerts/${id}/false-positive`)
     setAlerts(alerts.filter(a => a.id !== id))
     setStatusMsg(`✓ Alert ${id} marked as False Positive. Active Learning feedback saved.`)
     setTimeout(() => setStatusMsg(''), 3000)

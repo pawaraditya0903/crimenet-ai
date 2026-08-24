@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import axios from 'axios'
 
 export default function Reports() {
@@ -15,7 +15,7 @@ export default function Reports() {
     
     try {
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/reports/generate',
+        '/api/reports/generate',
         {
           template: template,
           entity_type: entityType,

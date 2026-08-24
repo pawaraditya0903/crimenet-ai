@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import axios from 'axios'
 
 export default function Analytics() {
@@ -21,11 +21,11 @@ export default function Analytics() {
   const [searchFilter, setSearchFilter] = useState('')
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/analytics/top-influencers').then(r => setInfluencers(r.data.influencers || []))
-    axios.get('http://127.0.0.1:8000/api/analytics/anomalies').then(r => setAnomalies(r.data.anomalies || []))
-    axios.get('http://127.0.0.1:8000/api/analytics/network-stats').then(r => setStats(r.data))
-    axios.get('http://127.0.0.1:8000/api/entities/all').then(r => setAllEntities(r.data.entities || []))
-    axios.get('http://127.0.0.1:8000/api/relationships/all').then(r => setAllRelationships(r.data.relationships || []))
+    axios.get('/api/analytics/top-influencers').then(r => setInfluencers(r.data.influencers || []))
+    axios.get('/api/analytics/anomalies').then(r => setAnomalies(r.data.anomalies || []))
+    axios.get('/api/analytics/network-stats').then(r => setStats(r.data))
+    axios.get('/api/entities/all').then(r => setAllEntities(r.data.entities || []))
+    axios.get('/api/relationships/all').then(r => setAllRelationships(r.data.relationships || []))
   }, [])
 
   const runMathSimulation = () => {
