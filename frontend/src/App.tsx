@@ -112,6 +112,7 @@ export default function App() {
   const [auditModalOpen, setAuditModalOpen] = useState(false)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [logFilter, setLogFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
+  const [logSearchQuery, setLogSearchQuery] = useState('')
   const [selectedIntruder, setSelectedIntruder] = useState<any>(null)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -462,9 +463,11 @@ export default function App() {
   }
 
   const filteredLogs = auditLogs.filter((l: any) => {
-    if (logFilter === 'BLOCKED') return l.status.includes('BLOCKED')
-    if (logFilter === 'AUTHORIZED') return l.status.includes('AUTHORIZED')
-    return true
+    const matchesFilter = logFilter === 'ALL' || (logFilter === 'BLOCKED' && l.status.includes('BLOCKED')) || (logFilter === 'AUTHORIZED' && l.status.includes('AUTHORIZED'))
+    const q = logSearchQuery.toLowerCase().trim()
+    if (!q) return matchesFilter
+    const text = `${l.ip} ${l.device} ${l.action} ${l.timestamp} ${l.status} ${l.badge || ''}`.toLowerCase()
+    return matchesFilter && text.includes(q)
   })
 
   const navItems = [
@@ -767,6 +770,18 @@ export default function App() {
                 <h3 style={{ fontSize: 17, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span>🛡️</span> LIVE INTRUDER & VISITOR ACCESS LOGS
                 </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search IP, Device, Timestamp..."
+                    value={logSearchQuery}
+                    onChange={(e) => setLogSearchQuery(e.target.value)}
+                    style={{ padding: '5px 12px', borderRadius: 6, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 11, outline: 'none', width: 220 }}
+                  />
+                  <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 800 }}>
+                    Showing {filteredLogs.length} of {auditLogs.length} Total Logs
+                  </div>
+                </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   {(['ALL', 'BLOCKED', 'AUTHORIZED'] as const).map((f) => (
                     <button
