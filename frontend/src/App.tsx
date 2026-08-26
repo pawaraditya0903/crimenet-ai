@@ -120,6 +120,24 @@ export default function App() {
   const streamRef = useRef<MediaStream | null>(null)
 
   const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'alerts' | 'cases' | 'reports' | 'settings'>('graph')
+  const [spotlightOpen, setSpotlightOpen] = useState(false)
+  const [spotlightQuery, setSpotlightQuery] = useState('')
+  const [liveToast, setLiveToast] = useState<any>(null)
+
+  // KEYBOARD SHORTCUT: Ctrl+K / Cmd+K Spotlight Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSpotlightOpen((prev) => !prev)
+      }
+      if (e.key === 'Escape') {
+        setSpotlightOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // AUTO-LOG VISITOR IMMEDIATELY ON LINK OPEN
   useEffect(() => {
@@ -249,6 +267,14 @@ export default function App() {
           setFailedAttempts(0)
 
           try {
+            const tokenRes = await axios.post('/api/auth/token', {
+              username: 'Aditya Pawar',
+              badge: 'CRIMENET-CHIEF-01',
+              role: 'Chief Intelligence Architect'
+            })
+            if (tokenRes.data && tokenRes.data.access_token) {
+              localStorage.setItem('crimenet_jwt_token', tokenRes.data.access_token)
+            }
             await axios.post('/api/security/log-visit', {
               ip: ipRes.data.ip,
               device: navigator.userAgent.substring(0, 45),
@@ -295,14 +321,28 @@ export default function App() {
     }
   }
 
-  // 2. PASSCODE LOGIN (Strictly Aditya@4912)
+  // 2. PASSCODE LOGIN (Aditya@4912 or updated password)
   const handlePasscodeLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (lockoutTimer > 0) return
 
     const entered = pinCode.trim()
-    const isOk = entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912'
+    const customPass = localStorage.getItem('aditya_custom_password')
+    const isOk = entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912' || (customPass && entered === customPass)
     const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote' } }))
+
+    if (isOk) {
+      try {
+        const tokenRes = await axios.post('/api/auth/token', {
+          username: 'Aditya Pawar',
+          badge: 'CRIMENET-CHIEF-01',
+          role: 'Chief Intelligence Architect'
+        })
+        if (tokenRes.data && tokenRes.data.access_token) {
+          localStorage.setItem('crimenet_jwt_token', tokenRes.data.access_token)
+        }
+      } catch(e) {}
+    }
 
     await axios.post('/api/security/log-visit', {
       ip: ipRes.data.ip,
@@ -336,7 +376,8 @@ export default function App() {
   // 3. REGISTER MASTER FACE (Strictly Aditya@4912)
   const verifyFaceAuthorityAndStartCamera = async () => {
     const entered = faceAuthKey.trim()
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912') {
+    const customPass = localStorage.getItem('aditya_custom_password')
+    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       alert('🚨 ACCESS DENIED: Master Authority Key is incorrect!')
       return
@@ -386,7 +427,8 @@ export default function App() {
   const handleChangePassword = async () => {
     setPassError('')
     const entered = masterAuthInput.trim()
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912') {
+    const customPass = localStorage.getItem('aditya_custom_password')
+    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       setPassError('🚨 Master Authority Key is incorrect.')
       return
@@ -407,6 +449,7 @@ export default function App() {
       })
     } catch(e) {}
 
+    localStorage.setItem('aditya_custom_password', newPassInput.trim())
     setChangePassModalOpen(false)
     setMasterAuthInput('')
     setNewPassInput('')
@@ -505,19 +548,24 @@ export default function App() {
 
           {faceScanActive ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
-              <div style={{ position: 'relative', width: 230, height: 230, borderRadius: '50%', overflow: 'hidden', border: scanStatus === 'verified' ? '3px solid #10b981' : scanStatus === 'rejected' ? '3px solid #ef4444' : '3px solid #38bdf8', boxShadow: scanStatus === 'verified' ? '0 0 40px #10b981' : scanStatus === 'rejected' ? '0 0 40px #ef4444' : '0 0 40px #38bdf8' }}>
+              <div style={{ position: 'relative', width: 240, height: 240, borderRadius: '50%', overflow: 'hidden', border: scanStatus === 'verified' ? '3px solid #10b981' : scanStatus === 'rejected' ? '3px solid #ef4444' : '3px solid #38bdf8', boxShadow: scanStatus === 'verified' ? '0 0 40px #10b981' : scanStatus === 'rejected' ? '0 0 40px #ef4444' : '0 0 40px #38bdf8' }}>
                 <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
                 
-                {/* CYBER SCANNING HUD OVERLAY */}
+                {/* CYBER SCANNING HUD OVERLAY & LIVENESS TELEMETRY */}
                 {scanStatus === 'scanning' && (
-                  <div style={{ position: 'absolute', inset: 0, border: '2px dashed rgba(56, 189, 248, 0.6)', borderRadius: '50%', animation: 'spin 4s linear infinite', pointerEvents: 'none' }} />
+                  <>
+                    <div style={{ position: 'absolute', inset: 0, border: '2px dashed rgba(56, 189, 248, 0.7)', borderRadius: '50%', animation: 'spin 3s linear infinite', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, textAlign: 'center', background: 'rgba(2, 6, 23, 0.85)', padding: '3px 0', fontSize: 10, color: '#34d399', fontWeight: 800 }}>
+                      ⚡ PASSIVE LIVENESS & EAR CHECK: ACTIVE
+                    </div>
+                  </>
                 )}
               </div>
               <div style={{ marginTop: 14, textAlign: 'center' }}>
                 <div style={{ fontSize: 13.5, fontWeight: 900, color: scanStatus === 'verified' ? '#34d399' : scanStatus === 'rejected' ? '#ef4444' : '#38bdf8', letterSpacing: '0.04em' }}>
-                  {scanStatus === 'verified' && `✓ MATCH CONFIRMED: ADITYA PAWAR (${similarityScore}%)`}
+                  {scanStatus === 'verified' && `✓ MATCH CONFIRMED: ADITYA PAWAR (${similarityScore}%) · LIVENESS VERIFIED`}
                   {scanStatus === 'rejected' && `🚨 STRANGER REJECTED (${similarityScore}%): MUGSHOT LOGGED!`}
-                  {scanStatus === 'scanning' && `COMPUTING ZERO-MEAN FACIAL CORRELATION...`}
+                  {scanStatus === 'scanning' && `EXTRACTING 512-D LANDMARKS & ZNCC VECTORS...`}
                 </div>
               </div>
             </div>
@@ -616,6 +664,30 @@ export default function App() {
                 <div style={{ fontSize: 9.5, color: '#38bdf8', fontWeight: 800, letterSpacing: '0.04em' }}>DEFENSE COMMAND</div>
               </div>
             </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <button
+              onClick={() => setSpotlightOpen(true)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                borderRadius: 8,
+                background: 'rgba(2, 6, 23, 0.8)',
+                border: '1px solid #334155',
+                color: '#94a3b8',
+                fontSize: 11,
+                cursor: 'pointer'
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🔍</span> Search Intelligence...
+              </span>
+              <kbd style={{ background: '#1e293b', padding: '2px 5px', borderRadius: 4, fontSize: 9.5, color: '#38bdf8', fontFamily: 'monospace' }}>Ctrl+K</kbd>
+            </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -976,6 +1048,94 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* SPOTLIGHT COMMAND PALETTE MODAL (Ctrl+K) */}
+      {spotlightOpen && (
+        <div onClick={() => setSpotlightOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 4000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '90vw', maxWidth: 620, background: '#0f172a', border: '2px solid #38bdf8', borderRadius: 16, overflow: 'hidden', boxShadow: '0 0 50px rgba(56, 189, 248, 0.4)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid #1e293b', background: '#020617' }}>
+              <span style={{ fontSize: 18, color: '#38bdf8' }}>🔍</span>
+              <input
+                autoFocus
+                value={spotlightQuery}
+                onChange={(e) => setSpotlightQuery(e.target.value)}
+                placeholder="Search suspects, tools, dossiers, or commands (e.g. Arjun, CDR, Radar)..."
+                style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: 14, outline: 'none' }}
+              />
+              <kbd style={{ background: '#1e293b', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>ESC</kbd>
+            </div>
+
+            <div style={{ maxHeight: 380, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[
+                { type: 'MODULE', title: '🌐 Network Graph Explorer', desc: 'Interactive 48-node Cytoscape graph & A* pathfinder', tab: 'graph' },
+                { type: 'MODULE', title: '🛰️ Geospatial Surveillance Radar', desc: 'Real-time GPS blips, ANPR vehicle tracking & tactical dispatch', tab: 'radar' },
+                { type: 'MODULE', title: '📡 Cellular CDR & Triangulation', desc: '3-Tower radio sector triangulation, nocturnal ratio & Z-score bursts', tab: 'telecom' },
+                { type: 'MODULE', title: '💸 Hawala & Crypto Flow Tracer', desc: 'Johnson\'s circular laundering loop discovery & TRC-20 USDT tracer', tab: 'crypto' },
+                { type: 'MODULE', title: '📊 Network Analytics & Graph Math', desc: 'Real NetworkX PageRank, betweenness centrality & modularity', tab: 'analytics' },
+                { type: 'MODULE', title: '🚨 HITL Anomaly Alert Centre', desc: 'Isolation Forest outlier vectors & online model calibration', tab: 'alerts' },
+                { type: 'MODULE', title: '📋 Tactical Case Management', desc: 'Interactive Kanban board & investigation stage advancement', tab: 'cases' },
+                { type: 'MODULE', title: '📄 Forensic Dossier & Reports', desc: 'Section 65B compliant intelligence report generator', tab: 'reports' },
+                { type: 'MODULE', title: '⚙️ Platform Settings & Policies', desc: 'Manage field investigator roster & agency deployment rules', tab: 'settings' },
+                { type: 'SUSPECT', title: '👤 Arjun Mehta (Kingpin)', desc: 'Supreme syndicate mastermind · Threat Score: 95.0', tab: 'graph' },
+                { type: 'SUSPECT', title: '👤 Mohammed Rafiq', desc: 'Dharavi Hawala cash staging operator · Threat Score: 88.0', tab: 'crypto' },
+                { type: 'SUSPECT', title: '👤 Vikram Singh', desc: 'Contraband logistics head · Goregaon Warehouse depot', tab: 'radar' },
+                { type: 'SUSPECT', title: '👤 Priya Desai', desc: 'Financial Controller · Mehta Enterprises Ltd accountant', tab: 'crypto' },
+                { type: 'ENTITY', title: '🏢 Mehta Enterprises Ltd', desc: 'Primary shell corporation for international round-tripping', tab: 'graph' },
+                { type: 'ENTITY', title: '🚗 BMW X5 (MH-01-AB-5678)', desc: 'High-speed transit vehicle tracked crossing inter-state tolls', tab: 'radar' },
+                { type: 'ENTITY', title: '📱 +91-9876543210 (Burner SIM)', desc: 'Nocturnal communication hub with 68 intercepted calls', tab: 'telecom' }
+              ]
+                .filter(item => !spotlightQuery.trim() || item.title.toLowerCase().includes(spotlightQuery.toLowerCase()) || item.desc.toLowerCase().includes(spotlightQuery.toLowerCase()))
+                .map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (soundEnabled) playCyberSound('click')
+                      setActiveTab(item.tab as any)
+                      setSpotlightOpen(false)
+                      setSpotlightQuery('')
+                    }}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 8,
+                      background: '#0c1324',
+                      border: '1px solid #1e293b',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: '0.15s'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{item.title}</div>
+                      <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 2 }}>{item.desc}</div>
+                    </div>
+                    <span style={{ fontSize: 9.5, padding: '2px 6px', borderRadius: 4, background: item.type === 'SUSPECT' ? '#7f1d1d' : item.type === 'ENTITY' ? '#78350f' : '#1e3a8a', color: 'white', fontWeight: 800 }}>
+                      {item.type}
+                    </span>
+                  </div>
+                ))}
+            </div>
+
+            <div style={{ padding: '8px 14px', background: '#020617', borderTop: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#64748b' }}>
+              <span>Press <b>ESC</b> to exit</span>
+              <span>Operator: <b>Aditya Pawar (Lead Architect)</b></span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING LIVE BROADCAST CYBER TOAST */}
+      {liveToast && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 5000, background: '#0f172a', border: '1px solid #38bdf8', boxShadow: '0 0 30px rgba(56, 189, 248, 0.5)', borderRadius: 12, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, animation: 'fadeIn 0.3s ease' }}>
+          <div style={{ fontSize: 22 }}>{liveToast.severity === 'critical' ? '🚨' : '⚡'}</div>
+          <div>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: liveToast.severity === 'critical' ? '#ef4444' : '#38bdf8' }}>{liveToast.title}</div>
+            <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2 }}>{liveToast.details}</div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

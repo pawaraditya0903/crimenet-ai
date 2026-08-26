@@ -5,23 +5,35 @@ export default function AlertCentre() {
   const [alerts, setAlerts] = useState<any[]>([])
   const [selAlert, setSelAlert] = useState<any>(null)
   const [statusMsg, setStatusMsg] = useState('')
+  const [calibration, setCalibration] = useState<any>({
+    decision_boundary: 0.82,
+    contamination: 0.03,
+    confirmed_threats: 3,
+    false_positives: 0,
+    last_updated: 'Live Engine Active'
+  })
 
   useEffect(() => {
-    axios.get('/api/alerts').then(r => setAlerts(r.data.alerts || []))
+    axios.get('/api/alerts').then(r => {
+      setAlerts(r.data.alerts || [])
+      if (r.data.calibration) setCalibration(r.data.calibration)
+    })
   }, [])
 
   const handleVerify = async (id: string) => {
-    await axios.post(`/api/alerts/${id}/verify`)
-    setStatusMsg(`✓ Alert ${id} confirmed as REAL THREAT. Isolation Forest weights updated!`)
-    setTimeout(() => setStatusMsg(''), 3000)
+    const res = await axios.post(`/api/alerts/${id}/verify`)
+    if (res.data.calibration) setCalibration(res.data.calibration)
+    setStatusMsg(`✓ Alert ${id} confirmed as REAL THREAT. Decision boundary updated to ${res.data.calibration?.decision_boundary || 0.84}!`)
+    setTimeout(() => setStatusMsg(''), 3500)
     setSelAlert(null)
   }
 
   const handleFalsePositive = async (id: string) => {
-    await axios.post(`/api/alerts/${id}/false-positive`)
+    const res = await axios.post(`/api/alerts/${id}/false-positive`)
+    if (res.data.calibration) setCalibration(res.data.calibration)
     setAlerts(alerts.filter(a => a.id !== id))
-    setStatusMsg(`✓ Alert ${id} marked as False Positive. Active Learning feedback saved.`)
-    setTimeout(() => setStatusMsg(''), 3000)
+    setStatusMsg(`✓ Alert ${id} marked as False Positive. Contamination rate adjusted to ${res.data.calibration?.contamination || 0.025}.`)
+    setTimeout(() => setStatusMsg(''), 3500)
     setSelAlert(null)
   }
 
@@ -33,6 +45,33 @@ export default function AlertCentre() {
           <p style={{ fontSize: 12, color: '#94a3b8' }}>Review Isolation Forest outlier vectors and refine ML decision boundaries with active feedback.</p>
         </div>
         {statusMsg && <div style={{ fontSize: 11, color: '#34d399', fontWeight: 700 }}>{statusMsg}</div>}
+      </div>
+
+      {/* HITL Calibration Telemetry Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        <div style={{ padding: '10px 14px', background: 'rgba(15, 23, 42, 0.85)', borderRadius: 8, border: '1px solid #38bdf8' }}>
+          <div style={{ fontSize: 9.5, color: '#94a3b8', textTransform: 'uppercase' }}>DECISION BOUNDARY</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#38bdf8' }}>{calibration.decision_boundary}</div>
+          <div style={{ fontSize: 9.5, color: '#64748b' }}>Isolation Forest Threshold</div>
+        </div>
+
+        <div style={{ padding: '10px 14px', background: 'rgba(15, 23, 42, 0.85)', borderRadius: 8, border: '1px solid #f59e0b' }}>
+          <div style={{ fontSize: 9.5, color: '#94a3b8', textTransform: 'uppercase' }}>CONTAMINATION RATE</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b' }}>{calibration.contamination}</div>
+          <div style={{ fontSize: 9.5, color: '#64748b' }}>Outlier Priors</div>
+        </div>
+
+        <div style={{ padding: '10px 14px', background: 'rgba(15, 23, 42, 0.85)', borderRadius: 8, border: '1px solid #ef4444' }}>
+          <div style={{ fontSize: 9.5, color: '#94a3b8', textTransform: 'uppercase' }}>CONFIRMED THREATS</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#ef4444' }}>{calibration.confirmed_threats}</div>
+          <div style={{ fontSize: 9.5, color: '#64748b' }}>Active Warrants</div>
+        </div>
+
+        <div style={{ padding: '10px 14px', background: 'rgba(15, 23, 42, 0.85)', borderRadius: 8, border: '1px solid #10b981' }}>
+          <div style={{ fontSize: 9.5, color: '#94a3b8', textTransform: 'uppercase' }}>FALSE POSITIVES</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981' }}>{calibration.false_positives}</div>
+          <div style={{ fontSize: 9.5, color: '#64748b' }}>Suppressed Signals</div>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

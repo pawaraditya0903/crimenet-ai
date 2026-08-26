@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import axios from 'axios'
 
 export default function CaseManagement() {
   const [cases, setCases] = useState<any[]>([
@@ -10,6 +11,7 @@ export default function CaseManagement() {
 
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [newPriority, setNewPriority] = useState('critical')
   const [showModal, setShowModal] = useState(false)
 
   const STAGES = [
@@ -19,21 +21,45 @@ export default function CaseManagement() {
     { id: 'court', label: '⚖️ Court Prosecution', color: '#10b981' }
   ]
 
-  const moveStage = (caseId: string, nextStage: string) => {
+  useEffect(() => {
+    axios.get('/api/cases')
+      .then((res) => {
+        if (res.data && Array.isArray(res.data.cases) && res.data.cases.length > 0) {
+          setCases(res.data.cases)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const moveStage = async (caseId: string, nextStage: string) => {
     setCases(cases.map(c => c.id === caseId ? { ...c, stage: nextStage } : c))
+    try {
+      await axios.patch(`/api/cases/${caseId}/stage`, { stage: nextStage })
+    } catch {}
   }
 
-  const handleCreateCase = () => {
+  const handleCreateCase = async () => {
     if (!newTitle.trim()) return
-    setCases([...cases, {
-      id: `c${cases.length + 1}`,
-      title: newTitle,
+    const casePayload = {
+      title: newTitle.trim(),
       desc: newDesc || 'Active case file initiated by Aditya Pawar',
       stage: 'evidence',
-      priority: 'high',
+      priority: newPriority,
       suspects: ['Target Under Identification'],
       squad: 'Cyber & Forensic Cell'
-    }])
+    }
+
+    try {
+      const res = await axios.post('/api/cases', casePayload)
+      if (res.data && res.data.case) {
+        setCases(prev => [...prev, res.data.case])
+      } else {
+        setCases(prev => [...prev, { ...casePayload, id: `c${prev.length + 1}` }])
+      }
+    } catch {
+      setCases(prev => [...prev, { ...casePayload, id: `c${prev.length + 1}` }])
+    }
+
     setNewTitle('')
     setNewDesc('')
     setShowModal(false)
@@ -68,12 +94,12 @@ export default function CaseManagement() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>{c.title}</span>
                     <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: c.priority === 'critical' ? '#7f1d1d' : '#1e3a8a', color: 'white', fontWeight: 800 }}>
-                      {c.priority.toUpperCase()}
+                      {c.priority ? c.priority.toUpperCase() : 'HIGH'}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{c.desc}</div>
-                  <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 700 }}>🎯 Suspects: {c.suspects.join(', ')}</div>
-                  <div style={{ fontSize: 10, color: '#10b981' }}>👮 Squad: {c.squad}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{c.description || c.desc}</div>
+                  <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 700 }}>🎯 Suspects: {(c.suspects || []).join(', ')}</div>
+                  <div style={{ fontSize: 10, color: '#10b981' }}>👮 Squad: {c.squad || 'Cyber Cell'}</div>
 
                   {/* Stage Advance Buttons */}
                   <div style={{ display: 'flex', gap: 4, marginTop: 6, paddingTop: 6, borderTop: '1px solid #1e293b' }}>
@@ -110,8 +136,19 @@ export default function CaseManagement() {
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
               placeholder="Case description and preliminary intelligence..."
-              style={{ width: '100%', height: 80, padding: '10px 12px', borderRadius: 8, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 12, marginBottom: 14 }}
+              style={{ width: '100%', height: 80, padding: '10px 12px', borderRadius: 8, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 12, marginBottom: 10 }}
             />
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              <select
+                value={newPriority}
+                onChange={(e) => setNewPriority(e.target.value)}
+                style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 12 }}
+              >
+                <option value="critical">Priority: Critical</option>
+                <option value="high">Priority: High</option>
+                <option value="medium">Priority: Medium</option>
+              </select>
+            </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleCreateCase} style={{ flex: 1, padding: 10, borderRadius: 8, background: '#1d4ed8', color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Create Case</button>
               <button onClick={() => setShowModal(false)} style={{ padding: '10px 16px', borderRadius: 8, background: '#334155', color: 'white', border: 'none', cursor: 'pointer' }}>Cancel</button>

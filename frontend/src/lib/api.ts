@@ -1,6 +1,29 @@
 import axios from 'axios'
+
 const api = axios.create({ baseURL: '/api' })
+
+// Attach JWT Bearer token to all outbound requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('crimenet_jwt_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+}, (error) => {
+  return Promise.reject(error)
+})
+
+// Also intercept global axios requests
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('crimenet_jwt_token')
+  if (token && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 export default api
+
 export const graphApi = { getNetwork: () => api.get('/graph/network') }
 export const analyticsApi = {
   getTopInfluencers: () => api.get('/analytics/top-influencers'),
@@ -26,4 +49,8 @@ export const reportsApi = {
   getTemplates: () => api.get('/reports/templates'),
 }
 export const entitiesApi = { search: (q: string) => api.get('/entities/search?q=' + encodeURIComponent(q)) }
-export const authApi = { listUsers: () => api.get('/auth/users') }
+export const authApi = {
+  listUsers: () => api.get('/auth/users'),
+  getToken: (payload: any) => api.post('/auth/token', payload),
+  verifyToken: () => api.get('/auth/verify-token')
+}
