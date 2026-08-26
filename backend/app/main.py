@@ -1083,19 +1083,41 @@ class CopilotChatRequest(BaseModel):
     conversation_id: Optional[str] = None
 
 @app.post("/api/copilot/chat")
-async def copilot_chat_endpoint(req: CopilotChatRequest):
-    user_msg = req.message.strip()
-    msg_lower = user_msg.lower()
-    case_id = req.case_id or "c1"
+@app.post("/api/chat/message")
+async def copilot_chat_endpoint(req_or_dict: Any):
+    if isinstance(req_or_dict, dict):
+        user_msg = req_or_dict.get("message", "").strip()
+        case_id = req_or_dict.get("case_id", "c1")
+        req = CopilotChatRequest(message=user_msg, case_id=case_id)
+    else:
+        req = req_or_dict
+        user_msg = req.message.strip()
+        case_id = req.case_id or "c1"
     
+    msg_lower = user_msg.lower()
     intent = "general_query"
     citations = []
     tools_called = []
     action_preview = None
     response_text = ""
 
-    # 1. Rule-Based Intent Classifier
-    if any(k in msg_lower for k in ["summar", "overview", "what is this case", "case info"]):
+    # 1. Phone Number / CDR Matcher
+    if any(char.isdigit() for char in user_msg) and len(re.findall(r'\d', user_msg)) >= 7:
+        intent = "telecom_inquiry"
+        tools_called.append("get_telecom_cdr_intelligence")
+        citations.append("[Evidence: ev-02]")
+        citations.append("[Entity: +91-9876543210]")
+        response_text = (
+            f"📡 **Telecom & CDR Intelligence Analysis [{user_msg}]:**\n\n"
+            f"• **Associated Subscriber:** Intercepted burner line assigned to Arjun Mehta syndicate operations.\n"
+            f"• **Call Pattern:** Flagged for abnormal pre-dispatch burst activity (+4.8 Sigma above baseline).\n"
+            f"• **Primary Staging Tower:** Sector 1 Industrial Depot (Goregaon).\n"
+            f"• **Cross-Correlation:** 18 calls synchronized with nocturnal BMW X5 movements.\n\n"
+            f"Would you like me to highlight this phone line on the Network Graph?"
+        )
+
+    # 2. Rule-Based Intent Classifier
+    elif any(k in msg_lower for k in ["summar", "overview", "what is this case", "case info"]):
         intent = "case_summary"
         summary = tool_get_case_summary(case_id)
         tools_called.append("get_case_summary")
