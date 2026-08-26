@@ -2690,7 +2690,21 @@ async def start_background_simulation():
 
     asyncio.create_task(simulation_loop())
 
-# ── SERVE FRONTEND SPA IN PRODUCTION ──
+# ── API HEALTH & STATUS ENDPOINTS ──
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "HEALTHY",
+        "service": "CrimeNet AI Investigation Engine",
+        "architect": "Aditya Pawar",
+        "version": "2.0.0-PROD",
+        "timestamp_utc": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "active_cases": len(CASES),
+        "total_nodes": len(ALL_ENTITIES),
+        "simulation_stream": SIMULATION_STATE["is_running"]
+    }
+
+# ── SERVE FRONTEND SPA OR BACKEND STATUS PAGE ──
 frontend_dist = os.path.normpath(os.path.join(BASE_DIR, "..", "..", "frontend", "dist"))
 if os.path.exists(frontend_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
@@ -2703,3 +2717,37 @@ if os.path.exists(frontend_dist):
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
         return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    @app.get("/")
+    async def render_backend_welcome():
+        html_content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>CrimeNet AI — Backend Intelligence API</title>
+            <style>
+                body { background: #030712; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+                .card { background: #0f172a; border: 1px solid #38bdf8; border-radius: 20px; padding: 36px; max-width: 580px; text-align: center; box-shadow: 0 20px 80px rgba(0,0,0,0.8), 0 0 40px rgba(56,189,248,0.2); }
+                h1 { color: #38bdf8; font-size: 24px; margin-bottom: 8px; font-weight: 900; }
+                p { color: #94a3b8; font-size: 13px; line-height: 1.6; }
+                .badge { display: inline-block; background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid #10b981; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 18px; }
+                .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 12px; text-decoration: none; margin: 6px; }
+                .btn-primary { background: #0284c7; color: white; }
+                .btn-secondary { background: #1e293b; color: #38bdf8; border: 1px solid #334155; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div style="font-size: 40px; margin-bottom: 12px;">🛡️</div>
+                <div class="badge">● BACKEND API & SOCKET.IO ENGINE ONLINE</div>
+                <h1>CrimeNet AI Engine</h1>
+                <p>You are viewing the <b>FastAPI Backend & WebSocket Server</b> hosted on Render. This service powers the real-time graph algorithms, Kalman telemetry, and Explainable AI pipelines.</p>
+                <div style="margin-top: 24px;">
+                    <a href="https://crimenet-ai-two.vercel.app/" class="btn btn-primary">🌐 Open Live Frontend Web App</a>
+                    <a href="/docs" class="btn btn-secondary">📖 Interactive API Docs (Swagger)</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return Response(content=html_content, media_type="text/html")

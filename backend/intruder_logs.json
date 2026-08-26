@@ -1,5 +1,35 @@
 [
   {
+    "id": "1787747084909",
+    "timestamp": "26-Aug-2026 17:54:44 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "PASSCODE_SUCCESS",
+    "status": "AUTHORIZED",
+    "badge": "Aditya Pawar",
+    "photo": ""
+  },
+  {
+    "id": "1787747075894",
+    "timestamp": "26-Aug-2026 17:54:35 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787747075687",
+    "timestamp": "26-Aug-2026 17:54:35 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
     "id": "1787743420167",
     "timestamp": "26-Aug-2026 16:53:40 IST",
     "ip": "122.170.192.133",
