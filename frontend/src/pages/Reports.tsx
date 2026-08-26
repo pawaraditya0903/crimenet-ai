@@ -8,12 +8,19 @@ export default function Reports() {
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
   const [preview, setPreview] = useState<any>(null)
-  const [availableSuspects, setAvailableSuspects] = useState<any[]>([])
+  const [availableSuspects, setAvailableSuspects] = useState<any[]>([
+    { id: 'n1', name: 'Arjun Mehta', type: 'Person' },
+    { id: 'n2', name: 'Mohammed Rafiq', type: 'Person' },
+    { id: 'n3', name: 'Vikram Singh', type: 'Person' },
+    { id: 'n4', name: 'Priya Desai', type: 'Person' },
+    { id: 'n5', name: 'Mehta Enterprises Ltd', type: 'Organization' },
+    { id: 'n9', name: 'Phoenix Trading LLC (Dubai)', type: 'Organization' }
+  ])
 
   useEffect(() => {
     axios.get('/api/entities/all')
       .then((res) => {
-        if (res.data && res.data.entities) {
+        if (res.data && res.data.entities && res.data.entities.length > 0) {
           setAvailableSuspects(res.data.entities.slice(0, 10))
         }
       })

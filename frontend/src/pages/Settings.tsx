@@ -30,16 +30,37 @@ export default function Settings() {
   ]
 
   useEffect(() => {
-    axios.get('/api/investigators').then(r => setInvestigators(r.data.investigators || []))
-    axios.get('/api/settings').then(r => {
-      if (r.data) {
-        if (r.data.agency) setAgency(r.data.agency)
-        if (r.data.jurisdiction) setJurisdiction(r.data.jurisdiction)
-        if (r.data.retention) setRetention(r.data.retention)
-        if (r.data.telegram_alerts !== undefined) setTelegramAlerts(r.data.telegram_alerts)
-        if (r.data.sms_raid_broadcast !== undefined) setSmsRaidBroadcast(r.data.sms_raid_broadcast)
-      }
-    })
+    axios.get('/api/investigators')
+      .then(r => {
+        if (r.data && r.data.investigators && r.data.investigators.length > 0) {
+          setInvestigators(r.data.investigators)
+        } else {
+          setInvestigators([
+            { id: "inv-1", name: "Aditya Pawar", email: "aditya.pawar@crimenet.ai", badge: "INV-2026-AP01", role: "Chief Intelligence Architect & Lead", clearance: "Top Secret / Level 5", skills: ["Telecom CDR & Tower Triangulation", "Cyber Forensics & Dark Web Tracing", "PMLA & Hawala Financial Auditing"] },
+            { id: "inv-2", name: "Ramesh Sharma", email: "ramesh.sharma@crimenet.ai", badge: "INV-2026-RS02", role: "Hawala & PMLA Financial Auditor", clearance: "Secret / Level 4", skills: ["PMLA & Hawala Financial Auditing", "Cryptocurrency & Blockchain Forensics"] },
+            { id: "inv-3", name: "Suresh Kadam", email: "suresh.kadam@crimenet.ai", badge: "INV-2026-SK03", role: "Cellular CDR & Tower Analyst", clearance: "Secret / Level 4", skills: ["Telecom CDR & Tower Triangulation", "ANPR Vehicle Toll Interception"] }
+          ])
+        }
+      })
+      .catch(() => {
+        setInvestigators([
+          { id: "inv-1", name: "Aditya Pawar", email: "aditya.pawar@crimenet.ai", badge: "INV-2026-AP01", role: "Chief Intelligence Architect & Lead", clearance: "Top Secret / Level 5", skills: ["Telecom CDR & Tower Triangulation", "Cyber Forensics & Dark Web Tracing", "PMLA & Hawala Financial Auditing"] },
+          { id: "inv-2", name: "Ramesh Sharma", email: "ramesh.sharma@crimenet.ai", badge: "INV-2026-RS02", role: "Hawala & PMLA Financial Auditor", clearance: "Secret / Level 4", skills: ["PMLA & Hawala Financial Auditing", "Cryptocurrency & Blockchain Forensics"] },
+          { id: "inv-3", name: "Suresh Kadam", email: "suresh.kadam@crimenet.ai", badge: "INV-2026-SK03", role: "Cellular CDR & Tower Analyst", clearance: "Secret / Level 4", skills: ["Telecom CDR & Tower Triangulation", "ANPR Vehicle Toll Interception"] }
+        ])
+      })
+
+    axios.get('/api/settings')
+      .then(r => {
+        if (r.data) {
+          if (r.data.agency) setAgency(r.data.agency)
+          if (r.data.jurisdiction) setJurisdiction(r.data.jurisdiction)
+          if (r.data.retention) setRetention(r.data.retention)
+          if (r.data.telegram_alerts !== undefined) setTelegramAlerts(r.data.telegram_alerts)
+          if (r.data.sms_raid_broadcast !== undefined) setSmsRaidBroadcast(r.data.sms_raid_broadcast)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const toggleSkill = (skill: string) => {

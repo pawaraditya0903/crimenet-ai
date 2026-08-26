@@ -1550,13 +1550,6 @@ async def generate_pdf(data: dict):
     return Response(
         content=buf.getvalue(),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=CrimeNet_Dossier_Draft_{target_id.replace(' ','_')}.pdf"}
-    )
-
-    doc.build(story)
-    return Response(
-        content=buf.getvalue(),
-        media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=CrimeNet_{template.upper()}_{target_id.replace(' ','_')}.pdf"}
     )
 
@@ -1583,15 +1576,6 @@ async def delete_investigator(inv_id: str):
     global INVESTIGATORS
     INVESTIGATORS = [i for i in INVESTIGATORS if i["id"] != inv_id]
     return {"status": "deleted", "id": inv_id}
-
-@app.get("/api/alerts")
-async def get_alerts():
-    active_anomalies = [a for a in ANOMALIES if a.get("status") != "SUPPRESSED"]
-    return {
-        "alerts": active_anomalies,
-        "stats": {"total": len(active_anomalies), "critical": 2, "high": 2, "unacknowledged": 2},
-        "calibration": CALIBRATION_STATE
-    }
 
 # ── EXPLAINABLE AI (XAI) & HITL ADVISORY ALERT WORKFLOW ──
 @app.get("/api/alerts/all")
