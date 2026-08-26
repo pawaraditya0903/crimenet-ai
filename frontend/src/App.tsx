@@ -1288,17 +1288,6 @@ export default function App() {
         </div>
       )}
 
-      {/* FLOATING LIVE BROADCAST CYBER TOAST */}
-      {liveToast && (
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 5000, background: '#0f172a', border: '1px solid #38bdf8', boxShadow: '0 0 30px rgba(56, 189, 248, 0.5)', borderRadius: 12, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, animation: 'fadeIn 0.3s ease' }}>
-          <div style={{ fontSize: 22 }}>{liveToast.severity === 'critical' ? '🚨' : '⚡'}</div>
-          <div>
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: liveToast.severity === 'critical' ? '#ef4444' : '#38bdf8' }}>{liveToast.title}</div>
-            <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2 }}>{liveToast.details}</div>
-          </div>
-        </div>
-      )}
-
     </div>
   )
 }

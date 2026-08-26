@@ -1,5 +1,65 @@
 [
   {
+    "id": "1787748940432",
+    "timestamp": "26-Aug-2026 18:25:40 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "PASSCODE_SUCCESS",
+    "status": "AUTHORIZED",
+    "badge": "Aditya Pawar",
+    "photo": ""
+  },
+  {
+    "id": "1787748933360",
+    "timestamp": "26-Aug-2026 18:25:33 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787748933147",
+    "timestamp": "26-Aug-2026 18:25:33 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787748930096",
+    "timestamp": "26-Aug-2026 18:25:30 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "PASSCODE_SUCCESS",
+    "status": "AUTHORIZED",
+    "badge": "Aditya Pawar",
+    "photo": ""
+  },
+  {
+    "id": "1787748920297",
+    "timestamp": "26-Aug-2026 18:25:20 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787748920070",
+    "timestamp": "26-Aug-2026 18:25:20 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
     "id": "1787748865727",
     "timestamp": "26-Aug-2026 18:24:25 IST",
     "ip": "122.170.192.133",
