@@ -571,7 +571,7 @@ export default function App() {
     alert('✓ Master Password Successfully Updated!')
   }
 
-  // 5. INTRUDER LOGS HANDLERS (Password: Aditya@4912)
+  // 5. INTRUDER LOGS HANDLERS (Password: Aditya@09)
   const openAuditLogs = () => {
     if (soundEnabled) playCyberSound('click')
     setAuditKeyInput('')
@@ -581,8 +581,7 @@ export default function App() {
 
   const verifyAuditAccess = async () => {
     const entered = auditKeyInput.trim()
-    const customPass = localStorage.getItem('aditya_custom_password')
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
+    if (entered !== 'Aditya@09' && entered.toLowerCase() !== 'aditya@09') {
       if (soundEnabled) playCyberSound('deny')
       setAuditKeyError('🚨 ACCESS DENIED: Incorrect Intruder Log Key!')
       return
@@ -944,7 +943,7 @@ export default function App() {
         />
       </div>
 
-      {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL (Password: Aditya@4912) */}
+      {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL (Password: Aditya@09) */}
       {auditAuthModalOpen && (
         <div onClick={() => setAuditAuthModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 3800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '90vw', maxWidth: 420, background: '#0f172a', border: '1px solid #ef4444', borderRadius: 16, padding: 24, textAlign: 'center', boxShadow: '0 0 50px rgba(239, 68, 68, 0.4)' }}>
