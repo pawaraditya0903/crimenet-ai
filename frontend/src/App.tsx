@@ -159,7 +159,7 @@ export default function App() {
   const [confirmPassInput, setConfirmPassInput] = useState('')
   const [passError, setPassError] = useState('')
 
-  // INTRUDER LOGS MODAL & DEDICATED PASSWORD LOCK (Aditya@09)
+  // INTRUDER LOGS MODAL & DEDICATED PASSWORD LOCK (Aditya@4912)
   const [auditAuthModalOpen, setAuditAuthModalOpen] = useState(false)
   const [auditKeyInput, setAuditKeyInput] = useState('')
   const [auditKeyError, setAuditKeyError] = useState('')
@@ -426,11 +426,11 @@ export default function App() {
 
     const entered = pinCode.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    const validCodes = ['Aditya@09', 'aditya@09', 'Aditya@4912', 'aditya@4912', 'Aditya', 'aditya', '1234', 'admin']
-    const isOk = validCodes.includes(entered) || validCodes.includes(entered.toLowerCase()) || (customPass && entered === customPass)
+    const isOk = entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912' || (customPass && entered === customPass)
 
     if (isOk) {
       if (soundEnabled) playCyberSound('grant')
+      try { sessionStorage.setItem('crimenet_authenticated', 'true') } catch {}
       setIsAuthenticated(true)
       setFailedAttempts(0)
       setAuthError('')
@@ -490,8 +490,7 @@ export default function App() {
   const verifyFaceAuthorityAndStartCamera = async () => {
     const entered = faceAuthKey.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    const validCodes = ['Aditya@09', 'aditya@09', 'Aditya@4912', 'aditya@4912', 'Aditya', 'aditya']
-    if (!validCodes.includes(entered) && !validCodes.includes(entered.toLowerCase()) && entered !== customPass) {
+    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       alert('🚨 ACCESS DENIED: Master Authority Key is incorrect!')
       return
@@ -542,8 +541,7 @@ export default function App() {
     setPassError('')
     const entered = masterAuthInput.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    const validCodes = ['Aditya@09', 'aditya@09', 'Aditya@4912', 'aditya@4912', 'Aditya', 'aditya']
-    if (!validCodes.includes(entered) && !validCodes.includes(entered.toLowerCase()) && entered !== customPass) {
+    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       setPassError('🚨 Master Authority Key is incorrect.')
       return
@@ -573,7 +571,7 @@ export default function App() {
     alert('✓ Master Password Successfully Updated!')
   }
 
-  // 5. INTRUDER LOGS HANDLERS (Password: Aditya@09)
+  // 5. INTRUDER LOGS HANDLERS (Password: Aditya@4912)
   const openAuditLogs = () => {
     if (soundEnabled) playCyberSound('click')
     setAuditKeyInput('')
@@ -583,7 +581,8 @@ export default function App() {
 
   const verifyAuditAccess = async () => {
     const entered = auditKeyInput.trim()
-    if (entered !== 'Aditya@09' && entered.toLowerCase() !== 'aditya@09') {
+    const customPass = localStorage.getItem('aditya_custom_password')
+    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       setAuditKeyError('🚨 ACCESS DENIED: Incorrect Intruder Log Key!')
       return
@@ -945,7 +944,7 @@ export default function App() {
         />
       </div>
 
-      {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL (Password: Aditya@09) */}
+      {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL (Password: Aditya@4912) */}
       {auditAuthModalOpen && (
         <div onClick={() => setAuditAuthModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 3800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '90vw', maxWidth: 420, background: '#0f172a', border: '1px solid #ef4444', borderRadius: 16, padding: 24, textAlign: 'center', boxShadow: '0 0 50px rgba(239, 68, 68, 0.4)' }}>

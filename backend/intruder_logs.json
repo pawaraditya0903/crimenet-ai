@@ -1,5 +1,25 @@
 [
   {
+    "id": "1787749203737",
+    "timestamp": "26-Aug-2026 18:30:03 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787749203489",
+    "timestamp": "26-Aug-2026 18:30:03 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
     "id": "1787749079428",
     "timestamp": "26-Aug-2026 18:27:59 IST",
     "ip": "122.170.192.133",
