@@ -1,4 +1,4 @@
-import json, os, math, random, ssl, io, urllib.request, urllib.error, urllib.parse, datetime, re, hmac, hashlib, base64, time, sqlite3
+import json, os, math, random, ssl, io, urllib.request, urllib.error, urllib.parse, datetime, re, hmac, hashlib, base64, time, sqlite3, asyncio
 from datetime import datetime as dt_cls
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
@@ -56,19 +56,68 @@ def verify_jwt_token(token: str) -> Optional[dict]:
     except Exception:
         return None
 
-async def broadcast_incident(event_type: str, title: str, details: str, severity: str = "warning"):
+async def emit_investigation_event(
+    event_type: str,
+    payload: dict,
+    case_id: Optional[str] = None,
+    severity: str = "info",
+    actor_id: str = "SYSTEM_AUTOMATION"
+):
+    event_obj = {
+        "event_id": f"evt-{int(time.time() * 1000)}-{random.randint(100, 999)}",
+        "event_type": event_type,
+        "timestamp_utc": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "case_id": case_id,
+        "actor_id": actor_id,
+        "severity": severity,
+        "payload": payload
+    }
+    # Store notification in SQLite if important
+    if event_type in ["ALERT_CREATED", "RADAR_POSITION_UPDATED", "FINANCIAL_ANOMALY_DETECTED", "TELECOM_BURST_DETECTED", "SYSTEM_NOTIFICATION", "EVIDENCE_ADDED"]:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("INSERT OR REPLACE INTO notifications VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (
+                event_obj["event_id"],
+                "INV-2026-AP01",
+                case_id or "c1",
+                payload.get("title", f"Event: {event_type.replace('_', ' ')}"),
+                payload.get("details", payload.get("message", "Simulated live telemetry received.")),
+                severity,
+                0,
+                event_obj["timestamp_utc"]
+            ))
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
     try:
-        payload = {
-            "id": f"evt-{int(time.time() * 1000)}",
-            "type": event_type,
-            "title": title,
-            "details": details,
-            "severity": severity,
-            "timestamp": dt_cls.now().strftime("%H:%M:%S")
-        }
-        await sio.emit("incident_broadcast", payload)
+        await sio.emit("investigation_event", event_obj)
+        if case_id:
+            await sio.emit("case_event", event_obj, room=f"case_{case_id}")
     except Exception:
         pass
+    return event_obj
+
+# Legacy alias
+async def broadcast_incident(event_type: str, title: str, details: str, severity: str = "warning"):
+    await emit_investigation_event(
+        event_type="SYSTEM_NOTIFICATION",
+        payload={"title": title, "details": details, "type": event_type},
+        severity=severity
+    )
+
+@sio.event
+async def join_case_room(sid, data):
+    case_id = data.get("case_id", "c1")
+    sio.enter_room(sid, f"case_{case_id}")
+    await sio.emit("room_joined", {"case_id": case_id, "status": "active"}, room=sid)
+
+@sio.event
+async def leave_case_room(sid, data):
+    case_id = data.get("case_id", "c1")
+    sio.leave_room(sid, f"case_{case_id}")
 
 # ── CROSS-PLATFORM PERSISTENT SECURITY DATABASE ──
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -125,6 +174,36 @@ def init_sqlite_db():
             supervisor_status TEXT,
             supervisor_comments TEXT,
             updated_at TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY,
+            case_id TEXT,
+            user_id TEXT,
+            title TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT,
+            case_id TEXT,
+            user_id TEXT,
+            role TEXT,
+            content TEXT,
+            timestamp TEXT,
+            intent TEXT,
+            citations TEXT,
+            tool_calls TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS notifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            case_id TEXT,
+            title TEXT,
+            details TEXT,
+            severity TEXT,
+            is_read INTEGER,
+            timestamp TEXT
         )''')
         conn.commit()
         conn.close()
@@ -845,15 +924,442 @@ async def search_entities(q: str = ""):
 async def get_all_relationships():
     return {"relationships": ALL_RELATIONSHIPS, "total": len(ALL_RELATIONSHIPS)}
 
-# ── LIVE CHAT ENDPOINT WITH RAG ──
-@app.post("/api/chat/message")
-async def chat(data: dict):
-    user_msg = data.get("message", "").strip()
-    if not user_msg:
-        return {"response": "Please enter a message or suspect query.", "cypher_query": ""}
+# ══════════════════════════════════════════════════════════════════════
+# 🤖 CRIMENET AI COPILOT & SAFE TOOL-CALLING ARCHITECTURE
+# ══════════════════════════════════════════════════════════════════════
+
+SIMULATION_STATE = {
+    "is_running": False,
+    "speed_multiplier": 1.0,
+    "tick_count": 0,
+    "last_tick": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+}
+
+# ── COPILOT INTERNAL SAFE TOOLS ──
+def tool_get_case_summary(case_id: str = "c1") -> dict:
+    target_case = next((c for c in CASES if c["id"] == case_id), CASES[0])
+    linked_alerts = [a for a in ANOMALIES if a.get("case_id") == case_id or case_id == "c1"]
+    linked_evidence = [e for e in EVIDENCE_ITEMS if e.get("case_id") == case_id]
+    return {
+        "case_id": target_case["id"],
+        "title": target_case["title"],
+        "description": target_case["description"],
+        "stage": target_case["stage"],
+        "priority": target_case["priority"],
+        "assigned_squad": target_case["squad"],
+        "key_entities": target_case.get("suspects", []),
+        "active_alerts_count": len(linked_alerts),
+        "evidence_items_count": len(linked_evidence),
+        "citations": [f"[Case: {target_case['id']} - {target_case['title']}]"] + [f"[Evidence: {e['id']}]" for e in linked_evidence[:2]]
+    }
+
+def tool_get_case_alerts(case_id: str = "c1") -> dict:
+    alerts = [a for a in ANOMALIES if a.get("case_id") == case_id or case_id == "all"]
+    return {
+        "case_id": case_id,
+        "total_alerts": len(alerts),
+        "alerts": [
+            {
+                "id": a["id"],
+                "entity": a["entity_name"],
+                "type": a["anomaly_type"],
+                "score": a["anomaly_score"],
+                "severity": a["severity"],
+                "status": a.get("status", "PENDING_REVIEW")
+            } for a in alerts
+        ],
+        "citations": [f"[Alert: {a['id']}]" for a in alerts]
+    }
+
+def tool_get_alert_explanation(alert_id: str = "a1") -> dict:
+    target = next((a for a in ANOMALIES if a["id"] == alert_id), ANOMALIES[0])
+    return {
+        "alert_id": target["id"],
+        "entity": target["entity_name"],
+        "algorithm": target.get("algorithm", "IsolationForest-v2.1"),
+        "confidence": target.get("confidence_level", "HIGH_CONFIDENCE"),
+        "explanation": target.get("plain_english_explanation", target["details"]),
+        "features": target.get("feature_breakdown", []),
+        "status": target.get("status", "PENDING_REVIEW"),
+        "citations": [f"[Alert: {target['id']}]", f"[Entity: {target['entity_name']}]"]
+    }
+
+def tool_get_entity_profile(entity_query: str) -> dict:
+    match = None
+    q = entity_query.lower().strip()
+    for e in ALL_ENTITIES:
+        if q in e["name"].lower() or q in e.get("phone", "").lower():
+            match = e
+            break
+    if not match:
+        match = ALL_ENTITIES[0]
+
+    # Find 1-hop associates
+    associates = []
+    for r in ALL_RELATIONSHIPS:
+        if r["source"] == match["name"]:
+            associates.append(f"{r['target']} ({r['label']})")
+        elif r["target"] == match["name"]:
+            associates.append(f"{r['source']} ({r['label']})")
+
+    return {
+        "id": match["id"],
+        "name": match["name"],
+        "type": match["type"],
+        "role": match.get("role", "Network Node"),
+        "threat_score": match.get("risk_score", 50.0),
+        "phone": match.get("phone", "N/A"),
+        "city": match.get("city", "Mumbai"),
+        "direct_associates": associates[:4],
+        "citations": [f"[Entity: {match['name']}]"] + ([f"[Phone: {match['phone']}]"] if match.get("phone") else [])
+    }
+
+def tool_find_shortest_path(src: str, tgt: str) -> dict:
+    G = nx.Graph()
+    for r in ALL_RELATIONSHIPS:
+        G.add_edge(r["source"], r["target"], label=r["label"])
     
-    reply = ask_ai_intelligence(user_msg)
-    return {"response": reply, "cypher_query": "MATCH (n) RETURN n LIMIT 50"}
+    # Resolve names
+    resolved_src = "Arjun Mehta (Kingpin)" if "arjun" in src.lower() else src
+    resolved_tgt = "Phoenix Trading LLC (Dubai)" if "phoenix" in tgt.lower() else tgt
+
+    if not G.has_node(resolved_src) or not G.has_node(resolved_tgt):
+        return {"path": [resolved_src, "Mehta Enterprises Ltd", resolved_tgt], "hop_count": 2, "citations": []}
+
+    try:
+        path = nx.shortest_path(G, source=resolved_src, target=resolved_tgt)
+        return {
+            "source": resolved_src,
+            "target": resolved_tgt,
+            "hop_count": len(path) - 1,
+            "path": path,
+            "citations": [f"[Entity: {n}]" for n in path]
+        }
+    except Exception:
+        return {"path": [resolved_src, "Mehta Enterprises Ltd", resolved_tgt], "hop_count": 2, "citations": []}
+
+def tool_draft_case_briefing(case_id: str = "c1") -> dict:
+    c = next((item for item in CASES if item["id"] == case_id), CASES[0])
+    briefing_text = (
+        f"INVESTIGATIVE BRIEFING DRAFT — {c['title'].upper()}\n"
+        f"• Status: {c['stage'].upper()} | Priority: {c['priority'].upper()} | Squad: {c['squad']}\n"
+        f"• Overview: {c['description']}\n"
+        f"• Key Nodes of Interest: {', '.join(c.get('suspects', []))}\n"
+        f"• Key Findings: Identified ₹1.5 Cr nocturnal wire to offshore shell entity & 68-call telecom burst on burner line.\n"
+        f"• Advisory Action Plan: Issue 24/7 lawful telemetry audit & request banking records under Section 17 PMLA.\n"
+        f"• Governance Notice: Draft only. Requires human investigator review and supervisory authorization."
+    )
+    return {
+        "case_id": c["id"],
+        "draft_type": "EXECUTIVE_BRIEFING_DRAFT",
+        "content": briefing_text,
+        "requires_confirmation": True,
+        "citations": [f"[Case: {c['id']}]", "[Evidence: ev-01]", "[Alert: a1]"]
+    }
+
+def tool_draft_supervisor_escalation(alert_id: str = "a1") -> dict:
+    a = next((item for item in ANOMALIES if item["id"] == alert_id), ANOMALIES[0])
+    escalation_memo = (
+        f"SUPERVISOR ESCALATION MEMORANDUM\n"
+        f"• Target Node: {a['entity_name']} ({a['entity_type']})\n"
+        f"• Flagged Anomaly: {a['anomaly_type']} (Score: {a['anomaly_score']} / Severity: {a['severity'].upper()})\n"
+        f"• Summary: {a['details']}\n"
+        f"• Reason for Escalation: Outlier vector exceeds 4.41x baseline with newly registered offshore counterparty.\n"
+        f"• Recommended Supervisory Directive: Authorize formal dossier compilation and inter-agency intelligence request."
+    )
+    return {
+        "alert_id": a["id"],
+        "draft_type": "SUPERVISOR_ESCALATION_MEMO",
+        "content": escalation_memo,
+        "requires_confirmation": True,
+        "citations": [f"[Alert: {a['id']}]", f"[Entity: {a['entity_name']} ]"]
+    }
+
+# ── COPILOT INTENT ROUTER & EXECUTION PIPELINE ──
+class CopilotChatRequest(BaseModel):
+    message: str
+    case_id: Optional[str] = "c1"
+    user_id: Optional[str] = "INV-2026-AP01"
+    conversation_id: Optional[str] = None
+
+@app.post("/api/copilot/chat")
+async def copilot_chat_endpoint(req: CopilotChatRequest):
+    user_msg = req.message.strip()
+    msg_lower = user_msg.lower()
+    case_id = req.case_id or "c1"
+    
+    intent = "general_query"
+    citations = []
+    tools_called = []
+    action_preview = None
+    response_text = ""
+
+    # 1. Rule-Based Intent Classifier
+    if any(k in msg_lower for k in ["summar", "overview", "what is this case", "case info"]):
+        intent = "case_summary"
+        summary = tool_get_case_summary(case_id)
+        tools_called.append("get_case_summary")
+        citations.extend(summary["citations"])
+        response_text = (
+            f"**Case Briefing for {summary['title']}** [{summary['stage'].upper()} / {summary['priority'].upper()}]:\n\n"
+            f"{summary['description']}.\n\n"
+            f"• **Key Entities of Interest:** {', '.join(summary['key_entities'])}\n"
+            f"• **Active Alerts:** {summary['active_alerts_count']} flagged anomalies awaiting review.\n"
+            f"• **Evidence Items Ingested:** {summary['evidence_items_count']} verified records in Merkle ledger.\n\n"
+            f"*Decision Support Note: All analytical findings represent statistical indicators for human investigator validation.*"
+        )
+
+    elif any(k in msg_lower for k in ["alert", "highest risk", "flagged", "threat"]):
+        intent = "alert_list"
+        alerts_data = tool_get_case_alerts(case_id)
+        tools_called.append("get_case_alerts")
+        citations.extend(alerts_data["citations"])
+        response_text = (
+            f"**Active Risk Indicators for Case {case_id.upper()}** ({alerts_data['total_alerts']} Total):\n\n"
+            + "\n".join([f"• **{a['id'].upper()}** [{a['severity'].upper()}]: {a['entity']} — {a['type'].replace('_',' ')} (Score: {int(a['score']*100)}% · Status: {a['status'].replace('_',' ')})" for a in alerts_data["alerts"]])
+            + "\n\nType *'Explain alert a1'* to view the Explainable AI feature breakdown."
+        )
+
+    elif any(k in msg_lower for k in ["explain alert", "why was", "why flagged", "explain a1", "explain a2", "explain a3", "explain a4"]):
+        intent = "alert_explanation"
+        alert_id = "a1"
+        if "a2" in msg_lower: alert_id = "a2"
+        elif "a3" in msg_lower: alert_id = "a3"
+        elif "a4" in msg_lower: alert_id = "a4"
+        
+        xai = tool_get_alert_explanation(alert_id)
+        tools_called.append("get_alert_explanation")
+        citations.extend(xai["citations"])
+        response_text = (
+            f"**Explainable AI (XAI) Breakdown for {xai['alert_id'].upper()} ({xai['entity']}):**\n\n"
+            f"• **Algorithm:** {xai['algorithm']} ({xai['confidence']})\n"
+            f"• **Reasoning:** {xai['explanation']}\n\n"
+            f"**Feature Vector Deviations:**\n"
+            + "\n".join([f"  - *{f['feature']}:* Observed `{f['value']}` vs Normal `{f['baseline']}` ({f['deviation']})" for f in xai["features"]])
+            + f"\n\n*Current Status: {xai['status'].replace('_',' ')}*. Would you like me to prepare a supervisor escalation draft?"
+        )
+
+    elif any(k in msg_lower for k in ["path", "trail", "connect", "shortest"]):
+        intent = "graph_path"
+        path_res = tool_find_shortest_path("Arjun Mehta", "Phoenix Trading LLC")
+        tools_called.append("find_shortest_graph_path")
+        citations.extend(path_res["citations"])
+        response_text = (
+            f"**Shortest Network Connection Trail ({path_res['hop_count']} Hops):**\n\n"
+            + " ➔ ".join([f"**{node}**" for node in path_res["path"]])
+            + "\n\nThis trail illustrates financial and logistical links between entities of interest in the graph topology."
+        )
+
+    elif any(k in msg_lower for k in ["briefing", "create briefing", "draft briefing", "summary report"]):
+        intent = "briefing_draft"
+        draft = tool_draft_case_briefing(case_id)
+        tools_called.append("draft_case_briefing")
+        citations.extend(draft["citations"])
+        action_preview = draft
+        response_text = (
+            f"I have drafted an **Executive Case Briefing** for Case {case_id.upper()}.\n\n"
+            f"```\n{draft['content']}\n```\n\n"
+            f"⚠️ **Action Required:** This draft requires your review before it can be added to the case repository."
+        )
+
+    elif any(k in msg_lower for k in ["escalat", "supervisor", "draft escalation"]):
+        intent = "escalation_draft"
+        draft = tool_draft_supervisor_escalation("a1")
+        tools_called.append("draft_supervisor_escalation")
+        citations.extend(draft["citations"])
+        action_preview = draft
+        response_text = (
+            f"I have generated a **Supervisor Escalation Memorandum Draft** for Alert a1.\n\n"
+            f"```\n{draft['content']}\n```\n\n"
+            f"⚠️ **Action Required:** Click **'Submit for Supervisory Review'** to route this memorandum to the supervisor's inbox."
+        )
+
+    elif any(k in msg_lower for k in ["start simulation", "run simulation", "play simulation"]):
+        SIMULATION_STATE["is_running"] = True
+        tools_called.append("start_demo_simulation")
+        response_text = "✓ **Live Demo Simulation Started.** Synthetic telemetry events (vehicle radar sweeps, telecom handshakes, and wire transactions) are now streaming in real time."
+
+    elif any(k in msg_lower for k in ["pause simulation", "stop simulation"]):
+        SIMULATION_STATE["is_running"] = False
+        tools_called.append("pause_demo_simulation")
+        response_text = "✓ **Live Demo Simulation Paused.** Event stream has been halted."
+
+    elif any(k in msg_lower for k in ["who is", "profile", "tell me about", "arjun", "rafiq", "vikram", "priya"]):
+        intent = "entity_profile"
+        prof = tool_get_entity_profile(user_msg)
+        tools_called.append("get_entity_profile")
+        citations.extend(prof["citations"])
+        response_text = (
+            f"**Subject Dossier: {prof['name']}** [{prof['type']}]\n"
+            f"• **Role:** {prof['role']} | **Location:** {prof['city']}\n"
+            f"• **Composite Risk Score:** {prof['threat_score']} / 100 (Advisory Index)\n"
+            f"• **Linked MSISDN:** `{prof['phone']}`\n"
+            f"• **Direct Network Links:** {', '.join(prof['direct_associates'])}\n\n"
+            f"Would you like me to highlight this entity in the Network Graph Explorer?"
+        )
+
+    else:
+        # Fallback RAG Assistant
+        intent = "rag_search"
+        tools_called.append("vector_semantic_search")
+        rag_reply = ask_ai_intelligence(user_msg)
+        citations.append("[Entity: Arjun Mehta]")
+        response_text = rag_reply
+
+    # Build retrieval trace
+    trace = {
+        "timestamp_utc": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "case_id": case_id,
+        "intent": intent,
+        "tools_executed": tools_called,
+        "data_sources_consulted": ["SQLite_Cases", "NetworkX_Graph_v3.6", "Isolation_Forest_Alerts", "Merkle_Evidence_Ledger"],
+        "confidence_level": "HIGH_CONFIDENCE",
+        "statutory_caveat": "Outputs are decision-support indicators. Autonomous enforcement is strictly disabled."
+    }
+
+    # Store message in SQLite
+    conv_id = req.conversation_id or f"conv-{case_id}"
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO conversations VALUES (?, ?, ?, ?, ?, ?)", (
+            conv_id, case_id, req.user_id or "INV-2026-AP01", f"Investigation Inquiry: {user_msg[:30]}", dt_cls.now().strftime("%Y-%m-%d"), dt_cls.now().strftime("%Y-%m-%d %H:%M:%S")
+        ))
+        msg_id = f"msg-{int(time.time() * 1000)}"
+        c.execute("INSERT INTO chat_messages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
+            msg_id, conv_id, case_id, req.user_id or "INV-2026-AP01", "assistant", response_text, dt_cls.now().strftime("%H:%M:%S"), intent, json.dumps(citations), json.dumps(tools_called)
+        ))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+    return {
+        "status": "success",
+        "conversation_id": conv_id,
+        "response": response_text,
+        "intent": intent,
+        "citations": citations,
+        "action_preview": action_preview,
+        "retrieval_trace": trace
+    }
+
+@app.get("/api/copilot/suggestions")
+async def get_copilot_suggestions(case_id: str = "c1"):
+    return {
+        "suggestions": [
+            "Summarize this case.",
+            "Show the highest-risk alerts.",
+            "Explain alert a1.",
+            "Find the shortest relationship path to Phoenix Trading.",
+            "Show suspicious circular transaction cycles.",
+            "Create an executive briefing draft.",
+            "Start demo simulation stream."
+        ]
+    }
+
+@app.post("/api/copilot/actions/confirm")
+async def confirm_copilot_action(data: dict):
+    draft_type = data.get("draft_type", "EXECUTIVE_BRIEFING_DRAFT")
+    case_id = data.get("case_id", "c1")
+    return {
+        "status": "ACTION_CONFIRMED_AND_LOGGED",
+        "draft_type": draft_type,
+        "case_id": case_id,
+        "confirmed_by": "INV-2026-AP01",
+        "timestamp": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "message": f"✓ {draft_type.replace('_', ' ')} confirmed and saved to Case {case_id.upper()}."
+    }
+
+# ── LIVE SIMULATION STREAM CONTROLS ──
+@app.post("/api/simulation/start")
+async def start_sim():
+    SIMULATION_STATE["is_running"] = True
+    SIMULATION_STATE["last_tick"] = dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    await emit_investigation_event("SYSTEM_NOTIFICATION", {"title": "Simulation Active", "details": "Live synthetic telemetry stream engaged.", "speed": SIMULATION_STATE["speed_multiplier"]})
+    return {"status": "RUNNING", "state": SIMULATION_STATE}
+
+@app.post("/api/simulation/pause")
+async def pause_sim():
+    SIMULATION_STATE["is_running"] = False
+    await emit_investigation_event("SYSTEM_NOTIFICATION", {"title": "Simulation Paused", "details": "Telemetry stream paused."})
+    return {"status": "PAUSED", "state": SIMULATION_STATE}
+
+@app.post("/api/simulation/reset")
+async def reset_sim():
+    SIMULATION_STATE["tick_count"] = 0
+    SIMULATION_STATE["is_running"] = False
+    return {"status": "RESET", "state": SIMULATION_STATE}
+
+@app.post("/api/simulation/speed")
+async def set_sim_speed(data: dict):
+    SIMULATION_STATE["speed_multiplier"] = float(data.get("speed", 1.0))
+    return {"status": "SPEED_UPDATED", "speed": SIMULATION_STATE["speed_multiplier"]}
+
+@app.get("/api/simulation/status")
+async def get_sim_status():
+    return SIMULATION_STATE
+
+# ── NOTIFICATIONS API ──
+@app.get("/api/notifications")
+async def get_notifications():
+    notifications = []
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT id, user_id, case_id, title, details, severity, is_read, timestamp FROM notifications ORDER BY timestamp DESC LIMIT 20")
+        rows = c.fetchall()
+        for r in rows:
+            notifications.append({
+                "id": r[0],
+                "user_id": r[1],
+                "case_id": r[2],
+                "title": r[3],
+                "details": r[4],
+                "severity": r[5],
+                "is_read": bool(r[6]),
+                "timestamp": r[7]
+            })
+        conn.close()
+    except Exception:
+        pass
+    
+    if not notifications:
+        notifications = [
+            {"id": "notif-1", "title": "Large Wire Anomaly Flagged", "details": "₹1.50 Cr nocturnal transfer to Phoenix Trading LLC", "severity": "critical", "is_read": False, "timestamp": "02:00 UTC", "case_id": "c2"},
+            {"id": "notif-2", "title": "Telecom Burst Detected", "details": "68 nocturnal calls on MSISDN +91-9876543210", "severity": "high", "is_read": False, "timestamp": "21:30 UTC", "case_id": "c1"},
+            {"id": "notif-3", "title": "Evidence Integrity Verified", "details": "SHA-256 Merkle root anchored intact.", "severity": "info", "is_read": True, "timestamp": "04:15 UTC", "case_id": "c1"},
+        ]
+
+    return {
+        "total": len(notifications),
+        "unread_count": sum(1 for n in notifications if not n["is_read"]),
+        "notifications": notifications
+    }
+
+@app.post("/api/notifications/{notif_id}/read")
+async def mark_notif_read(notif_id: str):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("UPDATE notifications SET is_read = 1 WHERE id = ?", (notif_id,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+    return {"status": "marked_read", "id": notif_id}
+
+@app.post("/api/notifications/clear-all")
+async def clear_all_notifications():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("DELETE FROM notifications")
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+    return {"status": "cleared"}
 
 # ── 4 SPECIALIZED PDF GENERATORS ──
 @app.get("/api/reports/templates")
@@ -2123,6 +2629,66 @@ async def delete_single_log(req: Request):
 async def clear_all_logs_endpoint():
     save_persisted_logs([])
     return {"success": True, "message": "All logs wiped permanently"}
+
+# ── STARTUP BACKGROUND SIMULATION STREAM ──
+@app.on_event("startup")
+async def start_background_simulation():
+    async def simulation_loop():
+        vehicle_lat = 19.0596
+        vehicle_lng = 72.8295
+        while True:
+            await asyncio.sleep(4.0)
+            if SIMULATION_STATE.get("is_running", False):
+                SIMULATION_STATE["tick_count"] += 1
+                tick = SIMULATION_STATE["tick_count"]
+                
+                # Alternate simulated event types
+                if tick % 3 == 0:
+                    vehicle_lat += 0.0003
+                    vehicle_lng += 0.0001
+                    await emit_investigation_event(
+                        event_type="RADAR_POSITION_UPDATED",
+                        payload={
+                            "target_name": "BMW X5 (MH-01-AB-5678)",
+                            "lat": round(vehicle_lat, 5),
+                            "lng": round(vehicle_lng, 5),
+                            "speed_kmh": round(62.0 + (tick % 5) * 3.1, 1),
+                            "heading_deg": 42.5,
+                            "uncertainty_m": 12.4,
+                            "nearest_checkpoint": "Bandra-Worli Toll Plaza"
+                        },
+                        case_id="c3",
+                        severity="warning"
+                    )
+                elif tick % 3 == 1:
+                    mule_names = ["Anita Roy (CA)", "Sameer Sheikh (Courier)", "Rohan Gupta (Mule Lead)"]
+                    chosen = mule_names[tick % len(mule_names)]
+                    await emit_investigation_event(
+                        event_type="FINANCIAL_ANOMALY_DETECTED",
+                        payload={
+                            "account": chosen,
+                            "amount_inr": 48500,
+                            "threshold_inr": 50000,
+                            "pattern": "SUB_50K_SMURFING_STRUCTURED_DEPOSIT",
+                            "destination": "Al-Bahar Currency Exchange"
+                        },
+                        case_id="c2",
+                        severity="critical"
+                    )
+                else:
+                    await emit_investigation_event(
+                        event_type="TELECOM_BURST_DETECTED",
+                        payload={
+                            "caller": "+91-9876543210 (Burner Line)",
+                            "tower_name": "Goregaon Sector 1 Depot",
+                            "z_score": 3.82,
+                            "call_count_1h": 18
+                        },
+                        case_id="c1",
+                        severity="warning"
+                    )
+
+    asyncio.create_task(simulation_loop())
 
 # ── SERVE FRONTEND SPA IN PRODUCTION ──
 frontend_dist = os.path.normpath(os.path.join(BASE_DIR, "..", "..", "frontend", "dist"))

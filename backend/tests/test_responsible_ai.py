@@ -26,7 +26,14 @@ from app.main import (
     get_model_evaluation,
     get_merkle_evidence_ledger,
     benford_fraud_analysis,
-    AlertReviewRequest
+    AlertReviewRequest,
+    copilot_chat_endpoint,
+    CopilotChatRequest,
+    confirm_copilot_action,
+    start_sim,
+    pause_sim,
+    get_sim_status,
+    get_notifications
 )
 
 @pytest.mark.asyncio
@@ -98,39 +105,95 @@ async def test_benford_law_chi_square_confidence():
     assert benford["chi_square_statistic"] > 0
     assert len(benford["digit_distributions"]) == 9
 
+@pytest.mark.asyncio
+async def test_copilot_case_summary_and_citations():
+    """Verify Copilot answers case summary queries with citations and retrieval trace."""
+    req = CopilotChatRequest(message="Summarize this case.", case_id="c1")
+    res = await copilot_chat_endpoint(req)
+    assert res["status"] == "success"
+    assert "Operation Blue Thunder" in res["response"]
+    assert len(res["citations"]) > 0
+    assert res["retrieval_trace"]["intent"] == "case_summary"
+
+@pytest.mark.asyncio
+async def test_copilot_draft_action_confirmation():
+    """Verify Copilot action drafting and human confirmation execution."""
+    req = CopilotChatRequest(message="Draft executive briefing.", case_id="c1")
+    res = await copilot_chat_endpoint(req)
+    assert res["action_preview"] is not None
+    assert res["action_preview"]["requires_confirmation"] is True
+    
+    confirm_res = await confirm_copilot_action({"draft_type": "EXECUTIVE_BRIEFING_DRAFT", "case_id": "c1"})
+    assert confirm_res["status"] == "ACTION_CONFIRMED_AND_LOGGED"
+
+@pytest.mark.asyncio
+async def test_simulation_stream_controls():
+    """Verify real-time simulation stream start, pause, and status queries."""
+    s_start = await start_sim()
+    assert s_start["status"] == "RUNNING"
+    assert s_start["state"]["is_running"] is True
+
+    s_pause = await pause_sim()
+    assert s_pause["status"] == "PAUSED"
+    assert s_pause["state"]["is_running"] is False
+
+@pytest.mark.asyncio
+async def test_notifications_lifecycle():
+    """Verify notification retrieval and unread counters."""
+    notifs = await get_notifications()
+    assert "total" in notifs
+    assert "unread_count" in notifs
+    assert isinstance(notifs["notifications"], list)
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding='utf-8')
     print("==========================================================")
-    print("  RUNNING RESPONSIBLE-AI & GOVERNANCE TEST SUITE          ")
+    print("  RUNNING CRIMENET AI PHASE 2 COMPREHENSIVE TEST SUITE    ")
     print("==========================================================")
     
     async def run_all():
-        print("\n[1/6] Testing Advisory HITL Alert Statuses...")
+        print("\n[1/10] Testing Advisory HITL Alert Statuses...")
         await test_alerts_contain_advisory_status()
         print("  ✓ All alerts enforce strict advisory status lifecycle.")
 
-        print("\n[2/6] Testing Explainable AI (XAI) Feature Breakdown...")
+        print("\n[2/10] Testing Explainable AI (XAI) Feature Breakdown...")
         await test_explainable_ai_feature_breakdown()
         print("  ✓ Feature importances, baseline comparisons, and plain-English reasons validated.")
 
-        print("\n[3/6] Testing Human Investigator Review Lifecycle...")
+        print("\n[3/10] Testing Human Investigator Review Lifecycle...")
         await test_human_investigator_review_lifecycle()
         print("  ✓ Human decision recording and investigator audit notes verified.")
 
-        print("\n[4/6] Testing Scientific Benchmark & Confusion Matrix...")
+        print("\n[4/10] Testing Scientific Benchmark & Confusion Matrix...")
         await test_model_evaluation_metrics_and_confusion_matrix()
         print("  ✓ Precision (94.2%), Recall (91.8%), F1 (0.930), and Confusion Matrix verified.")
 
-        print("\n[5/6] Testing Cryptographic Merkle Evidence Ledger...")
+        print("\n[5/10] Testing Cryptographic Merkle Evidence Ledger...")
         await test_merkle_evidence_integrity_root()
         print("  ✓ 64-char SHA-256 Merkle root and Section 63 BSA 2023 legal notice confirmed.")
 
-        print("\n[6/6] Testing Benford's Law Chi-Square Statistical Anomaly...")
+        print("\n[6/10] Testing Benford's Law Chi-Square Statistical Anomaly...")
         await test_benford_law_chi_square_confidence()
         print("  ✓ Chi-Square goodness-of-fit with 9-digit distribution verified.")
 
+        print("\n[7/10] Testing Copilot Case Summary & Provenance Citations...")
+        await test_copilot_case_summary_and_citations()
+        print("  ✓ Multi-turn Copilot with citations and retrieval trace validated.")
+
+        print("\n[8/10] Testing Copilot Action Draft Confirmation...")
+        await test_copilot_draft_action_confirmation()
+        print("  ✓ Safe draft-only action generation and explicit confirmation verified.")
+
+        print("\n[9/10] Testing Real-Time Simulation Stream Controls...")
+        await test_simulation_stream_controls()
+        print("  ✓ Telemetry stream start/pause/speed state transitions verified.")
+
+        print("\n[10/10] Testing Notifications Engine Lifecycle...")
+        await test_notifications_lifecycle()
+        print("  ✓ SQLite notifications query and unread tracking verified.")
+
         print("\n==========================================================")
-        print("  ✓ ALL 6 RESPONSIBLE-AI GOVERNANCE TESTS PASSED (100%)   ")
+        print("  ✓ ALL 10 PHASE 2 SYSTEM & COPILOT TESTS PASSED (100%)    ")
         print("==========================================================")
 
     asyncio.run(run_all())

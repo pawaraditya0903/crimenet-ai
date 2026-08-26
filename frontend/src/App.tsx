@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import { io } from 'socket.io-client'
 import GraphExplorer from './pages/GraphExplorer'
 import GeospatialRadar from './pages/GeospatialRadar'
 import TelecomInterceptor from './pages/TelecomInterceptor'
@@ -10,6 +11,10 @@ import CaseManagement from './pages/CaseManagement'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import ModelEvaluation from './pages/ModelEvaluation'
+import CommandBar from './components/CommandBar'
+import CopilotDrawer from './components/CopilotDrawer'
+import NotificationToast from './components/NotificationToast'
+import type { ToastEvent } from './components/NotificationToast'
 
 // ── TACTICAL CYBER AUDIO SYNTHESIZER (WEB AUDIO API) ──
 const playCyberSound = (type: 'beep' | 'grant' | 'deny' | 'click' | 'scan') => {
@@ -120,25 +125,48 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'alerts' | 'cases' | 'reports' | 'settings'>('graph')
-  const [spotlightOpen, setSpotlightOpen] = useState(false)
-  const [spotlightQuery, setSpotlightQuery] = useState('')
-  const [liveToast, setLiveToast] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'evaluation' | 'alerts' | 'cases' | 'reports' | 'settings'>('graph')
+  const [selectedCase, setSelectedCase] = useState<string>('c1')
+  const [copilotOpen, setCopilotOpen] = useState<boolean>(false)
+  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'offline'>('connected')
+  const [activeToast, setActiveToast] = useState<ToastEvent | null>(null)
 
-  // KEYBOARD SHORTCUT: Ctrl+K / Cmd+K Spotlight Command Palette
+  // ── REAL-TIME INVESTIGATION EVENT ENGINE (SOCKET.IO CLIENT) ──
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        setSpotlightOpen((prev) => !prev)
-      }
-      if (e.key === 'Escape') {
-        setSpotlightOpen(false)
-      }
+    const socket = io('/', {
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      timeout: 10000
+    })
+
+    socket.on('connect', () => {
+      setConnectionState('connected')
+      socket.emit('join_case_room', { case_id: selectedCase })
+    })
+
+    socket.on('disconnect', () => {
+      setConnectionState('offline')
+    })
+
+    socket.on('reconnecting', () => {
+      setConnectionState('reconnecting')
+    })
+
+    socket.on('investigation_event', (event: any) => {
+      if (soundEnabled) playCyberSound('beep')
+      setActiveToast({
+        id: event.event_id || `toast-${Date.now()}`,
+        title: event.payload?.title || `Event: ${event.event_type?.replace(/_/g, ' ')}`,
+        details: event.payload?.details || event.payload?.message || 'New live telemetry record.',
+        severity: event.severity || 'info',
+        timestamp: event.timestamp_utc || new Date().toLocaleTimeString()
+      })
+    })
+
+    return () => {
+      socket.disconnect()
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [selectedCase, soundEnabled])
 
   // AUTO-LOG VISITOR IMMEDIATELY ON LINK OPEN
   useEffect(() => {
@@ -755,14 +783,21 @@ export default function App() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
+        {/* TOP COMMAND BAR & SPOTLIGHT CONTROL CENTER */}
+        <CommandBar
+          selectedCase={selectedCase}
+          onSelectCase={setSelectedCase}
+          connectionState={connectionState}
+          onToggleCopilot={() => setCopilotOpen(prev => !prev)}
+          copilotOpen={copilotOpen}
+        />
+
         {/* TOP TACTICAL TELEMETRY & RESPONSIBLE-AI GOVERNANCE BAR */}
-        <div style={{ height: 48, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+        <div style={{ height: 44, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', color: '#fef08a', fontWeight: 800, fontSize: 10 }}>
               <span>⚠️</span> SYNTHETIC DEMO DATASET ONLY — DECISION SUPPORT
             </div>
-            <span style={{ color: '#64748b' }}>|</span>
-            <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>🕒 {currentTime}</span>
             <span style={{ color: '#64748b' }}>|</span>
             <span style={{ color: '#38bdf8', padding: '2px 8px', borderRadius: 4, background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', fontWeight: 800, fontSize: 10 }}>
               🛡️ ROLE: LEAD INVESTIGATOR (CLEARANCE LEVEL 5)
@@ -773,21 +808,21 @@ export default function App() {
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               title="Toggle Audio Feedback"
-              style={{ background: '#1e293b', border: '1px solid #334155', color: soundEnabled ? '#38bdf8' : '#64748b', padding: '5px 10px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+              style={{ background: '#1e293b', border: '1px solid #334155', color: soundEnabled ? '#38bdf8' : '#64748b', padding: '4px 8px', borderRadius: 20, cursor: 'pointer', fontSize: 10.5, fontWeight: 700 }}
             >
               {soundEnabled ? '🔊 Audio ON' : '🔇 Audio Muted'}
             </button>
 
             <button
               onClick={() => { setFaceAuthKey(''); setFaceAuthPassed(false); setCalibrateModalOpen(true); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399', cursor: 'pointer', fontSize: 10.5, fontWeight: 700 }}
             >
               <span>📸</span> Register Face ID
             </button>
 
             <button
               onClick={() => { setChangePassModalOpen(true); setMasterAuthInput(''); setNewPassInput(''); setConfirmPassInput(''); setPassError(''); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38bdf8', color: '#38bdf8', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38bdf8', color: '#38bdf8', cursor: 'pointer', fontSize: 10.5, fontWeight: 700 }}
             >
               <span>🔑</span> Change Password
             </button>
@@ -806,6 +841,19 @@ export default function App() {
           {activeTab === 'reports' && <Reports />}
           {activeTab === 'settings' && <Settings />}
         </div>
+
+        {/* 🤖 VOICE INVESTIGATION COPILOT DRAWER */}
+        <CopilotDrawer
+          isOpen={copilotOpen}
+          onClose={() => setCopilotOpen(false)}
+          activeCaseId={selectedCase}
+        />
+
+        {/* 🔔 LIVE EVENT FLOATING TOAST NOTIFICATION */}
+        <NotificationToast
+          toast={activeToast}
+          onDismiss={() => setActiveToast(null)}
+        />
       </div>
 
       {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL (Password: Aditya@09) */}
