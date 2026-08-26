@@ -252,18 +252,17 @@ export default function App() {
     axios.get('/api/security/master-profile')
       .then((res) => {
         if (res && res.data && typeof res.data === 'object') {
-          if (res.data.photo) setMasterFacePhoto(res.data.photo)
+          if (res.data.photo) {
+            setMasterFacePhoto(res.data.photo)
+            try { localStorage.setItem('aditya_master_face_photo', res.data.photo) } catch {}
+          }
           if (res.data.face_descriptor && Array.isArray(res.data.face_descriptor)) {
-            setMasterDescriptor(res.data.face_descriptor)
+            setMasterFaceDescriptor(res.data.face_descriptor)
+            try { localStorage.setItem('aditya_master_face_descriptor', JSON.stringify(res.data.face_descriptor)) } catch {}
           }
         }
       })
-      .catch(() => {}) => {
-      if (res && res.data && typeof res.data === 'object' && res.data.photo) {
-        setMasterFacePhoto(res.data.photo)
-        localStorage.setItem('aditya_master_face_photo', res.data.photo)
-      }
-    }).catch(() => {})
+      .catch(() => {})
   }, [])
 
   // LOCKDOWN TIMER
