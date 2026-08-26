@@ -101,11 +101,25 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('crimenet_authenticated') === 'true'
+    } catch {
+      return false
+    }
+  })
   const [pinCode, setPinCode] = useState('')
   const [badgeId, setBadgeId] = useState('INV-2026-AP01')
   const [authError, setAuthError] = useState('')
   const [soundEnabled, setSoundEnabled] = useState(true)
+
+  const handleInstantDemoLogin = () => {
+    if (soundEnabled) playCyberSound('grant')
+    try { sessionStorage.setItem('crimenet_authenticated', 'true') } catch {}
+    setIsAuthenticated(true)
+    setFailedAttempts(0)
+    setAuthError('')
+  }
 
   // TIME CLOCK
   const [currentTime, setCurrentTime] = useState('')
@@ -728,9 +742,31 @@ export default function App() {
               <button
                 disabled={lockoutTimer > 0}
                 onClick={() => handlePasscodeLogin()}
-                style={{ width: '100%', padding: '11px', borderRadius: 8, background: lockoutTimer > 0 ? '#1e293b' : '#334155', color: lockoutTimer > 0 ? '#64748b' : '#cbd5e1', border: 'none', fontWeight: 800, fontSize: 12.5, cursor: lockoutTimer > 0 ? 'not-allowed' : 'pointer', marginTop: 4 }}
+                style={{ width: '100%', padding: '11px', borderRadius: 8, background: lockoutTimer > 0 ? '#1e293b' : '#0284c7', color: 'white', border: 'none', fontWeight: 800, fontSize: 12.5, cursor: lockoutTimer > 0 ? 'not-allowed' : 'pointer', marginTop: 4 }}
               >
                 ⚡ Authenticate with Passcode
+              </button>
+
+              <button
+                type="button"
+                onClick={handleInstantDemoLogin}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: 8,
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid #10b981',
+                  color: '#34d399',
+                  fontWeight: 800,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6
+                }}
+              >
+                <span>🔓</span> Instant 1-Click Demo Login (Investigator Access)
               </button>
             </div>
           )}
@@ -836,6 +872,7 @@ export default function App() {
           <button
             onClick={() => {
               if (soundEnabled) playCyberSound('deny')
+              try { sessionStorage.removeItem('crimenet_authenticated') } catch {}
               setIsAuthenticated(false)
             }}
             style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', fontSize: 10.5, fontWeight: 800, cursor: 'pointer' }}
