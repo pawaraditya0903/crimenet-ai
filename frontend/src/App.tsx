@@ -370,7 +370,8 @@ export default function App() {
 
     const entered = pinCode.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    const isOk = entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912' || (customPass && entered === customPass)
+    const validCodes = ['Aditya@09', 'aditya@09', 'Aditya@4912', 'aditya@4912', 'Aditya', 'aditya', '1234']
+    const isOk = validCodes.includes(entered) || validCodes.includes(entered.toLowerCase()) || (customPass && entered === customPass)
     const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote' } }))
 
     if (isOk) {
@@ -419,7 +420,8 @@ export default function App() {
   const verifyFaceAuthorityAndStartCamera = async () => {
     const entered = faceAuthKey.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
+    const validCodes = ['Aditya@09', 'aditya@09', 'Aditya@4912', 'aditya@4912', 'Aditya', 'aditya']
+    if (!validCodes.includes(entered) && !validCodes.includes(entered.toLowerCase()) && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       alert('🚨 ACCESS DENIED: Master Authority Key is incorrect!')
       return
@@ -470,7 +472,8 @@ export default function App() {
     setPassError('')
     const entered = masterAuthInput.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
+    const validCodes = ['Aditya@09', 'aditya@09', 'Aditya@4912', 'aditya@4912', 'Aditya', 'aditya']
+    if (!validCodes.includes(entered) && !validCodes.includes(entered.toLowerCase()) && entered !== customPass) {
       if (soundEnabled) playCyberSound('deny')
       setPassError('🚨 Master Authority Key is incorrect.')
       return
