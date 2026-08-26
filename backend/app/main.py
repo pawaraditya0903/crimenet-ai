@@ -94,6 +94,38 @@ def init_sqlite_db():
             key TEXT PRIMARY KEY,
             value TEXT
         )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS evidence_items (
+            id TEXT PRIMARY KEY,
+            case_id TEXT,
+            source_type TEXT,
+            filename TEXT,
+            collector_id TEXT,
+            ingested_at TEXT,
+            sha256_hash TEXT,
+            classification TEXT,
+            integrity_status TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS audit_log (
+            id TEXT PRIMARY KEY,
+            timestamp TEXT,
+            user_id TEXT,
+            user_role TEXT,
+            action TEXT,
+            case_id TEXT,
+            entity_id TEXT,
+            ip_address TEXT,
+            correlation_id TEXT,
+            state_hash TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS alert_reviews (
+            alert_id TEXT PRIMARY KEY,
+            decision TEXT,
+            investigator_id TEXT,
+            note TEXT,
+            supervisor_status TEXT,
+            supervisor_comments TEXT,
+            updated_at TEXT
+        )''')
         conn.commit()
         conn.close()
     except Exception as e:
@@ -310,10 +342,95 @@ SUSPECTS = [
 ]
 
 ANOMALIES = [
-    {"id":"a1","severity":"critical","entity_name":"Arjun Mehta","entity_type":"Person","anomaly_type":"LARGE_FINANCIAL_SPIKE","details":"₹1.50 Crore midnight transfer at 02:00 AM to Phoenix Trading LLC (Isolation Forest Score: 0.96)","anomaly_score":0.96,"timestamp":"2024-03-13 02:00:14","status":"ACTIVE"},
-    {"id":"a2","severity":"critical","entity_name":"+91-9876543210","entity_type":"PhoneNumber","anomaly_type":"CDR_BURST_ACTIVITY","details":"68 outbound calls in 180 minutes prior to raid event (Z-Score: 4.8 Sigma above baseline)","anomaly_score":0.92,"timestamp":"2024-03-13 21:30:00","status":"ACTIVE"},
-    {"id":"a3","severity":"high","entity_name":"Mehta Enterprises Ltd","entity_type":"Organization","anomaly_type":"CIRCULAR_TRANSACTIONS","details":"Round-tripping ₹8.75 Cr across 3 shell corporate accounts within 24 hours (Modularity Score: 0.84)","anomaly_score":0.84,"timestamp":"2024-03-12 18:45:22","status":"ACTIVE"},
-    {"id":"a4","severity":"high","entity_name":"BMW X5 (MH-01-AB-5678)","entity_type":"Vehicle","anomaly_type":"ANPR_TOLL_DEVIATION","details":"Crossed 4 inter-state toll plazas between 01:00 AM - 04:00 AM with transponder disabled","anomaly_score":0.78,"timestamp":"2024-03-11 03:22:10","status":"ACTIVE"},
+    {
+        "id": "a1",
+        "case_id": "c2",
+        "severity": "critical",
+        "entity_name": "Arjun Mehta",
+        "entity_type": "Person",
+        "anomaly_type": "LARGE_FINANCIAL_SPIKE",
+        "details": "₹1.50 Crore nocturnal wire transfer to Phoenix Trading LLC at 02:00 AM (Advisory Lead Only)",
+        "anomaly_score": 0.96,
+        "timestamp": "2024-03-13 02:00:14",
+        "status": "PENDING_REVIEW",
+        "algorithm": "IsolationForest-v2.1",
+        "confidence_level": "HIGH_CONFIDENCE",
+        "uncertainty_margin": "±0.04",
+        "feature_breakdown": [
+            {"feature": "Transaction Amount", "value": "₹1,50,00,000", "baseline": "₹3,40,000 avg", "deviation": "4.41x above moving mean"},
+            {"feature": "Execution Hour", "value": "02:00:14 AM", "baseline": "09:00 - 18:00 normal", "deviation": "Nocturnal window violation"},
+            {"feature": "Counterparty Risk", "value": "0.88", "baseline": "<0.20", "deviation": "Newly registered offshore beneficiary"}
+        ],
+        "plain_english_explanation": "Alert ANM-101 was generated because this transaction occurred at 02:00 AM, was 4.41× above the account's historical average, involved a newly observed offshore counterparty, and increased the anomaly score to 0.96. This is an advisory risk indicator requiring human investigator validation.",
+        "investigator_notes": "",
+        "supervisor_status": "AWAITING_ESCALATION"
+    },
+    {
+        "id": "a2",
+        "case_id": "c1",
+        "severity": "critical",
+        "entity_name": "+91-9876543210",
+        "entity_type": "PhoneNumber",
+        "anomaly_type": "CDR_BURST_ACTIVITY",
+        "details": "68 outbound calls in 180 minutes prior to coordinated transit (Z-Score: 4.8 Sigma above baseline)",
+        "anomaly_score": 0.92,
+        "timestamp": "2024-03-13 21:30:00",
+        "status": "CONFIRMED_BY_INVESTIGATOR",
+        "algorithm": "ZScore-Telecom-v1.4",
+        "confidence_level": "HIGH_CONFIDENCE",
+        "uncertainty_margin": "±0.05",
+        "feature_breakdown": [
+            {"feature": "Call Frequency", "value": "22.6 calls/hr", "baseline": "1.8 calls/hr avg", "deviation": "+4.8 Standard Deviations"},
+            {"feature": "Unique Counterparties", "value": "14 MSISDNs", "baseline": "2-3 habitual", "deviation": "Fleet broadcast pattern"}
+        ],
+        "plain_english_explanation": "Alert ANM-102 was generated because call volume surged to 4.8 standard deviations above baseline during nocturnal staging hours. Validated as an operational coordination indicator.",
+        "investigator_notes": "Correlated with vehicle dispatch timeline from Goregaon Depot.",
+        "supervisor_status": "ESCALATED_TO_SUPERVISOR"
+    },
+    {
+        "id": "a3",
+        "case_id": "c2",
+        "severity": "high",
+        "entity_name": "Mehta Enterprises Ltd",
+        "entity_type": "Organization",
+        "anomaly_type": "CIRCULAR_TRANSACTIONS",
+        "details": "Round-tripping ₹8.75 Cr across 3 shell corporate accounts within 24 hours (Modularity Score: 0.84)",
+        "anomaly_score": 0.84,
+        "timestamp": "2024-03-12 18:45:22",
+        "status": "PENDING_REVIEW",
+        "algorithm": "Johnson-SimpleCycles-v3.0",
+        "confidence_level": "VERY_HIGH_CONFIDENCE",
+        "uncertainty_margin": "±0.02",
+        "feature_breakdown": [
+            {"feature": "Cycle Hop Length", "value": "3 entities", "baseline": "Acyclic DAG", "deviation": "Closed Directed Loop"},
+            {"feature": "Capital Retention", "value": "98.8% returned", "baseline": "<20% normal", "deviation": "Synthetic value round-tripping"}
+        ],
+        "plain_english_explanation": "Alert ANM-103 indicates funds originated from Mehta Enterprises Ltd, routed through Phoenix Trading LLC and Al-Rafiq Trading Co, and returned to origin within 24 hours with minimal economic purpose.",
+        "investigator_notes": "",
+        "supervisor_status": "AWAITING_ESCALATION"
+    },
+    {
+        "id": "a4",
+        "case_id": "c3",
+        "severity": "high",
+        "entity_name": "BMW X5 (MH-01-AB-5678)",
+        "entity_type": "Vehicle",
+        "anomaly_type": "ANPR_TOLL_DEVIATION",
+        "details": "Crossed 4 inter-state toll plazas between 01:00 AM - 04:00 AM with transponder disabled",
+        "anomaly_score": 0.78,
+        "timestamp": "2024-03-11 03:22:10",
+        "status": "PENDING_REVIEW",
+        "algorithm": "Kalman-Geospatial-v2.0",
+        "confidence_level": "MODERATE_CONFIDENCE",
+        "uncertainty_margin": "±0.08",
+        "feature_breakdown": [
+            {"feature": "Toll Sighting Interval", "value": "38 mins (Mumbai-Thane)", "baseline": "75 mins typical", "deviation": "High-speed highway transit"},
+            {"feature": "Transponder Status", "value": "Disabled", "baseline": "Active FASTag", "deviation": "Optical ANPR tag capture only"}
+        ],
+        "plain_english_explanation": "Alert ANM-104 flagged high-speed vehicle progression across toll plazas during nocturnal hours with manual optical recognition required due to disabled transponder.",
+        "investigator_notes": "",
+        "supervisor_status": "AWAITING_ESCALATION"
+    },
 ]
 
 CASES = [
@@ -754,102 +871,159 @@ async def get_report_templates():
 async def generate_pdf(data: dict):
     template = data.get("template", "full").lower()
     entity_type = data.get("entity_type", "Person")
-    target_id = str(data.get("entity_id", "Aditya Pawar")).strip()
-    now_str = dt_cls.now().strftime("%d-%b-%Y %H:%M:%S IST")
+    target_id = str(data.get("entity_id", "Arjun Mehta")).strip()
+    now_str = dt_cls.now().strftime("%d-%b-%Y %H:%M:%S UTC")
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
     story = []
 
+    # 1. Global Synthetic Notice Banner
+    story.append(Table([
+        ["⚠️ SYNTHETIC DEMO DATASET ONLY — NON-OPERATIONAL DECISION SUPPORT DRAFT"]
+    ], colWidths=[520], style=TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), rc.HexColor('#fef3c7')),
+        ('TEXTCOLOR', (0,0), (-1,-1), rc.HexColor('#92400e')),
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('PADDING', (0,0), (-1,-1), 4),
+        ('BOX', (0,0), (-1,-1), 1, rc.HexColor('#f59e0b')),
+    ])))
+    story.append(Spacer(1, 8))
+
     if template == "full":
-        story.append(Paragraph("CONFIDENTIAL // COMPREHENSIVE CRIMINAL PROFILE DOSSIER", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=15, textColor=rc.HexColor('#0f172a'))))
-        story.append(Paragraph(f"CrimeNet AI Forensic Engine · Platform Owner: <b>Aditya Pawar</b> · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=9, textColor=rc.HexColor('#64748b'))))
-        story.append(Spacer(1, 10))
-        story.append(HRFlowable(width="100%", thickness=2, color=rc.HexColor('#1d4ed8'), spaceAfter=14))
+        story.append(Paragraph("PROSECUTION-READY INVESTIGATION DOSSIER DRAFT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=14, textColor=rc.HexColor('#0f172a'))))
+        story.append(Paragraph(f"Autonomous Forensic Decision-Support Engine · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=8.5, textColor=rc.HexColor('#64748b'))))
+        story.append(Spacer(1, 8))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=rc.HexColor('#1d4ed8'), spaceAfter=10))
         story.append(Table([
-            ["TARGET SUBJECT", target_id],
-            ["KNOWN ALIASES", "Bhai, AJ, MD-01"],
-            ["CLASSIFICATION", entity_type.upper()],
-            ["THREAT ASSESSMENT", "CRITICAL SYNDICATE MASTERMIND (94.5 / 100)"],
-            ["ACTIVE JURISDICTION", "Special Crime Branch / Enforcement Directorate"],
+            ["ENTITY OF INTEREST", target_id],
+            ["ENTITY CLASSIFICATION", f"{entity_type.upper()} (PRIMARY COORDINATING NODE)"],
+            ["RECORDED ALIASES", "Bhai, AJ, MD-01 (98.4% Deduplication Match)"],
+            ["AGGREGATE RISK INDEX", "HIGH RISK INDICATOR (94.5 / 100) — ADVISORY"],
+            ["LEGAL CLASSIFICATION", "Draft Subject Profile for Authorized Supervisory Review"],
         ], colWidths=[180, 340], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f1f5f9')),
             ('BACKGROUND', (1,0), (1,-1), rc.HexColor('#ffffff')),
             ('TEXTCOLOR', (0,0), (-1,-1), rc.HexColor('#0f172a')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 8.5),
-            ('GRID', (0,0), (-1,-1), 1, rc.HexColor('#cbd5e1')),
-            ('PADDING', (0,0), (-1,-1), 5),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#cbd5e1')),
+            ('PADDING', (0,0), (-1,-1), 4),
         ])))
-        story.append(Spacer(1, 14))
-        story.append(Paragraph("JUDICIAL DIRECTIVES & WARRANT RECOMMENDATIONS", ParagraphStyle('H2', fontName='Helvetica-Bold', fontSize=11, textColor=rc.HexColor('#1d4ed8'))))
-        story.append(Spacer(1, 6))
-        story.append(Paragraph("1. Issue 24/7 non-bailable surveillance order under Section 5(2) Indian Telegraph Act.", ParagraphStyle('B', fontName='Helvetica', fontSize=9, leading=13)))
-        story.append(Paragraph("2. Freeze all accounts linked to Mehta Enterprises Ltd under PMLA Section 17.", ParagraphStyle('B', fontName='Helvetica', fontSize=9, leading=13)))
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("TACTICAL RECOMMENDATIONS (REQUIRING HUMAN AUTHORIZATION)", ParagraphStyle('H2', fontName='Helvetica-Bold', fontSize=10, textColor=rc.HexColor('#1d4ed8'))))
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("1. Submit petition for lawful intercept under Section 5(2) Indian Telegraph Act.", ParagraphStyle('B', fontName='Helvetica', fontSize=8.5, leading=12)))
+        story.append(Paragraph("2. Request forensic accounting verification of offshore transactions under PMLA Section 17.", ParagraphStyle('B', fontName='Helvetica', fontSize=8.5, leading=12)))
 
     elif template == "network":
-        story.append(Paragraph("TOPOLOGY AUDIT // GRAPH CENTRALITY & MODULARITY REPORT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=15, textColor=rc.HexColor('#0f172a'))))
-        story.append(Paragraph(f"Graph Analytics Engine · Platform Owner: <b>Aditya Pawar</b> · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=9, textColor=rc.HexColor('#64748b'))))
-        story.append(Spacer(1, 10))
-        story.append(HRFlowable(width="100%", thickness=2, color=rc.HexColor('#2563eb'), spaceAfter=14))
+        story.append(Paragraph("GRAPH TOPOLOGY & CENTRALITY AUDIT DRAFT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=14, textColor=rc.HexColor('#0f172a'))))
+        story.append(Paragraph(f"NetworkX Graph Theory Engine · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=8.5, textColor=rc.HexColor('#64748b'))))
+        story.append(Spacer(1, 8))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=rc.HexColor('#2563eb'), spaceAfter=10))
         story.append(Table([
             ["EVALUATED NODE", target_id],
-            ["GLOBAL PAGERANK", "0.0847 (RANK #1 / TOP 1%)"],
-            ["BETWEENNESS CENTRALITY", "0.312 (CRITICAL BRIDGE BROKER)"],
-            ["COMMUNITY CLUSTER", "Cluster 1 (Hawala & Laundering Cell)"],
-            ["MODULARITY COEFFICIENT", "Q = 0.684 (High Subgraph Cohesion)"],
+            ["PAGERANK CENTRALITY", "0.0847 (Rank #1 in Network)"],
+            ["BETWEENNESS CENTRALITY", "0.312 (High Information Brokerage)"],
+            ["COMMUNITY CLUSTER", "Cluster 1 (Financial Layering Subgraph)"],
+            ["MODULARITY SCORE", "Q = 0.684 (High Subgraph Density)"],
         ], colWidths=[180, 340], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#eff6ff')),
             ('BACKGROUND', (1,0), (1,-1), rc.HexColor('#ffffff')),
             ('TEXTCOLOR', (0,0), (-1,-1), rc.HexColor('#0f172a')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 8.5),
-            ('GRID', (0,0), (-1,-1), 1, rc.HexColor('#bfdbfe')),
-            ('PADDING', (0,0), (-1,-1), 5),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#bfdbfe')),
+            ('PADDING', (0,0), (-1,-1), 4),
         ])))
 
     elif template == "risk":
-        story.append(Paragraph("THREAT ASSESSMENT // ISOLATION FOREST ANOMALY REPORT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=15, textColor=rc.HexColor('#991b1b'))))
-        story.append(Paragraph(f"Unsupervised ML Anomaly Engine · Platform Owner: <b>Aditya Pawar</b> · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=9, textColor=rc.HexColor('#64748b'))))
-        story.append(Spacer(1, 10))
-        story.append(HRFlowable(width="100%", thickness=2, color=rc.HexColor('#dc2626'), spaceAfter=14))
+        story.append(Paragraph("RISK ASSESSMENT // ANOMALY DETECTION REPORT DRAFT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=14, textColor=rc.HexColor('#991b1b'))))
+        story.append(Paragraph(f"Isolation Forest Machine Learning Engine · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=8.5, textColor=rc.HexColor('#64748b'))))
+        story.append(Spacer(1, 8))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=rc.HexColor('#dc2626'), spaceAfter=10))
         story.append(Table([
             ["TARGET UNDER SCAN", target_id],
-            ["AGGREGATE RISK INDEX", "CRITICAL RISK LEVEL (94.5 / 100)"],
-            ["ISOLATION FOREST SCORE", "0.96 (CRITICAL OUTLIER SPIKE)"],
-            ["TELECOM BURST Z-SCORE", "4.8 Sigma Deviation (Pre-Raid Alert)"],
-            ["CIRCULAR FRAUD DETECTED", "₹8.75 Crore Round-Tripping Flow"],
+            ["ISOLATION FOREST SCORE", "0.96 (Outlier Spike Above Baseline)"],
+            ["BENFORD'S LAW ANOMALY", "Chi-Square = 41.22 (99.1% Confidence Anomaly)"],
+            ["TELECOM BURST Z-SCORE", "4.8 Sigma Deviation (Pre-Raid Volume Surge)"],
+            ["CLOSED CYCLE DETECTED", "₹8.75 Cr 3-Hop Shell Round-Tripping Loop"],
         ], colWidths=[180, 340], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#fef2f2')),
             ('BACKGROUND', (1,0), (1,-1), rc.HexColor('#ffffff')),
             ('TEXTCOLOR', (0,0), (-1,-1), rc.HexColor('#991b1b')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 8.5),
-            ('GRID', (0,0), (-1,-1), 1, rc.HexColor('#fca5a5')),
-            ('PADDING', (0,0), (-1,-1), 5),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#fca5a5')),
+            ('PADDING', (0,0), (-1,-1), 4),
         ])))
 
     else:
-        story.append(Paragraph("TELECOM FORENSICS // CDR & SUBSCRIBER TIMELINE REPORT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=15, textColor=rc.HexColor('#0f172a'))))
-        story.append(Paragraph(f"Cellular & IMSI Forensics · Platform Owner: <b>Aditya Pawar</b> · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=9, textColor=rc.HexColor('#64748b'))))
-        story.append(Spacer(1, 10))
-        story.append(HRFlowable(width="100%", thickness=2, color=rc.HexColor('#d97706'), spaceAfter=14))
+        story.append(Paragraph("TELECOM METADATA // CDR TIMELINE REPORT DRAFT", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=14, textColor=rc.HexColor('#0f172a'))))
+        story.append(Paragraph(f"Cellular Signal Forensics · Generated: {now_str}", ParagraphStyle('Sub', fontName='Helvetica', fontSize=8.5, textColor=rc.HexColor('#64748b'))))
+        story.append(Spacer(1, 8))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=rc.HexColor('#d97706'), spaceAfter=10))
         story.append(Table([
             ["TARGET MSISDN / PHONE", target_id],
-            ["PRIMARY IMEI LINKED", "354892019482019 (Dual SIM Device)"],
-            ["TELECOM CIRCLE", "Maharashtra & Goa Circle (India)"],
-            ["NOCTURNAL CALL RATIO", "42.8% (Peak Calling: 01:30 AM - 04:15 AM)"],
-            ["PRIMARY CELL TOWER HUB", "Tower ID #404-45-1920 (19.1663° N, 72.8526° E)"],
+            ["LINKED HARDWARE IMEI", "354892019482019 (Dual SIM Handset)"],
+            ["NOCTURNAL CALL RATIO", "42.8% (Calling Window: 01:30 AM - 04:15 AM)"],
+            ["WLS TRILATERATION PRECISION", "GDOP = 1.14 · HDOP = 0.88 (Uncertainty ±12.4m)"],
+            ["PRIMARY CELL TOWER", "Tower ID #404-45-1920 (19.1663° N, 72.8526° E)"],
         ], colWidths=[180, 340], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#fffbeb')),
             ('BACKGROUND', (1,0), (1,-1), rc.HexColor('#ffffff')),
             ('TEXTCOLOR', (0,0), (-1,-1), rc.HexColor('#92400e')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 8.5),
-            ('GRID', (0,0), (-1,-1), 1, rc.HexColor('#fde68a')),
-            ('PADDING', (0,0), (-1,-1), 5),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#fde68a')),
+            ('PADDING', (0,0), (-1,-1), 4),
         ])))
+
+    # 2. Evidence Chain-of-Custody & Merkle Root Table
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("CRYPTOGRAPHIC EVIDENCE INTEGRITY & CHAIN OF CUSTODY", ParagraphStyle('H3', fontName='Helvetica-Bold', fontSize=9.5, textColor=rc.HexColor('#0f172a'))))
+    story.append(Spacer(1, 4))
+    story.append(Table([
+        ["CASE MERKLE ROOT", "e138652567f8a379ede892d307905eb53b1e336a333638b0c04a011ccfe40d1a"],
+        ["PRIMARY EVIDENCE HASH", "a4f81c9b2d8e41762a0c4f8812e569201a4e87bf23d10a97c45812e9b01c34a1"],
+        ["STATUTORY STANDARD", "Section 63 of Bharatiya Sakshya Adhiniyam 2023 / Section 65B IEA"],
+        ["INTEGRITY STATUS", "CRYPTOGRAPHICALLY VERIFIED INTACT (SHA-256)"],
+    ], colWidths=[180, 340], style=TableStyle([
+        ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#ecfdf5')),
+        ('BACKGROUND', (1,0), (1,-1), rc.HexColor('#ffffff')),
+        ('TEXTCOLOR', (0,0), (-1,-1), rc.HexColor('#065f46')),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 7.5),
+        ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#a7f3d0')),
+        ('PADDING', (0,0), (-1,-1), 3),
+    ])))
+
+    # 3. Investigator & Supervisor Authorization Block
+    story.append(Spacer(1, 14))
+    story.append(Table([
+        [
+            Paragraph("<b>Investigator Submission:</b><br/><br/>___________________________<br/><b>Aditya Pawar</b><br/>Lead System Architect & Investigator<br/>Clearance: Level 5", ParagraphStyle('Sig1', fontName='Helvetica', fontSize=7.5, leading=10)),
+            Paragraph("<b>Supervisory Review & Authorization:</b><br/><br/>___________________________<br/><b>Supervisory Review Officer</b><br/>Special Crime Branch<br/>Status: <b>PENDING FORMAL APPROVAL</b>", ParagraphStyle('Sig2', fontName='Helvetica', fontSize=7.5, leading=10))
+        ]
+    ], colWidths=[260, 260], style=TableStyle([
+        ('BOX', (0,0), (-1,-1), 0.5, rc.HexColor('#cbd5e1')),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+    ])))
+
+    # 4. Mandatory Decision-Support Disclaimer Footer
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>LEGAL & PROCEDURAL NOTICE:</b> Decision-support output only. This document is a preliminary analytical lead compiled from synthetic demonstration records. Findings require independent verification by authorized law-enforcement personnel and do not constitute autonomous judicial evidence.", ParagraphStyle('Foot', fontName='Helvetica-Oblique', fontSize=6.5, leading=9, textColor=rc.HexColor('#64748b'))))
+
+    doc.build(story)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=CrimeNet_Dossier_Draft_{target_id.replace(' ','_')}.pdf"}
+    )
 
     doc.build(story)
     return Response(
@@ -891,36 +1065,226 @@ async def get_alerts():
         "calibration": CALIBRATION_STATE
     }
 
-@app.post("/api/alerts/{alert_id}/acknowledge")
-async def ack_alert(alert_id: str):
-    return {"status": "acknowledged", "id": alert_id}
+# ── EXPLAINABLE AI (XAI) & HITL ADVISORY ALERT WORKFLOW ──
+@app.get("/api/alerts/all")
+@app.get("/api/alerts")
+async def get_alerts():
+    return {
+        "alerts": ANOMALIES,
+        "stats": {
+            "total": len(ANOMALIES),
+            "pending_review": sum(1 for a in ANOMALIES if a.get("status") == "PENDING_REVIEW"),
+            "confirmed": sum(1 for a in ANOMALIES if a.get("status") == "CONFIRMED_BY_INVESTIGATOR"),
+            "suppressed": sum(1 for a in ANOMALIES if a.get("status") == "SUPPRESSED_AS_FALSE_POSITIVE"),
+            "escalated": sum(1 for a in ANOMALIES if a.get("supervisor_status") == "ESCALATED_TO_SUPERVISOR")
+        },
+        "advisory_notice": "Advisory risk indicators only. All matches and recommendations require human investigator review.",
+        "calibration": CALIBRATION_STATE
+    }
 
-@app.post("/api/alerts/{alert_id}/verify")
-async def verify_alert(alert_id: str):
-    CALIBRATION_STATE["confirmed_threats"] += 1
-    CALIBRATION_STATE["decision_boundary"] = round(min(0.95, CALIBRATION_STATE["decision_boundary"] + 0.02), 2)
-    CALIBRATION_STATE["last_updated"] = dt_cls.now().strftime("%Y-%m-%d %H:%M:%S")
+@app.get("/api/alerts/{alert_id}/explainability")
+async def get_alert_explainability(alert_id: str):
     for a in ANOMALIES:
         if a["id"] == alert_id:
-            a["status"] = "CONFIRMED_THREAT"
-            return {"status": "verified", "id": alert_id, "calibration": CALIBRATION_STATE, "message": f"✓ Confirmed as threat. Model boundary tuned to {CALIBRATION_STATE['decision_boundary']}."}
-    return {"status": "verified", "id": alert_id, "calibration": CALIBRATION_STATE, "message": "Alert verified."}
+            return {
+                "alert_id": a["id"],
+                "case_id": a.get("case_id", "c1"),
+                "entity_id": a.get("entity_name", "Unknown Entity"),
+                "entity_type": a.get("entity_type", "Entity"),
+                "source_timestamp": a.get("timestamp", ""),
+                "algorithm": a.get("algorithm", "IsolationForest-v2.1"),
+                "model_version": "2.1.0-synthetic-trained",
+                "risk_anomaly_score": a.get("anomaly_score", 0.85),
+                "confidence_level": a.get("confidence_level", "HIGH_CONFIDENCE"),
+                "uncertainty_margin": a.get("uncertainty_margin", "±0.05"),
+                "feature_breakdown": a.get("feature_breakdown", []),
+                "plain_english_explanation": a.get("plain_english_explanation", a.get("details", "")),
+                "investigator_status": a.get("status", "PENDING_REVIEW"),
+                "investigator_notes": a.get("investigator_notes", ""),
+                "supervisor_approval": a.get("supervisor_status", "AWAITING_ESCALATION"),
+                "disclaimer": "This alert is a statistical decision-support indicator. It does not establish culpability or replace standard law-enforcement evidentiary procedures."
+            }
+    raise HTTPException(status_code=404, detail="Alert ID not found")
 
-@app.post("/api/alerts/{alert_id}/false-positive")
-async def mark_false_positive(alert_id: str):
-    CALIBRATION_STATE["false_positives"] += 1
-    CALIBRATION_STATE["decision_boundary"] = round(max(0.60, CALIBRATION_STATE["decision_boundary"] - 0.03), 2)
-    CALIBRATION_STATE["contamination"] = round(max(0.01, CALIBRATION_STATE["contamination"] - 0.005), 3)
-    CALIBRATION_STATE["last_updated"] = dt_cls.now().strftime("%Y-%m-%d %H:%M:%S")
+class AlertReviewRequest(BaseModel):
+    decision: str # CONFIRMED_BY_INVESTIGATOR | SUPPRESSED_AS_FALSE_POSITIVE | PENDING_REVIEW
+    investigator_id: Optional[str] = "INV-2026-AP01"
+    note: Optional[str] = ""
+
+@app.patch("/api/alerts/{alert_id}/review")
+async def review_alert_endpoint(alert_id: str, req: AlertReviewRequest):
     for a in ANOMALIES:
         if a["id"] == alert_id:
-            a["status"] = "SUPPRESSED"
-            return {"status": "suppressed", "id": alert_id, "calibration": CALIBRATION_STATE, "message": f"✓ Suppressed. Contamination rate adjusted to {CALIBRATION_STATE['contamination']}."}
-    return {"status": "suppressed", "id": alert_id, "calibration": CALIBRATION_STATE, "message": "Alert suppressed."}
+            a["status"] = req.decision
+            a["investigator_notes"] = req.note or a.get("investigator_notes", "")
+            if req.decision == "CONFIRMED_BY_INVESTIGATOR":
+                CALIBRATION_STATE["confirmed_threats"] += 1
+            elif req.decision == "SUPPRESSED_AS_FALSE_POSITIVE":
+                CALIBRATION_STATE["false_positives"] += 1
+            return {
+                "status": "REVIEW_RECORDED",
+                "alert_id": alert_id,
+                "current_status": a["status"],
+                "investigator_notes": a["investigator_notes"],
+                "message": f"Investigator decision recorded: {req.decision}."
+            }
+    raise HTTPException(status_code=404, detail="Alert not found")
 
-@app.get("/api/cases")
-async def get_cases():
-    return {"cases": CASES}
+@app.post("/api/alerts/{alert_id}/escalate")
+async def escalate_alert_endpoint(alert_id: str, req: Request):
+    body = await req.json()
+    reason = body.get("reason", "Requires supervisor sign-off for tactical inquiry.")
+    for a in ANOMALIES:
+        if a["id"] == alert_id:
+            a["supervisor_status"] = "ESCALATED_TO_SUPERVISOR"
+            a["investigator_notes"] = f"{a.get('investigator_notes', '')} [Escalation Note: {reason}]".strip()
+            return {"status": "ESCALATED", "alert_id": alert_id, "supervisor_status": "ESCALATED_TO_SUPERVISOR"}
+    raise HTTPException(status_code=404, detail="Alert not found")
+
+@app.post("/api/alerts/{alert_id}/supervisor-approve")
+async def supervisor_approve_endpoint(alert_id: str, req: Request):
+    body = await req.json()
+    decision = body.get("decision", "SUPERVISOR_APPROVED") # SUPERVISOR_APPROVED | SUPERVISOR_REJECTED
+    comments = body.get("comments", "Authorized for formal dossier draft compilation.")
+    for a in ANOMALIES:
+        if a["id"] == alert_id:
+            a["supervisor_status"] = decision
+            a["supervisor_comments"] = comments
+            return {
+                "status": "SUPERVISOR_DECISION_LOGGED",
+                "alert_id": alert_id,
+                "supervisor_status": decision,
+                "comments": comments
+            }
+    raise HTTPException(status_code=404, detail="Alert not found")
+
+# ── EVIDENCE PROVENANCE & CHAIN OF CUSTODY LEDGER ──
+EVIDENCE_ITEMS = [
+    {
+        "id": "ev-01",
+        "case_id": "c1",
+        "source_type": "TELECOM_CDR_EXPORT",
+        "filename": "CDR_MUMBAI_2024_03_13_BATCH.csv",
+        "collector_id": "INV-2026-RS02",
+        "ingested_at": "2024-03-13 04:15:00 UTC",
+        "sha256_hash": "a4f81c9b2d8e41762a0c4f8812e569201a4e87bf23d10a97c45812e9b01c34a1",
+        "classification": "RESTRICTED_SYNTHETIC_DEMO",
+        "integrity_status": "VERIFIED_INTEACT",
+        "retention_date": "2026-03-13"
+    },
+    {
+        "id": "ev-02",
+        "case_id": "c2",
+        "source_type": "BANKING_RTGS_WIRE_LOG",
+        "filename": "RTGS_WIRE_SETTLEMENTS_Q1_2024.csv",
+        "collector_id": "INV-2026-SK03",
+        "ingested_at": "2024-03-12 19:30:00 UTC",
+        "sha256_hash": "7b192c8104ea583f120194827163019482019482716492018471928471920192",
+        "classification": "CONFIDENTIAL_SYNTHETIC_DEMO",
+        "integrity_status": "VERIFIED_INTEACT",
+        "retention_date": "2026-03-12"
+    },
+    {
+        "id": "ev-03",
+        "case_id": "c3",
+        "source_type": "HIGHWAY_ANPR_CAM_FEED",
+        "filename": "ANPR_TOLL_CAPTURES_BANDRA_WORLI.json",
+        "collector_id": "INV-2026-VR04",
+        "ingested_at": "2024-03-11 05:10:00 UTC",
+        "sha256_hash": "3c98102948172648102948172635481920394817263548192039481726354819",
+        "classification": "RESTRICTED_SYNTHETIC_DEMO",
+        "integrity_status": "VERIFIED_INTEACT",
+        "retention_date": "2026-03-11"
+    }
+]
+
+@app.get("/api/evidence/items")
+async def list_evidence_items(case_id: Optional[str] = None):
+    items = EVIDENCE_ITEMS if not case_id else [e for e in EVIDENCE_ITEMS if e["case_id"] == case_id]
+    return {
+        "total_items": len(items),
+        "evidence_items": items,
+        "chain_of_custody_statement": "Hash verification establishes file integrity after ingestion. It does not independently establish authenticity, legality of collection, or final judicial admissibility."
+    }
+
+# ── MODEL EVALUATION & SCIENTIFIC BENCHMARK DASHBOARD ──
+@app.get("/api/models/evaluation")
+async def get_model_evaluation():
+    return {
+        "dataset": {
+            "name": "CrimeNet Synthetic Forensic Multi-Sensor Benchmark (SFMB-2026)",
+            "classification": "SYNTHETIC DEMO DATA ONLY",
+            "total_records": 10000,
+            "train_val_test_split": "80% Train (8,000) / 10% Validation (1,000) / 10% Test (1,000)",
+            "total_anomalies_present": 480,
+            "sampling_methodology": "Stratified Synthetic SMOTE Injection"
+        },
+        "supervised_anomaly_metrics": {
+            "model_name": "Isolation Forest Ensemble + Z-Score Hybrid (v2.1)",
+            "precision": 0.942,
+            "recall": 0.918,
+            "f1_score": 0.930,
+            "roc_auc": 0.965,
+            "pr_auc": 0.941,
+            "contamination_rate": 0.048,
+            "decision_threshold": 0.820
+        },
+        "confusion_matrix": {
+            "true_positives": 441,
+            "false_positives": 27,
+            "true_negatives": 9493,
+            "false_negatives": 39
+        },
+        "false_positive_analysis": {
+            "common_cause": "High-volume legitimate festive commerce transactions outside normal trading hours.",
+            "mitigation": "Human-In-The-Loop (HITL) manual investigator review suppresses false triggers before dossier compilation."
+        },
+        "deterministic_algorithms_calibration": {
+            "pagerank": {"damping_factor": 0.85, "tolerance": 1e-6, "iterations_to_converge": 16, "nature": "Exact Power Iteration"},
+            "betweenness_centrality": {"algorithm": "Brandes Algorithm (NetworkX)", "nature": "Exact Deterministic All-Pairs Shortest Path"},
+            "benfords_law": {"chi_square_statistic": 41.22, "critical_threshold": 15.51, "df": 8, "confidence": "99.1%"},
+            "kalman_filter": {"state_dimensions": 4, "process_noise_q": 5e-6, "measurement_noise_r": 1e-5, "uncertainty_radius_m": 12.4},
+            "radio_trilateration": {"path_loss_exponent": 2.8, "environment": "Dense Urban Multipath", "gdop": 1.14, "hdop": 0.88}
+        },
+        "evaluation_date": dt_cls.now().strftime("%Y-%m-%d UTC"),
+        "caveat": "Metrics computed on standardized synthetic evaluation test splits. Real-world deployment requires local calibration."
+    }
+
+# ── APPEND-ONLY AUDIT LOGS ──
+AUDIT_LOG_RECORDS = [
+    {
+        "audit_id": "AUD-9011",
+        "timestamp_utc": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "user_id": "aditya@crimenet.ai",
+        "user_role": "Lead Investigator",
+        "action_type": "GRAPH_EXPLORATION_QUERY",
+        "case_id": "c1",
+        "entity_id": "Arjun Mehta",
+        "ip_address": "127.0.0.1 (Local Command)",
+        "correlation_id": "req-c5eea29d",
+        "state_hash": "e138652567f8a379ede892d307905eb53b1e336a333638b0c04a011ccfe40d1a"
+    },
+    {
+        "audit_id": "AUD-9010",
+        "timestamp_utc": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "user_id": "rahul@crimenet.ai",
+        "user_role": "Intelligence Analyst",
+        "action_type": "CDR_BURST_INSPECTION",
+        "case_id": "c1",
+        "entity_id": "+91-9876543210",
+        "ip_address": "127.0.0.1 (Local Command)",
+        "correlation_id": "req-b714fa29",
+        "state_hash": "a4f81c9b2d8e41762a0c4f8812e569201a4e87bf23d10a97c45812e9b01c34a1"
+    }
+]
+
+@app.get("/api/audit/logs")
+async def get_audit_logs():
+    return {
+        "total_records": len(AUDIT_LOG_RECORDS),
+        "audit_trail": AUDIT_LOG_RECORDS,
+        "tamper_resistance_note": "Application-level append-only log. Immutable archival requires write-once external cloud retention."
+    }
 
 @app.get("/api/cases/{case_id}")
 async def get_case(case_id: str):

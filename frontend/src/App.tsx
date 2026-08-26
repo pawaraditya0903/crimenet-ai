@@ -9,6 +9,7 @@ import AlertCentre from './pages/AlertCentre'
 import CaseManagement from './pages/CaseManagement'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import ModelEvaluation from './pages/ModelEvaluation'
 
 // ── TACTICAL CYBER AUDIO SYNTHESIZER (WEB AUDIO API) ──
 const playCyberSound = (type: 'beep' | 'grant' | 'deny' | 'click' | 'scan') => {
@@ -519,6 +520,7 @@ export default function App() {
     { id: 'telecom', label: 'Telecom Interceptor', icon: '📡' },
     { id: 'crypto', label: 'Crypto & Hawala Tracer', icon: '💸' },
     { id: 'analytics', label: 'ML Analytics', icon: '📊' },
+    { id: 'evaluation', label: 'Model Benchmark (XAI)', icon: '📈' },
     { id: 'alerts', label: 'Alert Centre', icon: '🚨' },
     { id: 'cases', label: 'Case Management', icon: '📁' },
     { id: 'reports', label: 'Reports', icon: '📄' },
@@ -753,17 +755,18 @@ export default function App() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOP TACTICAL TELEMETRY BAR */}
+        {/* TOP TACTICAL TELEMETRY & RESPONSIBLE-AI GOVERNANCE BAR */}
         <div style={{ height: 48, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#34d399', fontWeight: 800, fontSize: 10 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }}></span>
-              DEFCON 3 · ACTIVE RADAR
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', color: '#fef08a', fontWeight: 800, fontSize: 10 }}>
+              <span>⚠️</span> SYNTHETIC DEMO DATASET ONLY — DECISION SUPPORT
             </div>
             <span style={{ color: '#64748b' }}>|</span>
             <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>🕒 {currentTime}</span>
             <span style={{ color: '#64748b' }}>|</span>
-            <span style={{ color: '#94a3b8' }}>NODES MONITORED: <b style={{ color: 'white' }}>1,420</b></span>
+            <span style={{ color: '#38bdf8', padding: '2px 8px', borderRadius: 4, background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', fontWeight: 800, fontSize: 10 }}>
+              🛡️ ROLE: LEAD INVESTIGATOR (CLEARANCE LEVEL 5)
+            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -797,6 +800,7 @@ export default function App() {
           {activeTab === 'telecom' && <TelecomInterceptor />}
           {activeTab === 'crypto' && <CryptoHawalaTracer />}
           {activeTab === 'analytics' && <Analytics />}
+          {activeTab === 'evaluation' && <ModelEvaluation />}
           {activeTab === 'alerts' && <AlertCentre />}
           {activeTab === 'cases' && <CaseManagement />}
           {activeTab === 'reports' && <Reports />}
