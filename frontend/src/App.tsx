@@ -249,7 +249,16 @@ export default function App() {
 
   // Sync profile from server on load
   useEffect(() => {
-    axios.get('/api/security/master-profile').then((res) => {
+    axios.get('/api/security/master-profile')
+      .then((res) => {
+        if (res && res.data && typeof res.data === 'object') {
+          if (res.data.photo) setMasterFacePhoto(res.data.photo)
+          if (res.data.face_descriptor && Array.isArray(res.data.face_descriptor)) {
+            setMasterDescriptor(res.data.face_descriptor)
+          }
+        }
+      })
+      .catch(() => {}) => {
       if (res && res.data && typeof res.data === 'object' && res.data.photo) {
         setMasterFacePhoto(res.data.photo)
         localStorage.setItem('aditya_master_face_photo', res.data.photo)
