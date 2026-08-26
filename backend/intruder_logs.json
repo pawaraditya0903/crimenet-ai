@@ -1,5 +1,45 @@
 [
   {
+    "id": "1787747740929",
+    "timestamp": "26-Aug-2026 18:05:40 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787747740681",
+    "timestamp": "26-Aug-2026 18:05:40 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787747729605",
+    "timestamp": "26-Aug-2026 18:05:29 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
+    "id": "1787747729293",
+    "timestamp": "26-Aug-2026 18:05:29 IST",
+    "ip": "122.170.192.133",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App",
+    "action": "\ud83c\udf10 LINK_OPENED_PAGE_VISIT",
+    "status": "PAGE_VIEW",
+    "badge": "Remote Visitor Arrived",
+    "photo": ""
+  },
+  {
     "id": "1787747664285",
     "timestamp": "26-Aug-2026 18:04:24 IST",
     "ip": "122.170.192.133",

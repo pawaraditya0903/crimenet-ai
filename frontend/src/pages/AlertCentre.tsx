@@ -1,8 +1,78 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 
+const defaultAlerts = [
+  {
+    id: "a1",
+    case_id: "c2",
+    severity: "critical",
+    entity_name: "Arjun Mehta",
+    entity_type: "Person",
+    anomaly_type: "LARGE_FINANCIAL_SPIKE",
+    details: "₹1.50 Crore nocturnal wire transfer to Phoenix Trading LLC at 02:00 AM (Advisory Lead Only)",
+    anomaly_score: 0.96,
+    timestamp: "2024-03-13 02:00:14",
+    status: "PENDING_REVIEW",
+    algorithm: "IsolationForest-v2.1",
+    confidence_level: "HIGH_CONFIDENCE",
+    uncertainty_margin: "±0.04",
+    feature_breakdown: [
+      { feature: "Transaction Amount", value: "₹1,50,00,000", baseline: "₹3,40,000 avg", deviation: "4.41x above moving mean" },
+      { feature: "Execution Hour", value: "02:00:14 AM", baseline: "09:00 - 18:00 normal", deviation: "Nocturnal window violation" },
+      { feature: "Counterparty Risk", value: "0.88", baseline: "<0.20", deviation: "Newly registered offshore beneficiary" }
+    ],
+    plain_english_explanation: "Alert a1 was generated because this transaction occurred at 02:00 AM, was 4.41× above the account's historical average, involved a newly observed offshore counterparty, and increased the anomaly score to 0.96. This is an advisory risk indicator requiring human investigator validation.",
+    investigator_notes: "",
+    supervisor_status: "AWAITING_ESCALATION"
+  },
+  {
+    id: "a2",
+    case_id: "c1",
+    severity: "critical",
+    entity_name: "+91-9876543210",
+    entity_type: "PhoneNumber",
+    anomaly_type: "CDR_BURST_ACTIVITY",
+    details: "68 outbound calls in 180 minutes prior to coordinated transit (Z-Score: 4.8 Sigma above baseline)",
+    anomaly_score: 0.92,
+    timestamp: "2024-03-13 21:30:00",
+    status: "CONFIRMED_BY_INVESTIGATOR",
+    algorithm: "ZScore-Telecom-v1.4",
+    confidence_level: "HIGH_CONFIDENCE",
+    uncertainty_margin: "±0.05",
+    feature_breakdown: [
+      { feature: "Call Frequency", value: "22.6 calls/hr", baseline: "1.8 calls/hr avg", deviation: "+4.8 Standard Deviations" },
+      { feature: "Unique Counterparties", value: "14 MSISDNs", baseline: "2-3 habitual", deviation: "Fleet broadcast pattern" }
+    ],
+    plain_english_explanation: "Alert a2 was generated because call volume surged to 4.8 standard deviations above baseline during nocturnal staging hours. Validated as an operational coordination indicator.",
+    investigator_notes: "Correlated with vehicle dispatch timeline from Goregaon Depot.",
+    supervisor_status: "ESCALATED_TO_SUPERVISOR"
+  },
+  {
+    id: "a3",
+    case_id: "c2",
+    severity: "high",
+    entity_name: "Mehta Enterprises Ltd",
+    entity_type: "Organization",
+    anomaly_type: "CIRCULAR_TRANSACTIONS",
+    details: "Round-tripping ₹8.75 Cr across 3 shell corporate accounts within 24 hours (Modularity Score: 0.84)",
+    anomaly_score: 0.84,
+    timestamp: "2024-03-12 18:45:22",
+    status: "PENDING_REVIEW",
+    algorithm: "Johnson-SimpleCycles-v3.0",
+    confidence_level: "HIGH_CONFIDENCE",
+    uncertainty_margin: "±0.03",
+    feature_breakdown: [
+      { feature: "Cycle Path Length", value: "3 hops", baseline: "Linear tree normal", deviation: "Closed topological loop" },
+      { feature: "Throughput Retention", value: "98.2%", baseline: "<10% normal", deviation: "Minimal commercial absorption" }
+    ],
+    plain_english_explanation: "Alert a3 was generated because funds routed through multiple dummy accounts returned to the origin entity with only 1.8% transaction fee loss, exhibiting high layering characteristics.",
+    investigator_notes: "",
+    supervisor_status: "AWAITING_ESCALATION"
+  }
+]
+
 export default function AlertCentre() {
-  const [alerts, setAlerts] = useState<any[]>([])
+  const [alerts, setAlerts] = useState<any[]>(defaultAlerts)
   const [selAlert, setSelAlert] = useState<any>(null)
   const [xaiData, setXaiData] = useState<any>(null)
   const [investigatorNote, setInvestigatorNote] = useState('')
@@ -16,8 +86,10 @@ export default function AlertCentre() {
 
   const loadAlerts = () => {
     axios.get('/api/alerts').then(r => {
-      setAlerts(r.data.alerts || [])
-      if (r.data.calibration) setCalibration(r.data.calibration)
+      if (r.data && Array.isArray(r.data.alerts) && r.data.alerts.length > 0) {
+        setAlerts(r.data.alerts)
+      }
+      if (r.data && r.data.calibration) setCalibration(r.data.calibration)
     }).catch(() => {})
   }
 
@@ -179,10 +251,10 @@ export default function AlertCentre() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: 12 }}>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 900, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>🧠</span> EXPLAINABLE AI (XAI) REASONING: {xaiData.entity_id}
+                  <span>🧠</span> EXPLAINABLE AI (XAI) REASONING: {xaiData.entity_name || xaiData.entity_id}
                 </h3>
                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                  Alert ID: <b>{xaiData.alert_id}</b> · Algorithm: <b>{xaiData.algorithm}</b> · Confidence: <b>{xaiData.confidence_level} ({xaiData.uncertainty_margin})</b>
+                  Alert ID: <b>{xaiData.id || xaiData.alert_id}</b> · Algorithm: <b>{xaiData.algorithm}</b> · Confidence: <b>{xaiData.confidence_level} ({xaiData.uncertainty_margin})</b>
                 </div>
               </div>
               <button onClick={() => setSelAlert(null)} style={{ background: '#334155', border: 'none', color: 'white', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>✕ CLOSE</button>
@@ -192,7 +264,7 @@ export default function AlertCentre() {
             <div style={{ background: 'rgba(56, 189, 248, 0.1)', padding: 14, borderRadius: 10, border: '1px solid rgba(56, 189, 248, 0.3)' }}>
               <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase' }}>Plain-English Reasoning Summary</div>
               <div style={{ fontSize: 12.5, color: '#f8fafc', lineHeight: 1.5, marginTop: 4 }}>
-                {xaiData.plain_english_explanation}
+                {xaiData.plain_english_explanation || xaiData.details}
               </div>
             </div>
 

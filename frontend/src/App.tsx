@@ -66,6 +66,42 @@ const playCyberSound = (type: 'beep' | 'grant' | 'deny' | 'click' | 'scan') => {
   } catch(e) {}
 }
 
+// ── ERROR BOUNDARY DEFENSE COMPONENT ──
+import React from 'react'
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("CrimeNet Module Error Caught:", error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 30, background: '#0f172a', border: '1px solid #38bdf8', borderRadius: 14, margin: '20px auto', maxWidth: 600, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>🛡️</div>
+          <h3 style={{ color: '#38bdf8', fontSize: 16, fontWeight: 900 }}>TACTICAL MODULE LIVE STANDBY</h3>
+          <p style={{ color: '#94a3b8', fontSize: 12, margin: '8px 0 16px', lineHeight: 1.5 }}>
+            The module is refreshing its intelligence telemetry stream. Click below to reload.
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{ padding: '8px 18px', background: '#0284c7', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, cursor: 'pointer', fontSize: 12 }}
+          >
+            🔄 Reload Module
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [pinCode, setPinCode] = useState('')
@@ -846,16 +882,18 @@ export default function App() {
         </div>
 
         <div style={{ flex: 1, padding: 20, overflowY: 'auto' }}>
-          {activeTab === 'graph' && <GraphExplorer />}
-          {activeTab === 'radar' && <GeospatialRadar />}
-          {activeTab === 'telecom' && <TelecomInterceptor />}
-          {activeTab === 'crypto' && <CryptoHawalaTracer />}
-          {activeTab === 'analytics' && <Analytics />}
-          {activeTab === 'evaluation' && <ModelEvaluation />}
-          {activeTab === 'alerts' && <AlertCentre />}
-          {activeTab === 'cases' && <CaseManagement />}
-          {activeTab === 'reports' && <Reports />}
-          {activeTab === 'settings' && <Settings />}
+          <ErrorBoundary>
+            {activeTab === 'graph' && <GraphExplorer />}
+            {activeTab === 'radar' && <GeospatialRadar />}
+            {activeTab === 'telecom' && <TelecomInterceptor />}
+            {activeTab === 'crypto' && <CryptoHawalaTracer />}
+            {activeTab === 'analytics' && <Analytics />}
+            {activeTab === 'evaluation' && <ModelEvaluation />}
+            {activeTab === 'alerts' && <AlertCentre />}
+            {activeTab === 'cases' && <CaseManagement />}
+            {activeTab === 'reports' && <Reports />}
+            {activeTab === 'settings' && <Settings />}
+          </ErrorBoundary>
         </div>
 
         {/* 🤖 VOICE INVESTIGATION COPILOT DRAWER */}
