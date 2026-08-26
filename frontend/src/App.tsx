@@ -754,28 +754,6 @@ export default function App() {
               >
                 ⚡ Authenticate with Passcode
               </button>
-
-              <button
-                type="button"
-                onClick={handleInstantDemoLogin}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: 8,
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid #10b981',
-                  color: '#34d399',
-                  fontWeight: 800,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6
-                }}
-              >
-                <span>🔓</span> Instant 1-Click Demo Login (Investigator Access)
-              </button>
             </div>
           )}
 
