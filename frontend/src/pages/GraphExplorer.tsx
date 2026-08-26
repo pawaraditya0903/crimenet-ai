@@ -23,6 +23,8 @@ export default function GraphExplorer() {
   const [nodeSearchQuery, setNodeSearchQuery] = useState('')
   const [storyActive, setStoryActive] = useState(false)
   const [storyStep, setStoryStep] = useState(0)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [speechMuted, setSpeechMuted] = useState(false)
 
   const defaultElementsData = [
     { data: { id: 'n1', label: 'Arjun Mehta (Kingpin)', type: 'Person', tier: 'core', risk: 95, color: '#ef4444', size: 68, role: 'Syndicate Mastermind' } },
@@ -406,12 +408,23 @@ export default function GraphExplorer() {
     }
   }
 
+  const stopVoice = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    setIsSpeaking(false)
+  }
+
   const speakText = (text: string) => {
-    window.speechSynthesis.cancel()
+    stopVoice()
+    if (speechMuted) return
     const cleanText = text.replace(/[*#`_]/g, '')
     const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.rate = 1.05
     utterance.pitch = 0.95
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => setIsSpeaking(false)
     window.speechSynthesis.speak(utterance)
   }
 
@@ -645,12 +658,32 @@ export default function GraphExplorer() {
 
       {/* AI INVESTIGATION COPILOT */}
       <div style={{ background: '#0a101f', borderRadius: 14, border: '1px solid #1e293b', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid #1e293b', background: '#0f172a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid #1e293b', background: '#0f172a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>🧠 AI Investigation Copilot</div>
             <div style={{ fontSize: 10, color: '#34d399' }}>● Semantic Vector RAG Active</div>
           </div>
-          <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#1e3a8a', color: '#38bdf8', fontWeight: 700 }}>48 Dossiers</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isSpeaking && (
+              <button
+                onClick={stopVoice}
+                style={{ padding: '3px 8px', borderRadius: 6, background: '#dc2626', color: 'white', border: '1px solid #ef4444', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+                title="Stop Speech Synthesis"
+              >
+                ⏹️ STOP
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (isSpeaking) stopVoice()
+                setSpeechMuted(!speechMuted)
+              }}
+              style={{ padding: '3px 8px', borderRadius: 6, background: speechMuted ? 'rgba(239,68,68,0.2)' : 'rgba(56,189,248,0.2)', color: speechMuted ? '#f87171' : '#38bdf8', border: `1px solid ${speechMuted ? '#ef4444' : '#38bdf8'}`, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+              title={speechMuted ? 'Unmute Voice Reading' : 'Mute Voice Reading'}
+            >
+              {speechMuted ? '🔇 Muted' : '🔊 Voice ON'}
+            </button>
+          </div>
         </div>
 
         <div style={{ flex: 1, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>

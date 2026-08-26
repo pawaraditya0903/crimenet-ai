@@ -316,9 +316,19 @@ export default function CopilotDrawer({
 
       {/* AUDIO WAVEFORM CANVAS DISPLAY */}
       <div style={{ background: '#030712', padding: '6px 14px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <canvas ref={canvasRef} width={280} height={28} style={{ width: 280, height: 28 }} />
-        <div style={{ fontSize: 9.5, fontWeight: 800, color: isListening ? '#38bdf8' : isSpeaking ? '#34d399' : '#64748b' }}>
-          {isListening ? '🎤 LISTENING...' : isSpeaking ? '🔊 SPEAKING...' : 'IDLE'}
+        <canvas ref={canvasRef} width={240} height={28} style={{ width: 240, height: 28 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {isSpeaking && (
+            <button
+              onClick={stopSpeaking}
+              style={{ padding: '2px 8px', borderRadius: 4, background: '#dc2626', color: 'white', border: '1px solid #ef4444', fontSize: 9.5, fontWeight: 800, cursor: 'pointer' }}
+            >
+              ⏹️ STOP
+            </button>
+          )}
+          <div style={{ fontSize: 9.5, fontWeight: 800, color: isListening ? '#38bdf8' : isSpeaking ? '#34d399' : '#64748b' }}>
+            {isListening ? '🎤 LISTENING...' : isSpeaking ? '🔊 SPEAKING...' : 'IDLE'}
+          </div>
         </div>
       </div>
 
