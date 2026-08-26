@@ -128,43 +128,56 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'evaluation' | 'alerts' | 'cases' | 'reports' | 'settings'>('graph')
   const [selectedCase, setSelectedCase] = useState<string>('c1')
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false)
+  const [spotlightOpen, setSpotlightOpen] = useState<boolean>(false)
   const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'offline'>('connected')
   const [activeToast, setActiveToast] = useState<ToastEvent | null>(null)
 
   // ── REAL-TIME INVESTIGATION EVENT ENGINE (SOCKET.IO CLIENT) ──
   useEffect(() => {
-    const socket = io('/', {
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 10000
-    })
-
-    socket.on('connect', () => {
-      setConnectionState('connected')
-      socket.emit('join_case_room', { case_id: selectedCase })
-    })
-
-    socket.on('disconnect', () => {
-      setConnectionState('offline')
-    })
-
-    socket.on('reconnecting', () => {
-      setConnectionState('reconnecting')
-    })
-
-    socket.on('investigation_event', (event: any) => {
-      if (soundEnabled) playCyberSound('beep')
-      setActiveToast({
-        id: event.event_id || `toast-${Date.now()}`,
-        title: event.payload?.title || `Event: ${event.event_type?.replace(/_/g, ' ')}`,
-        details: event.payload?.details || event.payload?.message || 'New live telemetry record.',
-        severity: event.severity || 'info',
-        timestamp: event.timestamp_utc || new Date().toLocaleTimeString()
+    const backendUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8000'
+      : 'https://crimenet-ai.onrender.com'
+    
+    let socket: any = null
+    try {
+      socket = io(backendUrl, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 3000,
+        timeout: 8000
       })
-    })
+
+      socket.on('connect', () => {
+        setConnectionState('connected')
+        try { socket.emit('join_case_room', { case_id: selectedCase }) } catch {}
+      })
+
+      socket.on('disconnect', () => {
+        setConnectionState('offline')
+      })
+
+      socket.on('connect_error', () => {
+        setConnectionState('offline')
+      })
+
+      socket.on('reconnecting', () => {
+        setConnectionState('reconnecting')
+      })
+
+      socket.on('investigation_event', (event: any) => {
+        if (soundEnabled) playCyberSound('beep')
+        setActiveToast({
+          id: event?.event_id || `toast-${Date.now()}`,
+          title: event?.payload?.title || `Event: ${event?.event_type?.replace(/_/g, ' ') || 'Telemetry'}`,
+          details: event?.payload?.details || event?.payload?.message || 'New live telemetry record.',
+          severity: event?.severity || 'info',
+          timestamp: event?.timestamp_utc || new Date().toLocaleTimeString()
+        })
+      })
+    } catch {}
 
     return () => {
-      socket.disconnect()
+      if (socket) socket.disconnect()
     }
   }, [selectedCase, soundEnabled])
 
