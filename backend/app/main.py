@@ -1101,19 +1101,29 @@ async def copilot_chat_endpoint(req_or_dict: Any):
     action_preview = None
     response_text = ""
 
-    # 1. Phone Number / CDR Matcher
+    # 1. Phone Number / CDR Matcher (Exact 30-Day Call Logs Breakdown)
     if any(char.isdigit() for char in user_msg) and len(re.findall(r'\d', user_msg)) >= 7:
         intent = "telecom_inquiry"
         tools_called.append("get_telecom_cdr_intelligence")
-        citations.append("[Evidence: ev-02]")
+        citations.append("[Evidence: ev-01 (CDR_MUMBAI_2024_03_13_BATCH.csv)]")
         citations.append("[Entity: +91-9876543210]")
         response_text = (
-            f"📡 **Telecom & CDR Intelligence Analysis [{user_msg}]:**\n\n"
-            f"• **Associated Subscriber:** Intercepted burner line assigned to Arjun Mehta syndicate operations.\n"
-            f"• **Call Pattern:** Flagged for abnormal pre-dispatch burst activity (+4.8 Sigma above baseline).\n"
-            f"• **Primary Staging Tower:** Sector 1 Industrial Depot (Goregaon).\n"
-            f"• **Cross-Correlation:** 18 calls synchronized with nocturnal BMW X5 movements.\n\n"
-            f"Would you like me to highlight this phone line on the Network Graph?"
+            f"📡 **TELECOM CDR & CALL LOGS INTELLIGENCE DOSSIER [{user_msg}]**\n\n"
+            f"📊 **Call Logs Activity in Past Days:**\n"
+            f"• **Total Calls (Past 30 Days):** **184 Intercepted Calls** (Total Airtime: 22h 45m)\n"
+            f"• **Past 7 Days Pre-Raid Bursts:** **68 Nocturnal Calls** (Concentrated 01:30 AM – 04:15 AM)\n"
+            f"• **Past 24 Hours Traffic:** **14 Active Intercepts** (8 Outgoing / 6 Incoming)\n"
+            f"• **Direction Split:** 118 Outbound Calls (64.1%) ➔ 66 Inbound Calls (35.9%)\n\n"
+            f"👥 **Top 3 Frequent Calling Associates (Past 30 Days):**\n"
+            f"  1. `+91-9876543210` (**Arjun Mehta / Kingpin**) — 48 Calls (Avg Duration: 3m 12s)\n"
+            f"  2. `+91-9654321098` (**Mohammed Rafiq / Hawala**) — 32 Calls (Avg Duration: 1m 45s)\n"
+            f"  3. `+91-9845678901` (**Vikram Singh / Logistics**) — 24 Calls (Avg Duration: 4m 30s)\n\n"
+            f"📍 **Cell Tower Triangulation & Geolocation:**\n"
+            f"• **Primary Hub:** Tower #404-45-1920 (Sector 1 Industrial Depot, Goregaon East)\n"
+            f"• **Secondary Safehouse Cell:** Tower #404-45-1922 (Bandra West Safehouse)\n"
+            f"• **Trilateration Precision:** GDOP = 1.14 (Uncertainty $\pm 12.4\text{m}$)\n\n"
+            f"📱 **Hardware Identifiers:** IMEI: `354892019482019` | IMSI: `404459812049182` (Dual SIM Active)\n"
+            f"⚖️ **Legal Notice:** Lawful intercept active under Section 5(2) Indian Telegraph Act."
         )
 
     # 2. Rule-Based Intent Classifier
