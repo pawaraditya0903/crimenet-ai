@@ -419,14 +419,14 @@ export default function App() {
     }
   }
 
-  // 2. PASSCODE LOGIN (Aditya@4912 or updated password)
+  // 2. PASSCODE LOGIN (Strict Active Password)
   const handlePasscodeLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (lockoutTimer > 0) return
 
     const entered = pinCode.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    const isOk = entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912' || (customPass && entered === customPass)
+    const isOk = customPass ? (entered === customPass) : (entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912')
 
     if (isOk) {
       if (soundEnabled) playCyberSound('grant')
@@ -486,11 +486,12 @@ export default function App() {
     }
   }
 
-  // 3. REGISTER MASTER FACE (Strictly Aditya@4912)
+  // 3. REGISTER MASTER FACE (Strict Active Password)
   const verifyFaceAuthorityAndStartCamera = async () => {
     const entered = faceAuthKey.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
+    const isOk = customPass ? (entered === customPass) : (entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912')
+    if (!isOk) {
       if (soundEnabled) playCyberSound('deny')
       alert('🚨 ACCESS DENIED: Master Authority Key is incorrect!')
       return
@@ -522,9 +523,10 @@ export default function App() {
     setMasterFaceDescriptor(descriptor)
     setMasterFacePhoto(photo)
 
+    const activePass = localStorage.getItem('aditya_custom_password') || 'Aditya@4912'
     try {
       await axios.post('/api/security/register-master-face', {
-        key: 'Aditya@4912',
+        key: activePass,
         vector: descriptor,
         photo: photo
       })
@@ -536,14 +538,15 @@ export default function App() {
     alert('✓ Face Biometrics Successfully Saved and Locked!')
   }
 
-  // 4. CHANGE PASSWORD (Strictly Aditya@4912)
+  // 4. CHANGE PASSWORD (Strict Active Password)
   const handleChangePassword = async () => {
     setPassError('')
     const entered = masterAuthInput.trim()
     const customPass = localStorage.getItem('aditya_custom_password')
-    if (entered !== 'Aditya@4912' && entered.toLowerCase() !== 'aditya@4912' && entered !== customPass) {
+    const isOk = customPass ? (entered === customPass) : (entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912')
+    if (!isOk) {
       if (soundEnabled) playCyberSound('deny')
-      setPassError('🚨 Master Authority Key is incorrect.')
+      setPassError('🚨 Current Master Authority Key is incorrect.')
       return
     }
     if (newPassInput.trim().length < 4) {
@@ -555,9 +558,10 @@ export default function App() {
       return
     }
 
+    const activePass = customPass || 'Aditya@4912'
     try {
       await axios.post('/api/security/change-password', {
-        key: 'Aditya@4912',
+        key: activePass,
         new_password: newPassInput.trim()
       })
     } catch(e) {}
@@ -568,7 +572,7 @@ export default function App() {
     setNewPassInput('')
     setConfirmPassInput('')
     if (soundEnabled) playCyberSound('grant')
-    alert('✓ Master Password Successfully Updated!')
+    alert('✓ Master Password Successfully Updated! Previous password is now invalidated.')
   }
 
   // 5. INTRUDER LOGS HANDLERS (Password: Aditya@09)
