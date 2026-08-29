@@ -273,7 +273,7 @@ export default function App() {
     }
   }, [lockoutTimer])
 
-  // EXTRACT 144-D SPATIAL BIOMETRIC MATRIX
+  // EXTRACT 576-D SPATIAL BIOMETRIC MATRIX (24×24 luminance grid, lighting-normalised)
   const extractBiometricDescriptor = (): number[] => {
     if (!videoRef.current || !canvasRef.current) return []
     const canvas = canvasRef.current
@@ -288,16 +288,24 @@ export default function App() {
     const startX = (vW - cropSize) / 2
     const startY = (vH - cropSize) / 2
 
-    canvas.width = 12
-    canvas.height = 12
-    ctx.drawImage(vid, startX, startY, cropSize, cropSize, 0, 0, 12, 12)
-    const imgData = ctx.getImageData(0, 0, 12, 12)
-    const descriptor: number[] = []
+    // 24×24 = 576 values — 4× more resolution than the previous 12×12
+    canvas.width = 24
+    canvas.height = 24
+    ctx.drawImage(vid, startX, startY, cropSize, cropSize, 0, 0, 24, 24)
+    const imgData = ctx.getImageData(0, 0, 24, 24)
+    const raw: number[] = []
 
     for (let i = 0; i < imgData.data.length; i += 4) {
       const lum = imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114
-      descriptor.push(Math.round(lum))
+      raw.push(lum)
     }
+
+    // Apply simple 3-pixel local mean normalisation for lighting invariance
+    const descriptor: number[] = raw.map((v, idx) => {
+      const neighbours = [raw[idx - 1], raw[idx], raw[idx + 1]].filter(x => x !== undefined)
+      const localMean = neighbours.reduce((s, x) => s + x, 0) / neighbours.length
+      return Math.round(Math.max(0, Math.min(255, v - localMean + 128)))
+    })
     return descriptor
   }
 
@@ -359,7 +367,8 @@ export default function App() {
         const znccScore = saved ? computeZNCC(liveVec, saved) : 0
         setSimilarityScore(znccScore)
 
-        if (saved && znccScore >= 45) {
+        // Raised threshold: 75% ZNCC required (was 45% — far too permissive)
+        if (saved && znccScore >= 75) {
           if (soundEnabled) playCyberSound('grant')
           setScanStatus('verified')
           setFailedAttempts(0)
@@ -425,40 +434,39 @@ export default function App() {
     if (lockoutTimer > 0) return
 
     const entered = pinCode.trim()
-    const customPass = localStorage.getItem('aditya_custom_password')
-    const isOk = customPass ? (entered === customPass) : (entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912')
+    if (!entered) return
 
-    if (isOk) {
-      if (soundEnabled) playCyberSound('grant')
-      try { sessionStorage.setItem('crimenet_authenticated', 'true') } catch {}
-      setIsAuthenticated(true)
-      setFailedAttempts(0)
-      setAuthError('')
-
-      // Non-blocking background token & security logging
-      axios.post('/api/auth/token', {
+    try {
+      // Server-side credential check — password never hardcoded in JS bundle
+      const tokenRes = await axios.post('/api/auth/token', {
         username: 'Aditya Pawar',
         badge: 'CRIMENET-CHIEF-01',
-        role: 'Chief Intelligence Architect'
-      }).then(res => {
-        if (res.data && res.data.access_token) {
-          localStorage.setItem('crimenet_jwt_token', res.data.access_token)
-        }
-      }).catch(() => {})
+        role: 'Chief Intelligence Architect',
+        password: entered
+      })
 
-      axios.get('https://api.ipify.org?format=json')
-        .catch(() => ({ data: { ip: 'Remote' } }))
-        .then(ipRes => {
-          axios.post('/api/security/log-visit', {
-            ip: ipRes?.data?.ip || 'Remote',
-            device: navigator.userAgent.substring(0, 45),
-            action: 'PASSCODE_SUCCESS',
-            status: 'AUTHORIZED',
-            badge: 'Aditya Pawar',
-            photo: ''
-          }).catch(() => {})
-        })
-    } else {
+      if (tokenRes.data && tokenRes.data.access_token) {
+        if (soundEnabled) playCyberSound('grant')
+        localStorage.setItem('crimenet_jwt_token', tokenRes.data.access_token)
+        try { sessionStorage.setItem('crimenet_authenticated', 'true') } catch {}
+        setIsAuthenticated(true)
+        setFailedAttempts(0)
+        setAuthError('')
+
+        axios.get('https://api.ipify.org?format=json')
+          .catch(() => ({ data: { ip: 'Remote' } }))
+          .then(ipRes => {
+            axios.post('/api/security/log-visit', {
+              ip: ipRes?.data?.ip || 'Remote',
+              device: navigator.userAgent.substring(0, 45),
+              action: 'PASSCODE_SUCCESS',
+              status: 'AUTHORIZED',
+              badge: 'Aditya Pawar',
+              photo: ''
+            }).catch(() => {})
+          })
+      }
+    } catch (err: any) {
       if (soundEnabled) playCyberSound('deny')
       const newFails = failedAttempts + 1
       setFailedAttempts(newFails)
@@ -538,35 +546,52 @@ export default function App() {
     alert('✓ Face Biometrics Successfully Saved and Locked!')
   }
 
-  // 4. CHANGE PASSWORD (Strict Active Password)
+  // 4. CHANGE PASSWORD (Strict Active Password — server-side validation)
   const handleChangePassword = async () => {
     setPassError('')
     const entered = masterAuthInput.trim()
-    const customPass = localStorage.getItem('aditya_custom_password')
-    const isOk = customPass ? (entered === customPass) : (entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912')
-    if (!isOk) {
-      if (soundEnabled) playCyberSound('deny')
-      setPassError('🚨 Current Master Authority Key is incorrect.')
+    const newPass = newPassInput.trim()
+
+    if (!entered) {
+      setPassError('⚠️ Please enter your current master password.')
       return
     }
-    if (newPassInput.trim().length < 4) {
-      setPassError('⚠️ New password must be at least 4 characters.')
+    // Enforce stronger password requirements (8+ chars, 1 uppercase, 1 digit)
+    if (newPass.length < 8) {
+      setPassError('⚠️ New password must be at least 8 characters.')
       return
     }
-    if (newPassInput.trim() !== confirmPassInput.trim()) {
+    if (!/[A-Z]/.test(newPass)) {
+      setPassError('⚠️ New password must contain at least 1 uppercase letter.')
+      return
+    }
+    if (!/\d/.test(newPass)) {
+      setPassError('⚠️ New password must contain at least 1 digit.')
+      return
+    }
+    if (newPass !== confirmPassInput.trim()) {
       setPassError('⚠️ New Passwords do not match.')
       return
     }
 
-    const activePass = customPass || 'Aditya@4912'
     try {
-      await axios.post('/api/security/change-password', {
-        key: activePass,
-        new_password: newPassInput.trim()
+      const res = await axios.post('/api/security/change-password', {
+        key: entered,
+        new_password: newPass
       })
-    } catch(e) {}
+      if (res.data && !res.data.success) {
+        if (soundEnabled) playCyberSound('deny')
+        setPassError(`🚨 ${res.data.message || 'Password change failed.'}`)
+        return
+      }
+    } catch(e: any) {
+      if (soundEnabled) playCyberSound('deny')
+      setPassError('🚨 Server error during password change.')
+      return
+    }
 
-    localStorage.setItem('aditya_custom_password', newPassInput.trim())
+    // Remove cached password — server is now authoritative
+    localStorage.removeItem('aditya_custom_password')
     setChangePassModalOpen(false)
     setMasterAuthInput('')
     setNewPassInput('')
@@ -683,7 +708,7 @@ export default function App() {
                 <div style={{ fontSize: 13.5, fontWeight: 900, color: scanStatus === 'verified' ? '#34d399' : scanStatus === 'rejected' ? '#ef4444' : '#38bdf8', letterSpacing: '0.04em' }}>
                   {scanStatus === 'verified' && `✓ MATCH CONFIRMED: ADITYA PAWAR (${similarityScore}%) · LIVENESS VERIFIED`}
                   {scanStatus === 'rejected' && `🚨 STRANGER REJECTED (${similarityScore}%): MUGSHOT LOGGED!`}
-                  {scanStatus === 'scanning' && `EXTRACTING 512-D LANDMARKS & ZNCC VECTORS...`}
+                  {scanStatus === 'scanning' && `EXTRACTING 576-D LANDMARKS & ZNCC VECTORS...`}
                 </div>
               </div>
             </div>

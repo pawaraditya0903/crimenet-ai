@@ -135,12 +135,26 @@ export default function GeospatialRadar() {
   }, [radarActive, targets])
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const canvas = canvasRef.current
+    const rect = canvas?.getBoundingClientRect()
+    if (!rect || !canvas) return
 
-    const clicked = targets.find(t => Math.hypot(t.x - x, t.y - y) < 25)
+    // Scale click coords from CSS pixels to canvas logical pixels (DPI-aware)
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
+
+    // Use scaled coordinates for BMW X5 moving target too
+    const step = Date.now() / 1000 * 0.015
+    const movingX = (220 + Math.sin(step) * 18) * scaleX
+    const movingY = (260 + Math.cos(step) * 22) * scaleY
+
+    const clicked = targets.find(t => {
+      const posX = t.id === 't2' ? movingX : t.x * scaleX
+      const posY = t.id === 't2' ? movingY : t.y * scaleY
+      return Math.hypot(posX - x, posY - y) < 25 * Math.max(scaleX, scaleY)
+    })
     if (clicked) setSelectedTarget(clicked)
   }
 

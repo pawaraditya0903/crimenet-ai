@@ -1,8 +1,13 @@
 import json, os, math, random, ssl, io, urllib.request, urllib.error, urllib.parse, datetime, re, hmac, hashlib, base64, time, sqlite3, asyncio
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from datetime import datetime as dt_cls
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Depends, Header
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Depends, Header, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +21,13 @@ from reportlab.lib import colors as rc
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 
 # ── JWT CRYPTOGRAPHIC AUTHENTICATION ENGINE ──
-JWT_SECRET_KEY = "CRIMENET_DEFENSE_HMAC_SHA256_SECRET_KEY_2026"
+# Load from environment variable; fall back to a deterministic dev key
+_raw_jwt_secret = os.environ.get("JWT_SECRET_KEY", "")
+if not _raw_jwt_secret:
+    # Generate a stable dev-only key derived from machine + app identity
+    _dev_seed = f"CRIMENET_DEV_{os.getcwd()}_{os.name}"
+    _raw_jwt_secret = hashlib.sha256(_dev_seed.encode()).hexdigest()
+JWT_SECRET_KEY = _raw_jwt_secret
 
 def b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
@@ -212,14 +223,29 @@ def init_sqlite_db():
 
 init_sqlite_db()
 
+# Default password hash for "Aditya@4912"
+_DEFAULT_PASS_HASH = hashlib.sha256("Aditya@4912".encode()).hexdigest()
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.strip().encode()).hexdigest()
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return hmac.compare_digest(hash_password(plain), hashed)
+
 def get_master_data():
     if os.path.exists(MASTER_SECURITY_FILE):
         try:
             with open(MASTER_SECURITY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                # Migrate plaintext password to hash on first read
+                if data.get("password") and not data.get("password_hashed"):
+                    data["password"] = hash_password(data["password"])
+                    data["password_hashed"] = True
+                    save_master_data(data)
+                return data
         except Exception:
             pass
-    return {"password": "Aditya@4912", "face_descriptor": [], "face_photo": ""}
+    return {"password": _DEFAULT_PASS_HASH, "password_hashed": True, "face_descriptor": [], "face_photo": ""}
 
 def save_master_data(data):
     try:
@@ -268,11 +294,24 @@ def compute_zncc_similarity(vecA, vecB):
 
 app = FastAPI(title="CrimeNet AI - Autonomous Forensic Intelligence Platform")
 
+_cors_env = os.environ.get("CORS_ORIGINS", "")
+_ALLOWED_ORIGINS = (
+    [o.strip() for o in _cors_env.split(",") if o.strip()]
+    if _cors_env
+    else [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "https://crimenet-ai-two.vercel.app",
+        "https://crimenet-ai.vercel.app",
+    ]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     allow_credentials=True,
 )
 
@@ -534,29 +573,60 @@ CALIBRATION_STATE = {
     "decision_boundary": 0.82,
     "last_updated": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S")
 }
+_calibration_lock = asyncio.Lock()
 
-# ── SEMANTIC VECTOR RAG ENGINE ──
+# ── TF-IDF WEIGHTED SEMANTIC RAG ENGINE ──
 def compute_text_tokens(text: str) -> set:
     words = re.findall(r'\b[a-zA-Z0-9_\+\-]+\b', text.lower())
     return set(words)
 
+def compute_text_token_freq(text: str) -> dict:
+    """Returns term frequency dict for TF-IDF scoring."""
+    words = re.findall(r'\b[a-zA-Z0-9_\+\-]+\b', text.lower())
+    freq: dict = {}
+    for w in words:
+        freq[w] = freq.get(w, 0) + 1
+    total = max(len(words), 1)
+    return {w: c / total for w, c in freq.items()}
+
+# Pre-compute document frequencies for IDF calculation
+def _build_idf_index() -> dict:
+    doc_count = len(ALL_ENTITIES)
+    df: dict = {}
+    for e in ALL_ENTITIES:
+        doc_text = f"{e['name']} {e.get('role','')} {e.get('type','')} {e.get('city','')} {e.get('phone','')} {e.get('dossier','')}"
+        for token in compute_text_tokens(doc_text):
+            df[token] = df.get(token, 0) + 1
+    return {t: math.log(1 + doc_count / (1 + cnt)) for t, cnt in df.items()}
+
+_IDF_INDEX: dict = {}  # Populated after ALL_ENTITIES is defined
+
 def vector_semantic_search(query: str, top_k: int = 3) -> List[Dict[str, Any]]:
-    q_tokens = compute_text_tokens(query)
+    global _IDF_INDEX
+    if not _IDF_INDEX:
+        _IDF_INDEX = _build_idf_index()
+
+    q_tokens = compute_text_token_freq(query)
     if not q_tokens:
         return []
-    
+
     scored_items = []
     for e in ALL_ENTITIES:
         doc_text = f"{e['name']} {e.get('role','')} {e.get('type','')} {e.get('city','')} {e.get('phone','')} {e.get('dossier','')}"
-        doc_tokens = compute_text_tokens(doc_text)
-        
-        intersection = q_tokens.intersection(doc_tokens)
-        if intersection:
-            score = len(intersection) / (len(q_tokens) ** 0.5 * len(doc_tokens) ** 0.5)
-            # Boost high risk entities
+        doc_tf = compute_text_token_freq(doc_text)
+
+        # TF-IDF dot product score
+        score = 0.0
+        for token, q_tf in q_tokens.items():
+            if token in doc_tf:
+                idf = _IDF_INDEX.get(token, 1.0)
+                score += q_tf * doc_tf[token] * idf
+
+        if score > 0:
+            # Boost high-risk entities
             score *= (1.0 + (e.get('risk_score', 50) / 200.0))
             scored_items.append((score, e))
-            
+
     scored_items.sort(key=lambda x: x[0], reverse=True)
     return [item[1] for item in scored_items[:top_k]]
 
@@ -1084,15 +1154,19 @@ class CopilotChatRequest(BaseModel):
 
 @app.post("/api/copilot/chat")
 @app.post("/api/chat/message")
-async def copilot_chat_endpoint(req_or_dict: Any):
+async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str, Any]] = Body(...)):
     if isinstance(req_or_dict, dict):
-        user_msg = req_or_dict.get("message", "").strip()
-        case_id = req_or_dict.get("case_id", "c1")
+        user_msg = str(req_or_dict.get("message", "")).strip()
+        case_id = str(req_or_dict.get("case_id", "c1"))
         req = CopilotChatRequest(message=user_msg, case_id=case_id)
-    else:
+    elif hasattr(req_or_dict, "message"):
         req = req_or_dict
         user_msg = req.message.strip()
         case_id = req.case_id or "c1"
+    else:
+        req = CopilotChatRequest(message=str(req_or_dict), case_id="c1")
+        user_msg = req.message.strip()
+        case_id = "c1"
     
     msg_lower = user_msg.lower()
     intent = "general_query"
@@ -1101,8 +1175,24 @@ async def copilot_chat_endpoint(req_or_dict: Any):
     action_preview = None
     response_text = ""
 
-    # 1. Phone Number / CDR Matcher (Exact 30-Day Call Logs Breakdown)
-    if any(char.isdigit() for char in user_msg) and len(re.findall(r'\d', user_msg)) >= 7:
+    # 0. Greetings & Identity Queries
+    if msg_lower in ["hi", "hii", "hello", "hey", "hola", "greetings", "test"] or any(g in msg_lower for g in ["who are you", "what can you do", "help me"]):
+        intent = "greeting"
+        citations.append("[System: CrimeNet Voice Copilot v2.0]")
+        response_text = (
+            "👋 **Hello Investigator! I am CrimeNet Copilot**, your real-time forensic intelligence and link analysis assistant.\n\n"
+            "Here is what I can do for you right now:\n"
+            "• **Summarize Cases:** Ask *'Summarize this case'* for Operation Blue Thunder.\n"
+            "• **Threat & Risk Alerts:** Ask *'Show the highest-risk alerts'* or *'Explain alert a1'*.\n"
+            "• **Telecom CDR Audits:** Type or paste any phone number (e.g., `+91-9876543210` or `9834702432`).\n"
+            "• **Suspect Dossiers:** Ask *'Who is Arjun Mehta?'* or *'Tell me about Mohammed Rafiq'*.\n"
+            "• **Shortest Money Trails:** Ask *'Find shortest trail between Arjun Mehta and Phoenix Trading'*.\n"
+            "• **Draft Legal Briefings:** Ask *'Draft executive briefing'* or *'Draft supervisor escalation memorandum'*."
+        )
+
+    # 1. Phone Number / CDR Matcher — requires an isolated 7-12 digit sequence (actual phone number)
+    # Uses \b word boundaries so case IDs like "c1" or alert IDs like "a2" don't trigger this
+    elif bool(re.search(r'(?<!\w)\d{7,12}(?!\w)', user_msg)):
         intent = "telecom_inquiry"
         tools_called.append("get_telecom_cdr_intelligence")
         citations.append("[Evidence: ev-01 (CDR_MUMBAI_2024_03_13_BATCH.csv)]")
@@ -1121,7 +1211,7 @@ async def copilot_chat_endpoint(req_or_dict: Any):
             f"📍 **Cell Tower Triangulation & Geolocation:**\n"
             f"• **Primary Hub:** Tower #404-45-1920 (Sector 1 Industrial Depot, Goregaon East)\n"
             f"• **Secondary Safehouse Cell:** Tower #404-45-1922 (Bandra West Safehouse)\n"
-            f"• **Trilateration Precision:** GDOP = 1.14 (Uncertainty $\pm 12.4\text{m}$)\n\n"
+            f"• **Trilateration Precision:** GDOP = 1.14 (Uncertainty ±12.4m)\n\n"
             f"📱 **Hardware Identifiers:** IMEI: `354892019482019` | IMSI: `404459812049182` (Dual SIM Active)\n"
             f"⚖️ **Legal Notice:** Lawful intercept active under Section 5(2) Indian Telegraph Act."
         )
@@ -1291,7 +1381,7 @@ async def get_copilot_suggestions(case_id: str = "c1"):
     }
 
 @app.post("/api/copilot/actions/confirm")
-async def confirm_copilot_action(data: dict):
+async def confirm_copilot_action(data: dict = Body(...)):
     draft_type = data.get("draft_type", "EXECUTIVE_BRIEFING_DRAFT")
     case_id = data.get("case_id", "c1")
     return {
@@ -1639,10 +1729,13 @@ async def review_alert_endpoint(alert_id: str, req: AlertReviewRequest):
         if a["id"] == alert_id:
             a["status"] = req.decision
             a["investigator_notes"] = req.note or a.get("investigator_notes", "")
-            if req.decision == "CONFIRMED_BY_INVESTIGATOR":
-                CALIBRATION_STATE["confirmed_threats"] += 1
-            elif req.decision == "SUPPRESSED_AS_FALSE_POSITIVE":
-                CALIBRATION_STATE["false_positives"] += 1
+            # Thread-safe calibration state update
+            async with _calibration_lock:
+                if req.decision == "CONFIRMED_BY_INVESTIGATOR":
+                    CALIBRATION_STATE["confirmed_threats"] += 1
+                elif req.decision == "SUPPRESSED_AS_FALSE_POSITIVE":
+                    CALIBRATION_STATE["false_positives"] += 1
+                CALIBRATION_STATE["last_updated"] = dt_cls.now().strftime("%Y-%m-%d %H:%M:%S")
             return {
                 "status": "REVIEW_RECORDED",
                 "alert_id": alert_id,
@@ -1691,7 +1784,7 @@ EVIDENCE_ITEMS = [
         "ingested_at": "2024-03-13 04:15:00 UTC",
         "sha256_hash": "a4f81c9b2d8e41762a0c4f8812e569201a4e87bf23d10a97c45812e9b01c34a1",
         "classification": "RESTRICTED_SYNTHETIC_DEMO",
-        "integrity_status": "VERIFIED_INTEACT",
+        "integrity_status": "VERIFIED_INTACT",
         "retention_date": "2026-03-13"
     },
     {
@@ -1703,7 +1796,7 @@ EVIDENCE_ITEMS = [
         "ingested_at": "2024-03-12 19:30:00 UTC",
         "sha256_hash": "7b192c8104ea583f120194827163019482019482716492018471928471920192",
         "classification": "CONFIDENTIAL_SYNTHETIC_DEMO",
-        "integrity_status": "VERIFIED_INTEACT",
+        "integrity_status": "VERIFIED_INTACT",
         "retention_date": "2026-03-12"
     },
     {
@@ -1715,7 +1808,7 @@ EVIDENCE_ITEMS = [
         "ingested_at": "2024-03-11 05:10:00 UTC",
         "sha256_hash": "3c98102948172648102948172635481920394817263548192039481726354819",
         "classification": "RESTRICTED_SYNTHETIC_DEMO",
-        "integrity_status": "VERIFIED_INTEACT",
+        "integrity_status": "VERIFIED_INTACT",
         "retention_date": "2026-03-11"
     }
 ]
@@ -1801,7 +1894,7 @@ AUDIT_LOG_RECORDS = [
 ]
 
 @app.get("/api/audit/logs")
-async def get_audit_logs():
+async def get_system_audit_trail():
     return {
         "total_records": len(AUDIT_LOG_RECORDS),
         "audit_trail": AUDIT_LOG_RECORDS,
@@ -1887,10 +1980,18 @@ async def save_settings(data: dict):
 # ── JWT AUTHENTICATION TOKEN ENDPOINTS ──
 @app.post("/api/auth/token")
 async def generate_auth_token(data: dict):
+    """Issue a JWT only after verifying the master password credential."""
+    password_input = data.get("password", "")
     username = data.get("username", "Aditya Pawar")
     badge = data.get("badge", "CRIMENET-CHIEF-01")
     role = data.get("role", "Chief Intelligence Architect")
-    
+
+    # Validate credentials before issuing a token
+    master = get_master_data()
+    stored_hash = master.get("password", _DEFAULT_PASS_HASH)
+    if not password_input or not verify_password(password_input, stored_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials. Token issuance denied.")
+
     token = create_jwt_token({
         "sub": username,
         "badge": badge,
@@ -1898,7 +1999,7 @@ async def generate_auth_token(data: dict):
         "issued_at": int(time.time()),
         "clearance": "Top Secret / Level 5"
     })
-    
+
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -1957,7 +2058,7 @@ async def log_visit(data: dict):
     return {"status": "logged", "total_logs": len(logs)}
 
 @app.get("/api/security/audit-logs")
-async def get_audit_logs():
+async def get_security_intruder_logs():
     logs = get_persisted_logs()
     return {"logs": logs, "total": len(logs)}
 
@@ -1998,8 +2099,9 @@ async def verify_face_endpoint(req: FaceVerifyRequest):
         return {"authorized": False, "similarity": 0, "message": "No Master Face Registered Yet! Login via Passcode Aditya@4912 to register."}
 
     sim = compute_zncc_similarity(req.vector, master_vec)
-    
-    if sim >= 80:
+
+    # Threshold: 75% ZNCC match required (aligned with frontend threshold)
+    if sim >= 75:
         log_entry = {
             "id": str(int(dt_cls.now().timestamp() * 1000)),
             "timestamp": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -2029,7 +2131,8 @@ async def verify_face_endpoint(req: FaceVerifyRequest):
 @app.post("/api/security/register-master-face")
 async def register_master_face(req: RegisterMasterFaceRequest):
     master = get_master_data()
-    if req.key.strip() != "Aditya@4912" and req.key.strip() != master.get("password"):
+    stored_hash = master.get("password", _DEFAULT_PASS_HASH)
+    if not verify_password(req.key, stored_hash):
         return {"success": False, "message": "Invalid Master Key!"}
     master["face_descriptor"] = req.vector
     master["face_photo"] = req.photo
@@ -2039,9 +2142,16 @@ async def register_master_face(req: RegisterMasterFaceRequest):
 @app.post("/api/security/change-password")
 async def change_password_endpoint(req: ChangePasswordRequest):
     master = get_master_data()
-    if req.key.strip() != "Aditya@4912" and req.key.strip() != master.get("password"):
+    stored_hash = master.get("password", _DEFAULT_PASS_HASH)
+    if not verify_password(req.key, stored_hash):
         return {"success": False, "message": "Invalid Master Key!"}
-    master["password"] = req.new_password.strip()
+    # Enforce minimum password strength: 8+ chars
+    new_pass = req.new_password.strip()
+    if len(new_pass) < 8:
+        return {"success": False, "message": "Password must be at least 8 characters long."}
+    # Hash and save
+    master["password"] = hash_password(new_pass)
+    master["password_hashed"] = True
     save_master_data(master)
     return {"success": True, "message": "Master Password Successfully Updated!"}
 
@@ -2131,7 +2241,11 @@ class KalmanFilter2D:
         self.p_lng = 0.0001
 
     def update(self, z_lat: float, z_lng: float):
-        # 1. State Prediction
+        # Track previous position for velocity estimation
+        prev_lat = self.lat
+        prev_lng = self.lng
+
+        # 1. State Prediction (propagate using current velocity estimate)
         self.lat += self.v_lat * self.dt
         self.lng += self.v_lng * self.dt
         self.p_lat += 0.000005
@@ -2147,6 +2261,14 @@ class KalmanFilter2D:
         self.lng += k_lng * (z_lng - self.lng)
         self.p_lat *= (1.0 - k_lat)
         self.p_lng *= (1.0 - k_lng)
+
+        # 4. Velocity Estimation via exponential moving average of finite differences
+        measured_v_lat = (self.lat - prev_lat) / self.dt
+        measured_v_lng = (self.lng - prev_lng) / self.dt
+        alpha = 0.3  # Smoothing factor (lower = smoother, higher = more responsive)
+        self.v_lat = (1 - alpha) * self.v_lat + alpha * measured_v_lat
+        self.v_lng = (1 - alpha) * self.v_lng + alpha * measured_v_lng
+
         return self.lat, self.lng
 
     def predict_steps(self, steps: int = 5):
