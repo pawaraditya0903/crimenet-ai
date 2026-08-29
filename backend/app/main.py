@@ -579,18 +579,38 @@ CALIBRATION_STATE = {
 }
 _calibration_lock = asyncio.Lock()
 
-# ── TF-IDF WEIGHTED SEMANTIC RAG ENGINE ──
+# ── TF-IDF WEIGHTED SEMANTIC RAG ENGINE WITH STOPWORDS FILTER ──
+STOPWORDS = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as", "at",
+    "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can", "can't", "cannot",
+    "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each",
+    "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd",
+    "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i",
+    "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me",
+    "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other",
+    "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's",
+    "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them",
+    "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this",
+    "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll",
+    "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while",
+    "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're",
+    "you've", "your", "yours", "yourself", "yourselves", "hey", "hi", "hello", "buddy", "bro", "sir", "please", "tell",
+    "show", "give", "find", "test"
+}
+
 def compute_text_tokens(text: str) -> set:
     words = re.findall(r'\b[a-zA-Z0-9_\+\-]+\b', text.lower())
-    return set(words)
+    return {w for w in words if w not in STOPWORDS}
 
 def compute_text_token_freq(text: str) -> dict:
-    """Returns term frequency dict for TF-IDF scoring."""
-    words = re.findall(r'\b[a-zA-Z0-9_\+\-]+\b', text.lower())
+    """Returns term frequency dict for TF-IDF scoring, excluding stopwords."""
+    words = [w for w in re.findall(r'\b[a-zA-Z0-9_\+\-]+\b', text.lower()) if w not in STOPWORDS]
+    if not words:
+        return {}
     freq: dict = {}
     for w in words:
         freq[w] = freq.get(w, 0) + 1
-    total = max(len(words), 1)
+    total = len(words)
     return {w: c / total for w, c in freq.items()}
 
 # Pre-compute document frequencies for IDF calculation
@@ -611,6 +631,7 @@ def vector_semantic_search(query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         _IDF_INDEX = _build_idf_index()
 
     q_tokens = compute_text_token_freq(query)
+    # If query contains only stopwords (e.g. "hey buddy, how are you?"), return empty matches
     if not q_tokens:
         return []
 
@@ -626,8 +647,8 @@ def vector_semantic_search(query: str, top_k: int = 3) -> List[Dict[str, Any]]:
                 idf = _IDF_INDEX.get(token, 1.0)
                 score += q_tf * doc_tf[token] * idf
 
-        if score > 0:
-            # Boost high-risk entities
+        # Require a solid relevance score (above 0.08) to avoid false matches
+        if score >= 0.08:
             score *= (1.0 + (e.get('risk_score', 50) / 200.0))
             scored_items.append((score, e))
 
@@ -680,38 +701,22 @@ def ask_ai_intelligence(user_msg: str) -> str:
     except Exception:
         pass
 
-    # 3. Return Semantic RAG Result if found
+    # 3. Return Semantic RAG Result if genuine forensic match was found
     if rag_context:
         return rag_context
 
-    # 4. Check for Phone Number Query
-    digits = "".join(c for c in user_msg if c.isdigit())
-    if len(digits) >= 8:
-        prefix = digits[:4]
-        circle = "Maharashtra & Goa Circle" if prefix in ["9834","9822","9850","9823","9860","9881","9890","9762","9763","9764","9765"] else "Western Telecom Circle"
-        seed = sum(int(d) for d in digits)
-        risk = 72 + (seed % 26)
-        return (
-            f"📱 **TELECOM CDR & SUBSCRIBER DOSSIER: `{digits}`**\n\n"
-            f"• **Telecom Circle:** {circle} (India)\n"
-            f"• **Carrier Gateway:** Jio / Vodafone-Idea Network\n"
-            f"• **Calculated Threat Level:** **{risk:.1f} / 100** [{'CRITICAL' if risk >= 85 else 'HIGH RISK'}]\n"
-            f"• **Linked Dual-SIM IMEI:** `35{seed}892019482{seed%9}9`\n"
-            f"• **30-Day Call Volume:** {280 + seed*3} Outbound / {190 + seed*2} Inbound\n"
-            f"• **Nocturnal Call Ratio:** {(30 + (seed % 18)):.1f}% (Peak: 01:30 AM – 04:15 AM)\n"
-            f"• **Active Cell Tower:** Sector Hub ID #{40400 + (seed % 50)} (19.1663° N, 72.8526° E)\n\n"
-            f"📋 **Investigative Directives:**\n"
-            f"1. Section 5(2) Indian Telegraph Act lawful metadata interception warrant.\n"
-            f"2. Cross-reference IMEI across National CEIR Registry.\n"
-            f"3. Geofence surveillance on target tower hub."
-        )
-
+    # 4. Structured Intelligent Forensic Fallback
     return (
-        f"I have processed your query regarding: **'{user_msg}'**.\n\n"
-        f"• **Platform Analysis:** Monitored across Aditya Pawar's intelligence graph.\n"
-        f"• **Key Targets in System:** Arjun Mehta (Kingpin), Mohammed Rafiq (Hawala), Vikram Singh (Logistics), Priya Desai (Finance).\n"
-        f"• **Active Alerts:** ₹1.5 Cr midnight shell transfer to Phoenix Trading LLC & 68-call telecom burst on `+91-9876543210`.\n\n"
-        f"Feel free to ask for specific suspect profiles, case management directives, or type any phone number (like `9834702432`)!"
+        f"🕵️ **CrimeNet Copilot Tactical Analysis**\n\n"
+        f"I received your inquiry: *\"{user_msg}\"*\n\n"
+        f"• **Active Investigation:** Case c1 — *Operation Blue Thunder* (Cross-border Hawala & Narcotics)\n"
+        f"• **Key Suspects Available:** **Arjun Mehta** (Kingpin), **Mohammed Rafiq** (Hawala), **Vikram Singh** (Logistics), **Priya Desai** (Finance)\n"
+        f"• **Primary Red-Flag Indicators:** ₹1.5 Cr midnight wire to Phoenix Trading LLC & 68-call nocturnal burst on `+91-9876543210`\n\n"
+        f"💡 **Suggested Next Queries:**\n"
+        f"1. *\"Summarize this case\"*\n"
+        f"2. *\"Who is Arjun Mehta?\"*\n"
+        f"3. *\"Explain alert a1\"*\n"
+        f"4. *\"Find shortest trail between Arjun Mehta and Phoenix Trading\"*"
     )
 
 @app.get("/health")
@@ -1179,23 +1184,53 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
     action_preview = None
     response_text = ""
 
-    # 0. Greetings & Identity Queries
-    if msg_lower in ["hi", "hii", "hello", "hey", "hola", "greetings", "test"] or any(g in msg_lower for g in ["who are you", "what can you do", "help me"]):
+    # 0. Conversational Greetings & Casual Chat (e.g., "Hey buddy, how are you?", "hello", "what's up")
+    GREETING_PATTERNS = [
+        r'\bhow (are|r) you\b', r'\bhow(\'s|s) it going\b', r'\bhow (you|u) doing\b', r'\bhow do you do\b',
+        r'\bhey (buddy|bro|copilot|assistant|there)\b', r'\bhello (buddy|bro|copilot|there)\b',
+        r'\bgood (morning|afternoon|evening|night)\b',
+        r'\bwhat(\'s|s) up\b', r'\bsup\b', r'\bare you there\b', r'\byo\b', r'\bhola\b',
+        r'^\s*(hi|hii|hello|hey|greetings|test)\b'
+    ]
+    is_greeting_match = any(bool(re.search(p, msg_lower)) for p in GREETING_PATTERNS)
+
+    if is_greeting_match:
         intent = "greeting"
         citations.append("[System: CrimeNet Voice Copilot v2.0]")
         response_text = (
-            "👋 **Hello Investigator! I am CrimeNet Copilot**, your real-time forensic intelligence and link analysis assistant.\n\n"
-            "Here is what I can do for you right now:\n"
-            "• **Summarize Cases:** Ask *'Summarize this case'* for Operation Blue Thunder.\n"
-            "• **Threat & Risk Alerts:** Ask *'Show the highest-risk alerts'* or *'Explain alert a1'*.\n"
-            "• **Telecom CDR Audits:** Type or paste any phone number (e.g., `+91-9876543210` or `9834702432`).\n"
-            "• **Suspect Dossiers:** Ask *'Who is Arjun Mehta?'* or *'Tell me about Mohammed Rafiq'*.\n"
-            "• **Shortest Money Trails:** Ask *'Find shortest trail between Arjun Mehta and Phoenix Trading'*.\n"
-            "• **Draft Legal Briefings:** Ask *'Draft executive briefing'* or *'Draft supervisor escalation memorandum'*."
+            "👋 **Hello Investigator! I am doing great and ready for action.** All neural telemetry streams, graph links, and anomaly detectors are operating at 100% precision.\n\n"
+            "**How can I assist your investigation today?**\n"
+            "• **Case Briefing:** Ask *\"Summarize this case\"* for Operation Blue Thunder.\n"
+            "• **Risk Intelligence:** Ask *\"Show the highest-risk alerts\"* or *\"Explain alert a1\"*.\n"
+            "• **Telecom Forensics:** Send any 10-digit phone number (e.g., `+91-9876543210` or `9834702432`) for 30-day CDR logs & tower triangulation.\n"
+            "• **Suspect Dossiers:** Ask *\"Who is Arjun Mehta?\"* or *\"Tell me about Mohammed Rafiq\"*.\n"
+            "• **Money Trail Finder:** Ask *\"Find shortest trail between Arjun Mehta and Phoenix Trading\"*."
         )
 
-    # 1. Phone Number / CDR Matcher — requires an isolated 7-12 digit sequence (actual phone number)
-    # Uses \b word boundaries so case IDs like "c1" or alert IDs like "a2" don't trigger this
+    # 1. Platform & Architect Inquiries (e.g., "who made you", "who is aditya", "what is crimenet")
+    elif any(q in msg_lower for q in ["who made you", "who created you", "who built you", "aditya", "creator", "architect", "what is crimenet", "about crimenet", "tell me about this project", "who is aditya", "what are you"]):
+        intent = "system_identity"
+        citations.append("[Architecture: Aditya Pawar (Chief Intelligence Architect)]")
+        citations.append("[Platform: CrimeNet AI v2.0]")
+        response_text = (
+            "🛡️ **CrimeNet AI** is an Autonomous Forensic & Anti-Money Laundering Intelligence Platform architected and engineered by **Aditya Pawar** (Chief Intelligence Architect & Lead Developer).\n\n"
+            "**Key Architectural Pillars:**\n"
+            "• **Graph ML Link Analysis:** 48-node dynamic topology with PageRank & Brandes betweenness centrality\n"
+            "• **PMLA Anti-Hawala Tracer:** Johnson's directed simple cycles for detecting circular layering loops\n"
+            "• **Cellular CDR Triangulation:** Weighted Least Squares (WLS) 3-tower radio geolocation with GDOP 1.14\n"
+            "• **Explainable AI (XAI):** Isolation Forest feature breakdown with Human-In-The-Loop (HITL) calibration\n"
+            "• **Evidence Ledger:** SHA-256 Merkle tree chain-of-custody compliant with Section 63 BSA 2023 / Section 65B IEA"
+        )
+
+    # 2. Courtesy & Appreciation (e.g., "thanks", "great job", "awesome")
+    elif any(t in msg_lower for t in ["thank", "thanks", "thx", "appreciate", "great job", "awesome", "perfect", "good job", "nice", "well done", "cool"]):
+        intent = "courtesy"
+        citations.append("[System: CrimeNet Voice Copilot v2.0]")
+        response_text = (
+            "🤝 **You're welcome, Officer!** Standing by 24/7 to parse call records, uncover financial layering, and accelerate your casework. Let me know if you need to inspect an alert, generate a briefing, or trace an entity."
+        )
+
+    # 3. Phone Number / CDR Matcher — requires an isolated 7-12 digit sequence (actual phone number)
     elif bool(re.search(r'(?<!\w)\d{7,12}(?!\w)', user_msg)):
         intent = "telecom_inquiry"
         tools_called.append("get_telecom_cdr_intelligence")
@@ -1220,7 +1255,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
             f"⚖️ **Legal Notice:** Lawful intercept active under Section 5(2) Indian Telegraph Act."
         )
 
-    # 2. Rule-Based Intent Classifier
+    # 4. Rule-Based Intent Classifier: Case Summaries
     elif any(k in msg_lower for k in ["summar", "overview", "what is this case", "case info"]):
         intent = "case_summary"
         summary = tool_get_case_summary(case_id)
@@ -1235,7 +1270,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
             f"*Decision Support Note: All analytical findings represent statistical indicators for human investigator validation.*"
         )
 
-    elif any(k in msg_lower for k in ["alert", "highest risk", "flagged", "threat"]):
+    elif any(k in msg_lower for k in ["alert", "highest risk", "flagged", "threat", "anomaly", "anomalies"]):
         intent = "alert_list"
         alerts_data = tool_get_case_alerts(case_id)
         tools_called.append("get_case_alerts")
@@ -1246,7 +1281,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
             + "\n\nType *'Explain alert a1'* to view the Explainable AI feature breakdown."
         )
 
-    elif any(k in msg_lower for k in ["explain alert", "why was", "why flagged", "explain a1", "explain a2", "explain a3", "explain a4"]):
+    elif any(k in msg_lower for k in ["explain alert", "why was", "why flagged", "explain a1", "explain a2", "explain a3", "explain a4", "xai"]):
         intent = "alert_explanation"
         alert_id = "a1"
         if "a2" in msg_lower: alert_id = "a2"
@@ -1265,7 +1300,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
             + f"\n\n*Current Status: {xai['status'].replace('_',' ')}*. Would you like me to prepare a supervisor escalation draft?"
         )
 
-    elif any(k in msg_lower for k in ["path", "trail", "connect", "shortest"]):
+    elif any(k in msg_lower for k in ["path", "trail", "connect", "shortest", "link between", "relationship between"]):
         intent = "graph_path"
         path_res = tool_find_shortest_path("Arjun Mehta", "Phoenix Trading LLC")
         tools_called.append("find_shortest_graph_path")
@@ -1276,7 +1311,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
             + "\n\nThis trail illustrates financial and logistical links between entities of interest in the graph topology."
         )
 
-    elif any(k in msg_lower for k in ["briefing", "create briefing", "draft briefing", "summary report"]):
+    elif any(k in msg_lower for k in ["briefing", "create briefing", "draft briefing", "summary report", "memo"]):
         intent = "briefing_draft"
         draft = tool_draft_case_briefing(case_id)
         tools_called.append("draft_case_briefing")
@@ -1310,7 +1345,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
         tools_called.append("pause_demo_simulation")
         response_text = "✓ **Live Demo Simulation Paused.** Event stream has been halted."
 
-    elif any(k in msg_lower for k in ["who is", "profile", "tell me about", "arjun", "rafiq", "vikram", "priya"]):
+    elif any(k in msg_lower for k in ["who is", "profile", "tell me about", "arjun", "rafiq", "vikram", "priya", "mehta", "phoenix", "warehouse", "bmw"]):
         intent = "entity_profile"
         prof = tool_get_entity_profile(user_msg)
         tools_called.append("get_entity_profile")
@@ -1325,7 +1360,7 @@ async def copilot_chat_endpoint(req_or_dict: Union[CopilotChatRequest, Dict[str,
         )
 
     else:
-        # Fallback RAG Assistant
+        # Fallback RAG Assistant with Stopwords Filter
         intent = "rag_search"
         tools_called.append("vector_semantic_search")
         rag_reply = ask_ai_intelligence(user_msg)
