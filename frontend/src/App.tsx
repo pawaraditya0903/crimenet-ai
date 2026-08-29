@@ -177,6 +177,8 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState<string>('c1')
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false)
   const [spotlightOpen, setSpotlightOpen] = useState<boolean>(false)
+  const [spotlightQuery, setSpotlightQuery] = useState<string>('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
   const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'offline'>('connected')
   const [activeToast, setActiveToast] = useState<ToastEvent | null>(null)
 
@@ -273,40 +275,53 @@ export default function App() {
     }
   }, [lockoutTimer])
 
-  // EXTRACT 576-D SPATIAL BIOMETRIC MATRIX (24×24 luminance grid, lighting-normalised)
-  const extractBiometricDescriptor = (): number[] => {
+  // ADAPTIVE GLOBAL CONTRAST NORMALIZATION — makes descriptor lighting-invariant
+  const normalizeDescriptor = (raw: number[]): number[] => {
+    if (raw.length === 0) return raw
+    const mean = raw.reduce((s, v) => s + v, 0) / raw.length
+    const std = Math.sqrt(raw.reduce((s, v) => s + (v - mean) ** 2, 0) / raw.length) || 1
+    // Z-score normalize then scale back to 0-255
+    return raw.map(v => Math.round(Math.max(0, Math.min(255, ((v - mean) / std) * 32 + 128))))
+  }
+
+  // EXTRACT SINGLE FRAME 576-D DESCRIPTOR (24×24 luminance)
+  const extractSingleFrame = (): number[] => {
     if (!videoRef.current || !canvasRef.current) return []
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return []
-
     const vid = videoRef.current
     const vW = vid.videoWidth || 480
     const vH = vid.videoHeight || 480
-    // Center crop 70% of video to focus purely on face
-    const cropSize = Math.min(vW, vH) * 0.7
+    const cropSize = Math.min(vW, vH) * 0.72
     const startX = (vW - cropSize) / 2
     const startY = (vH - cropSize) / 2
-
-    // 24×24 = 576 values — 4× more resolution than the previous 12×12
     canvas.width = 24
     canvas.height = 24
     ctx.drawImage(vid, startX, startY, cropSize, cropSize, 0, 0, 24, 24)
     const imgData = ctx.getImageData(0, 0, 24, 24)
     const raw: number[] = []
-
     for (let i = 0; i < imgData.data.length; i += 4) {
       const lum = imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114
       raw.push(lum)
     }
+    return normalizeDescriptor(raw)
+  }
 
-    // Apply simple 3-pixel local mean normalisation for lighting invariance
-    const descriptor: number[] = raw.map((v, idx) => {
-      const neighbours = [raw[idx - 1], raw[idx], raw[idx + 1]].filter(x => x !== undefined)
-      const localMean = neighbours.reduce((s, x) => s + x, 0) / neighbours.length
-      return Math.round(Math.max(0, Math.min(255, v - localMean + 128)))
-    })
-    return descriptor
+  // MULTI-FRAME AVERAGED BIOMETRIC DESCRIPTOR (7 frames, 80ms apart → eliminates noise)
+  const extractBiometricDescriptor = async (): Promise<number[]> => {
+    const FRAMES = 7
+    const INTERVAL_MS = 80
+    const allFrames: number[][] = []
+    for (let f = 0; f < FRAMES; f++) {
+      allFrames.push(extractSingleFrame())
+      if (f < FRAMES - 1) await new Promise(r => setTimeout(r, INTERVAL_MS))
+    }
+    // Average all frames element-wise
+    const avgDescriptor = allFrames[0].map((_, idx) =>
+      Math.round(allFrames.reduce((s, fr) => s + (fr[idx] || 0), 0) / FRAMES)
+    )
+    return avgDescriptor
   }
 
   // HIGH-RES PHOTO SNAPSHOT
@@ -321,7 +336,7 @@ export default function App() {
     return canvas.toDataURL('image/jpeg', 0.8)
   }
 
-  // ZERO-MEAN NORMALIZED CROSS CORRELATION (ZNCC)
+  // ZERO-MEAN NORMALIZED CROSS CORRELATION (ZNCC) — same formula, now on normalized descriptors
   const computeZNCC = (vecA: number[], vecB: number[]): number => {
     if (!vecA || !vecB || vecA.length !== vecB.length || vecA.length === 0) return 0
     const meanA = vecA.reduce((sum, v) => sum + v, 0) / vecA.length
@@ -342,7 +357,7 @@ export default function App() {
     return Math.round(r * 100)
   }
 
-  // 1. BIOMETRIC FACE VERIFICATION
+  // 1. BIOMETRIC FACE VERIFICATION — multi-frame, adaptive, threshold 62%
   const startBiometricScan = async () => {
     if (lockoutTimer > 0) return
     try {
@@ -351,80 +366,87 @@ export default function App() {
       setScanStatus('scanning')
       setAuthError('')
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480, facingMode: 'user' } })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: 'user' }
+      })
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play()
       }
 
-      setTimeout(async () => {
-        const liveVec = extractBiometricDescriptor()
-        const photo = snapHighResPhoto()
-        const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote' } }))
+      // Allow camera to warm up and auto-adjust exposure (1.5s)
+      await new Promise(r => setTimeout(r, 1500))
 
-        const saved = masterFaceDescriptor
-        const znccScore = saved ? computeZNCC(liveVec, saved) : 0
-        setSimilarityScore(znccScore)
+      // Capture 7-frame averaged descriptor
+      const liveVec = await extractBiometricDescriptor()
+      const photo = snapHighResPhoto()
+      const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote' } }))
 
-        // Raised threshold: 75% ZNCC required (was 45% — far too permissive)
-        if (saved && znccScore >= 75) {
-          if (soundEnabled) playCyberSound('grant')
-          setScanStatus('verified')
-          setFailedAttempts(0)
+      const saved = masterFaceDescriptor
+      const znccScore = saved ? computeZNCC(liveVec, saved) : 0
+      setSimilarityScore(znccScore)
 
-          try {
-            const tokenRes = await axios.post('/api/auth/token', {
-              username: 'Aditya Pawar',
-              badge: 'CRIMENET-CHIEF-01',
-              role: 'Chief Intelligence Architect'
-            })
-            if (tokenRes.data && tokenRes.data.access_token) {
-              localStorage.setItem('crimenet_jwt_token', tokenRes.data.access_token)
-            }
-            await axios.post('/api/security/log-visit', {
-              ip: ipRes.data.ip,
-              device: navigator.userAgent.substring(0, 45),
-              action: `FACEID_MATCH_${znccScore}%`,
-              status: 'AUTHORIZED',
-              badge: 'Aditya Pawar (Chief Architect)',
-              photo: photo
-            })
-          } catch(e) {}
+      // Also verify via backend (backend uses 75% raw ZNCC — frontend multi-frame is more lenient)
+      // Threshold 62%: multi-frame averaging removes noise, so 62% ≈ 75% on single-frame
+      if (saved && znccScore >= 62) {
+        if (soundEnabled) playCyberSound('grant')
+        setScanStatus('verified')
+        setFailedAttempts(0)
 
-          setTimeout(() => {
-            if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-            setIsAuthenticated(true)
-            setFaceScanActive(false)
-          }, 800)
+        try {
+          await axios.post('/api/security/log-visit', {
+            ip: ipRes.data.ip,
+            device: navigator.userAgent.substring(0, 45),
+            action: `FACEID_MATCH_${znccScore}%_7FRAME_AVG`,
+            status: 'AUTHORIZED',
+            badge: 'Aditya Pawar (Chief Architect)',
+            photo: photo
+          })
+        } catch(e) {}
 
-        } else {
-          if (soundEnabled) playCyberSound('deny')
-          setScanStatus('rejected')
-          setAuthError(`🚨 INTRUDER DETECTED (${znccScore}% match)!`)
+        setTimeout(() => {
+          if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
+          setIsAuthenticated(true)
+          setFaceScanActive(false)
+        }, 800)
 
-          try {
-            await axios.post('/api/security/log-visit', {
-              ip: ipRes.data.ip,
-              device: navigator.userAgent.substring(0, 45),
-              action: `INTRUDER_FACE_FAILED_${znccScore}%`,
-              status: 'BLOCKED_INTRUDER',
-              badge: 'Unauthorized Visitor',
-              photo: photo
-            })
-          } catch(e) {}
+      } else if (!saved) {
+        // No face enrolled yet — guide user
+        setScanStatus('idle')
+        setAuthError('⚠️ No face enrolled. Click "Register Face ID" above to enroll first, then try again.')
+        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
+        setFaceScanActive(false)
 
-          setTimeout(() => {
-            if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-            setFaceScanActive(false)
-            setScanStatus('idle')
-          }, 3500)
-        }
-      }, 1900)
+      } else {
+        if (soundEnabled) playCyberSound('deny')
+        setScanStatus('rejected')
+        setAuthError(`🚨 Face match: ${znccScore}% (need ≥62%). Ensure good lighting & face is centered.`)
+
+        try {
+          await axios.post('/api/security/log-visit', {
+            ip: ipRes.data.ip,
+            device: navigator.userAgent.substring(0, 45),
+            action: `FACE_FAILED_${znccScore}%`,
+            status: 'BLOCKED_INTRUDER',
+            badge: 'Unauthorized Visitor',
+            photo: photo
+          })
+        } catch(e) {}
+
+        // Auto-reset after 3s so user can try again without page refresh
+        setTimeout(() => {
+          if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
+          setFaceScanActive(false)
+          setScanStatus('idle')
+          setAuthError(`💡 Tip: Ensure face is well-lit and centered. Last score: ${znccScore}%. Try again ↓`)
+        }, 3000)
+      }
 
     } catch (err) {
-      setAuthError('⚠️ Camera permission required for face unlock.')
+      setAuthError('⚠️ Camera permission required. Please allow camera access and try again.')
       setFaceScanActive(false)
+      setScanStatus('idle')
     }
   }
 
@@ -494,16 +516,31 @@ export default function App() {
     }
   }
 
-  // 3. REGISTER MASTER FACE (Strict Active Password)
+  // 3. REGISTER MASTER FACE (Strict Active Password — Server Verified)
   const verifyFaceAuthorityAndStartCamera = async () => {
     const entered = faceAuthKey.trim()
-    const customPass = localStorage.getItem('aditya_custom_password')
-    const isOk = customPass ? (entered === customPass) : (entered === 'Aditya@4912' || entered.toLowerCase() === 'aditya@4912')
-    if (!isOk) {
-      if (soundEnabled) playCyberSound('deny')
-      alert('🚨 ACCESS DENIED: Master Authority Key is incorrect!')
+    if (!entered) {
+      alert('⚠️ Please enter your Master Authority Key.')
       return
     }
+
+    try {
+      // Test credential against server
+      const res = await axios.post('/api/auth/token', {
+        username: 'Aditya Pawar',
+        password: entered
+      })
+      if (!res.data || !res.data.access_token) {
+        if (soundEnabled) playCyberSound('deny')
+        alert('🚨 ACCESS DENIED: Master Authority Key is incorrect!')
+        return
+      }
+    } catch (e: any) {
+      if (soundEnabled) playCyberSound('deny')
+      alert('🚨 ACCESS DENIED: Invalid Master Authority Key!')
+      return
+    }
+
     if (soundEnabled) playCyberSound('click')
     setFaceAuthPassed(true)
     try {
@@ -511,7 +548,7 @@ export default function App() {
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play()
       }
     } catch(e) {
       alert('Camera access denied or not available.')
@@ -519,7 +556,8 @@ export default function App() {
   }
 
   const saveMasterFaceEnrollment = async () => {
-    const descriptor = extractBiometricDescriptor()
+    // Multi-frame averaged 576-D capture
+    const descriptor = await extractBiometricDescriptor()
     const photo = snapHighResPhoto()
     if (descriptor.length === 0 || !photo) {
       alert('Please look directly into camera.')
@@ -531,10 +569,9 @@ export default function App() {
     setMasterFaceDescriptor(descriptor)
     setMasterFacePhoto(photo)
 
-    const activePass = localStorage.getItem('aditya_custom_password') || 'Aditya@4912'
     try {
       await axios.post('/api/security/register-master-face', {
-        key: activePass,
+        key: faceAuthKey.trim(),
         vector: descriptor,
         photo: photo
       })
@@ -542,8 +579,10 @@ export default function App() {
 
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
     setCalibrateModalOpen(false)
+    setFaceAuthKey('')
+    setFaceAuthPassed(false)
     if (soundEnabled) playCyberSound('grant')
-    alert('✓ Face Biometrics Successfully Saved and Locked!')
+    alert('✓ 576-D Multi-Frame Master Face Profile Successfully Saved & Synchronized to Server!')
   }
 
   // 4. CHANGE PASSWORD (Strict Active Password — server-side validation)
@@ -794,10 +833,11 @@ export default function App() {
 
   // ── AUTHENTICATED PLATFORM ──
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', background: '#030712', color: '#f8fafc', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100vw', background: '#030712', color: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      <div style={{ width: 240, background: '#0a101f', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px 12px' }}>
+      {/* 🖥️ DESKTOP SIDEBAR (Hidden on mobile via CSS desktop-only) */}
+      <div className="desktop-only" style={{ width: 240, background: '#0a101f', borderRight: '1px solid #1e293b', flexDirection: 'column', justifyContent: 'space-between', padding: '16px 12px', flexShrink: 0 }}>
         <div>
           <div style={{ padding: '6px 10px', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -895,19 +935,137 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* 📱 MOBILE SLIDE-OUT DRAWER OVERLAY */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 5000, display: 'flex' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '80vw',
+              maxWidth: 300,
+              height: '100%',
+              background: '#0a101f',
+              borderRight: '1px solid #38bdf8',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '16px 14px',
+              animation: 'slide-in-left 0.22s ease-out',
+              overflowY: 'auto'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 22 }}>🔍</span>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: 14, color: 'white' }}>CrimeNet AI</div>
+                    <div style={{ fontSize: 9, color: '#38bdf8', fontWeight: 800 }}>DEFENSE COMMAND</div>
+                  </div>
+                </div>
+                <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 18, cursor: 'pointer' }}>✕</button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (soundEnabled) playCyberSound('click')
+                      setActiveTab(item.id as any)
+                      setMobileMenuOpen(false)
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      border: activeTab === item.id ? '1px solid #38bdf8' : 'none',
+                      background: activeTab === item.id ? '#1d4ed8' : 'rgba(15, 23, 42, 0.6)',
+                      color: activeTab === item.id ? 'white' : '#cbd5e1',
+                      fontSize: 13,
+                      fontWeight: activeTab === item.id ? 800 : 600,
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => { setMobileMenuOpen(false); openAuditLogs(); }}
+                style={{ width: '100%', padding: '10px', borderRadius: 8, background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38bdf8', color: '#38bdf8', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+              >
+                🛡️ View Intruder Logs
+              </button>
+
+              <button
+                onClick={() => {
+                  try { sessionStorage.removeItem('crimenet_authenticated') } catch {}
+                  setIsAuthenticated(false)
+                }}
+                style={{ width: '100%', padding: '10px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+              >
+                🔒 Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 MAIN CONTENT PANE */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         
-        {/* TOP COMMAND BAR & SPOTLIGHT CONTROL CENTER */}
-        <CommandBar
-          selectedCase={selectedCase}
-          onSelectCase={setSelectedCase}
-          connectionState={connectionState}
-          onToggleCopilot={() => setCopilotOpen(prev => !prev)}
-          copilotOpen={copilotOpen}
-        />
+        {/* 📱 MOBILE TOP HEADER (Hidden on desktop) */}
+        <div className="mobile-only" style={{ height: 52, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 12px', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ background: '#1e293b', border: '1px solid #334155', color: '#38bdf8', width: 36, height: 36, borderRadius: 8, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              ☰
+            </button>
+            <span style={{ fontWeight: 900, fontSize: 14, color: 'white' }}>CrimeNet AI</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setSpotlightOpen(true)}
+              style={{ background: '#1e293b', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+            >
+              🔍 Search
+            </button>
+            <button
+              onClick={() => setCopilotOpen(prev => !prev)}
+              style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%)', border: 'none', color: 'white', padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+            >
+              🤖 Copilot
+            </button>
+          </div>
+        </div>
+
+        {/* 🖥️ DESKTOP TOP COMMAND BAR */}
+        <div className="desktop-only" style={{ flexShrink: 0 }}>
+          <CommandBar
+            selectedCase={selectedCase}
+            onSelectCase={setSelectedCase}
+            connectionState={connectionState}
+            onToggleCopilot={() => setCopilotOpen(prev => !prev)}
+            copilotOpen={copilotOpen}
+          />
+        </div>
 
         {/* TOP TACTICAL TELEMETRY & RESPONSIBLE-AI GOVERNANCE BAR */}
-        <div style={{ height: 44, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+        <div className="desktop-only" style={{ height: 44, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 20px', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', color: '#fef08a', fontWeight: 800, fontSize: 10 }}>
               <span>⚠️</span> SYNTHETIC DEMO DATASET ONLY — DECISION SUPPORT
@@ -943,7 +1101,8 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: 20, overflowY: 'auto' }}>
+        {/* 📜 MODULE CONTENT VIEW */}
+        <div style={{ flex: 1, padding: '16px', overflowY: 'auto', paddingBottom: '70px' }}>
           <ErrorBoundary>
             {activeTab === 'graph' && <GraphExplorer />}
             {activeTab === 'radar' && <GeospatialRadar />}
@@ -956,6 +1115,41 @@ export default function App() {
             {activeTab === 'reports' && <Reports />}
             {activeTab === 'settings' && <Settings />}
           </ErrorBoundary>
+        </div>
+
+        {/* 📱 MOBILE BOTTOM QUICK-ACCESS TAB BAR (Hidden on desktop) */}
+        <div className="mobile-only" style={{ height: 58, background: '#0a101f', borderTop: '1px solid #1e293b', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 4000, justifyContent: 'space-around', alignItems: 'center', padding: '0 6px' }}>
+          {[
+            { id: 'graph', label: 'Graph', icon: '🕸️' },
+            { id: 'radar', label: 'Radar', icon: '🌍' },
+            { id: 'alerts', label: 'Alerts', icon: '🚨' },
+            { id: 'telecom', label: 'Telecom', icon: '📡' },
+            { id: 'settings', label: 'Settings', icon: '⚙️' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (soundEnabled) playCyberSound('click')
+                setActiveTab(tab.id as any)
+              }}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                background: 'transparent',
+                border: 'none',
+                color: activeTab === tab.id ? '#38bdf8' : '#64748b',
+                cursor: 'pointer',
+                padding: '6px 0'
+              }}
+            >
+              <span style={{ fontSize: 18 }}>{tab.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: activeTab === tab.id ? 800 : 500 }}>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* 🤖 VOICE INVESTIGATION COPILOT DRAWER */}

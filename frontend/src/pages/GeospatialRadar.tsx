@@ -178,10 +178,10 @@ export default function GeospatialRadar() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 16, height: 'calc(100vh - 120px)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, minHeight: 'calc(100vh - 140px)' }}>
       
       {/* Radar Map Canvas */}
-      <div style={{ background: 'radial-gradient(circle at center, #0b1329 0%, #030712 100%)', borderRadius: 14, border: '1px solid rgba(56, 189, 248, 0.3)', padding: 16, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div style={{ background: 'radial-gradient(circle at center, #0b1329 0%, #030712 100%)', borderRadius: 14, border: '1px solid rgba(56, 189, 248, 0.3)', padding: 16, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 460 }}>
         
         {/* Header HUD */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>

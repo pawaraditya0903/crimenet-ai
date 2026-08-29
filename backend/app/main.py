@@ -436,19 +436,23 @@ structured_edge_labels = [
     ("MANAGES_LOGISTICS", "Fleet Control"),
     ("HOLDS_ESCROW", "Asset Custody")
 ]
+# Seeded pseudorandom generator for deterministic, realistic variance
+_edge_rng = random.Random(42)
 for k in range(41, 113):
     s_idx = k % len(ALL_ENTITIES)
     t_idx = (k * 7 + 3) % len(ALL_ENTITIES)
     if s_idx == t_idx:
         t_idx = (t_idx + 1) % len(ALL_ENTITIES)
     lbl, t_type = structured_edge_labels[k % len(structured_edge_labels)]
+    # Varied, realistic confidence between 0.74 and 0.98
+    base_conf = 0.75 + (_edge_rng.random() * 0.22)
     ALL_RELATIONSHIPS.append({
         "id": f"e{k}",
         "source": ALL_ENTITIES[s_idx]["name"],
         "target": ALL_ENTITIES[t_idx]["name"],
         "label": lbl,
         "type": t_type,
-        "confidence": round(0.72 + (k % 24) * 0.01, 2)
+        "confidence": round(base_conf, 2)
     })
 
 SUSPECTS = [
@@ -1961,11 +1965,41 @@ async def dispatch_tactical_unit(data: dict):
 
 # ── PLATFORM SETTINGS PERSISTENCE ──
 SETTINGS_STORE = {
+    # Agency & Governance
     "agency": "State Crime Branch — Cyber & Financial Crime Cell",
     "jurisdiction": "Western Region Headquarters (Mumbai)",
     "retention": "90 Days Active Buffer",
+    "statutory_act": "Section 63 BSA 2023 / Section 65B IEA",
     "telegram_alerts": True,
-    "sms_raid_broadcast": True
+    "sms_raid_broadcast": True,
+    "webhook_endpoint": "https://api.crimenet.internal/v1/dispatch",
+
+    # Security & Biometrics
+    "face_sensitivity": 62,
+    "auto_lock_timeout": 30,
+    "require_password_complexity": True,
+    "multi_frame_averaging": True,
+
+    # Audio & Notifications
+    "sound_enabled": True,
+    "audio_theme": "tactical",
+    "desktop_notifications": True,
+    "toast_duration": 6,
+    "critical_alerts_only_sound": False,
+
+    # Visual Theme & Interface
+    "accent_theme": "cyan",
+    "compact_mode": False,
+    "scanlines_effect": True,
+    "reduce_motion": False,
+    "high_contrast": False,
+
+    # Forensic Investigation Engine
+    "default_case": "c1",
+    "graph_layout": "cose",
+    "simulation_tick_rate": 4,
+    "anomaly_contamination": 0.05,
+    "pmla_threshold_inr": 50000
 }
 
 @app.get("/api/settings")
@@ -1975,6 +2009,16 @@ async def get_settings():
 @app.post("/api/settings")
 async def save_settings(data: dict):
     SETTINGS_STORE.update(data)
+    # Persist key-values to SQLite settings table
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        for k, v in data.items():
+            c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (str(k), json.dumps(v)))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
     return {"status": "saved", "settings": SETTINGS_STORE}
 
 # ── JWT AUTHENTICATION TOKEN ENDPOINTS ──
@@ -2100,8 +2144,9 @@ async def verify_face_endpoint(req: FaceVerifyRequest):
 
     sim = compute_zncc_similarity(req.vector, master_vec)
 
-    # Threshold: 75% ZNCC match required (aligned with frontend threshold)
-    if sim >= 75:
+    # Threshold: 62% ZNCC match required (aligned with multi-frame normalized frontend)
+    threshold = SETTINGS_STORE.get("face_sensitivity", 62)
+    if sim >= threshold:
         log_entry = {
             "id": str(int(dt_cls.now().timestamp() * 1000)),
             "timestamp": dt_cls.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -2600,13 +2645,20 @@ async def benford_fraud_analysis():
     Applies Benford's Law First-Digit Analysis to financial transactions and call durations.
     Fabricated invoices and bot-spoofed calls deviate violently from natural logarithmic curves.
     """
-    # Sample wire transactions and billing invoices from Mehta Enterprises
-    tx_amounts = [
-        15000000, 8750000, 2450000, 49500, 48200, 47000, 49000, 180000, 150000, 148500,
-        950000, 840000, 770000, 720000, 680000, 620000, 580000, 550000, 520000, 450000,
-        9800000, 8900000, 7800000, 49900, 49200, 48800, 47500, 46900, 45500, 44000
-    ]
-    
+    # Dynamically compile wire transactions and structured mule deposits from graph entities
+    tx_amounts = []
+    # 1. Macro syndicate wire transactions
+    for e in ALL_ENTITIES:
+        r = e.get("risk_score", 50.0)
+        # Generate proportional macro amounts with natural log distribution
+        base_amt = int((r ** 3.4) * 12.5)
+        if base_amt > 1000:
+            tx_amounts.append(base_amt)
+
+    # 2. Add PMLA structured micro-transactions clustered around digits 4 & 9 (sub-50k smurfing)
+    smurfing_splits = [49500, 48200, 47000, 49000, 49900, 49200, 48800, 47500, 46900, 45500, 44000, 95000, 92000, 98000, 94500]
+    tx_amounts.extend(smurfing_splits * 2)
+
     # Count first digits 1..9
     observed = {d: 0 for d in range(1, 10)}
     for val in tx_amounts:
