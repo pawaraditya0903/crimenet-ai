@@ -8,6 +8,7 @@ interface CommandBarProps {
   onToggleCopilot: () => void
   copilotOpen: boolean
   onSelectEntity?: (name: string) => void
+  onOpenDemoTour?: () => void
 }
 
 export default function CommandBar({
@@ -16,7 +17,8 @@ export default function CommandBar({
   connectionState,
   onToggleCopilot,
   copilotOpen,
-  onSelectEntity
+  onSelectEntity,
+  onOpenDemoTour
 }: CommandBarProps) {
   const [utcTime, setUtcTime] = useState('')
   const [istTime, setIstTime] = useState('')
@@ -296,6 +298,32 @@ export default function CommandBar({
               </div>
             )}
           </div>
+
+          {/* 5-Minute Evaluator / Judge Demo Tour Button */}
+          {onOpenDemoTour && (
+            <button
+              onClick={onOpenDemoTour}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+                border: '1px solid #c084fc',
+                color: 'white',
+                padding: '6px 12px',
+                borderRadius: 20,
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: 11,
+                boxShadow: '0 0 15px rgba(192, 132, 252, 0.4)',
+                transition: '0.2s'
+              }}
+              title="Launch 5-Minute Interactive Evaluator & Judge Presentation Tour"
+            >
+              <span>🎬</span>
+              <span>5-MIN JUDGE TOUR</span>
+            </button>
+          )}
 
           {/* CrimeNet AI Copilot Toggle Button */}
           <button

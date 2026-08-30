@@ -84,7 +84,7 @@ export default function CopilotDrawer({
     }
   }, [])
 
-  // Audio Waveform Animation
+  // Enhanced Audio Waveform & Multi-Band Spectrum Animation
   useEffect(() => {
     if (!canvasRef.current) return
     const canvas = canvasRef.current
@@ -92,26 +92,64 @@ export default function CopilotDrawer({
     if (!ctx) return
 
     let phase = 0
+    let barPhase = 0
     const renderWave = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const w = canvas.width
+      const h = canvas.height
+      const midY = h / 2
+
       if (isListening || isSpeaking) {
-        ctx.strokeStyle = isListening ? '#38bdf8' : '#34d399'
-        ctx.lineWidth = 2
+        const themeColor = isListening ? '#38bdf8' : '#34d399'
+        const secColor = isListening ? 'rgba(56, 189, 248, 0.35)' : 'rgba(52, 211, 153, 0.35)'
+
+        // 1. Render Multi-Bar Frequency Spectrum in Background
+        const numBars = 24
+        const barWidth = w / numBars - 2
+        for (let i = 0; i < numBars; i++) {
+          const barHeight = Math.abs(Math.sin(i * 0.4 + barPhase)) * (isListening ? (h * 0.65) : (h * 0.45))
+          const x = i * (barWidth + 2)
+          const y = midY - barHeight / 2
+          ctx.fillStyle = secColor
+          ctx.fillRect(x, y, barWidth, barHeight)
+        }
+        barPhase += 0.12
+
+        // 2. Dual Phase Sine Wave Oscilloscope
+        ctx.strokeStyle = themeColor
+        ctx.lineWidth = 2.5
+        ctx.shadowColor = themeColor
+        ctx.shadowBlur = 8
         ctx.beginPath()
-        for (let x = 0; x < canvas.width; x++) {
-          const y = canvas.height / 2 + Math.sin(x * 0.08 + phase) * (isListening ? 14 : 10) * Math.sin(x / canvas.width * Math.PI)
+        for (let x = 0; x < w; x++) {
+          const envelope = Math.sin((x / w) * Math.PI)
+          const y = midY + Math.sin(x * 0.09 + phase) * (isListening ? 14 : 9) * envelope
           if (x === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         }
         ctx.stroke()
-        phase += 0.15
-      } else {
-        // Flat resting line
-        ctx.strokeStyle = '#334155'
-        ctx.lineWidth = 1
+
+        // 3. Secondary Counter-Phase Wave
+        ctx.strokeStyle = isListening ? 'rgba(125, 211, 252, 0.8)' : 'rgba(110, 231, 183, 0.8)'
+        ctx.lineWidth = 1.5
+        ctx.shadowBlur = 0
         ctx.beginPath()
-        ctx.moveTo(0, canvas.height / 2)
-        ctx.lineTo(canvas.width, canvas.height / 2)
+        for (let x = 0; x < w; x++) {
+          const envelope = Math.sin((x / w) * Math.PI)
+          const y = midY + Math.cos(x * 0.07 - phase) * (isListening ? 10 : 6) * envelope
+          if (x === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.stroke()
+        phase += 0.16
+      } else {
+        // Flat resting tactical pulse line
+        ctx.strokeStyle = '#334155'
+        ctx.lineWidth = 1.5
+        ctx.shadowBlur = 0
+        ctx.beginPath()
+        ctx.moveTo(0, midY)
+        ctx.lineTo(w, midY)
         ctx.stroke()
       }
       animFrameRef.current = requestAnimationFrame(renderWave)
