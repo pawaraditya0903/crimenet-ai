@@ -244,12 +244,54 @@ export default function App() {
     }
   }, [selectedCase, soundEnabled])
 
-  // AUTO-LOG VISITOR IMMEDIATELY ON LINK OPEN
+  // INDIAN STANDARD TIME (IST) HELPERS
+  const getIndianTimestamp = () => {
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(new Date()).replace(/,/g, '') + ' IST'
+    } catch {
+      return new Date().toLocaleTimeString() + ' IST'
+    }
+  }
+
+  const formatLogTimestamp = (log: any) => {
+    if (!log) return ''
+    if (log.id && /^\d{12,14}$/.test(String(log.id))) {
+      const epoch = parseInt(String(log.id), 10)
+      if (!isNaN(epoch) && epoch > 1500000000000) {
+        try {
+          const d = new Date(epoch)
+          return new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).format(d).replace(/,/g, '') + ' IST'
+        } catch {}
+      }
+    }
+    return log.timestamp || ''
+  }
+
+  // AUTO-LOG VISITOR IMMEDIATELY ON LINK OPEN (Accurate Indian Standard Time)
   useEffect(() => {
     const recordInitialVisit = async () => {
       try {
         const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote Visitor' } }))
         await axios.post('/api/security/log-visit', {
+          timestamp: getIndianTimestamp(),
           ip: ipRes.data.ip,
           device: navigator.userAgent.substring(0, 45),
           action: '🌐 LINK_OPENED_PAGE_VISIT',
@@ -427,6 +469,7 @@ export default function App() {
 
         try {
           await axios.post('/api/security/log-visit', {
+            timestamp: getIndianTimestamp(),
             ip: ipRes.data.ip,
             device: navigator.userAgent.substring(0, 45),
             action: `FACEID_MATCH_${znccScore}%_7FRAME_AVG`,
@@ -456,6 +499,7 @@ export default function App() {
 
         try {
           await axios.post('/api/security/log-visit', {
+            timestamp: getIndianTimestamp(),
             ip: ipRes.data.ip,
             device: navigator.userAgent.substring(0, 45),
             action: `FACE_FAILED_${znccScore}%`,
@@ -510,6 +554,7 @@ export default function App() {
           .catch(() => ({ data: { ip: 'Remote' } }))
           .then(ipRes => {
             axios.post('/api/security/log-visit', {
+              timestamp: getIndianTimestamp(),
               ip: ipRes?.data?.ip || 'Remote',
               device: navigator.userAgent.substring(0, 45),
               action: 'PASSCODE_SUCCESS',
@@ -528,6 +573,7 @@ export default function App() {
         .catch(() => ({ data: { ip: 'Remote' } }))
         .then(ipRes => {
           axios.post('/api/security/log-visit', {
+            timestamp: getIndianTimestamp(),
             ip: ipRes?.data?.ip || 'Remote',
             device: navigator.userAgent.substring(0, 45),
             action: `WRONG_PASSCODE_ATTEMPT_#${newFails}`,
@@ -1332,7 +1378,7 @@ export default function App() {
                 <tbody>
                   {filteredLogs.map((log: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
-                      <td style={{ padding: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{log.timestamp}</td>
+                      <td style={{ padding: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{formatLogTimestamp(log)}</td>
                       <td style={{ padding: '10px', color: 'white', fontWeight: 700 }}>{log.ip}</td>
                       <td style={{ padding: '10px', color: '#cbd5e1' }}>{log.device}</td>
                       <td style={{ padding: '10px' }}>
@@ -1377,7 +1423,7 @@ export default function App() {
             <h3 style={{ color: '#ef4444', fontSize: 16, fontWeight: 900 }}>🚨 INTRUDER MUGSHOT CAPTURED</h3>
             <img src={selectedIntruder.photo} alt="Intruder Mugshot" style={{ width: 220, height: 220, borderRadius: 12, objectFit: 'cover', border: '2px solid #ef4444', margin: '14px auto', display: 'block', boxShadow: '0 0 30px rgba(239,68,68,0.6)' }} />
             <div style={{ textAlign: 'left', background: '#020617', padding: 12, borderRadius: 8, fontSize: 11.5, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div><b>Time:</b> {selectedIntruder.timestamp}</div>
+              <div><b>Time:</b> {formatLogTimestamp(selectedIntruder)}</div>
               <div><b>IP:</b> <span style={{ color: '#38bdf8', fontWeight: 700 }}>{selectedIntruder.ip}</span></div>
               <div><b>Device:</b> {selectedIntruder.device}</div>
               <div><b>Action:</b> <span style={{ color: '#ef4444', fontWeight: 800 }}>{selectedIntruder.action}</span></div>
