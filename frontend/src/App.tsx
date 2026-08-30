@@ -409,6 +409,49 @@ export default function App() {
     return canvas.toDataURL('image/jpeg', 0.8)
   }
 
+  // CAPTURE QUICK WEBCAM SNAPSHOT (FOR PASSCODE ATTEMPTS / INTRUDER MUGSHOTS)
+  const captureQuickSnapshot = async (): Promise<string> => {
+    // 1. If active video is already running
+    if (videoRef.current && canvasRef.current && videoRef.current.readyState >= 2) {
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        canvas.width = 360
+        canvas.height = 360
+        ctx.drawImage(videoRef.current, 0, 0, 360, 360)
+        return canvas.toDataURL('image/jpeg', 0.8)
+      }
+    }
+    // 2. Otherwise request a silent capture stream
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
+        })
+        const vid = document.createElement('video')
+        vid.srcObject = stream
+        vid.muted = true
+        vid.playsInline = true
+        await vid.play()
+        await new Promise(r => setTimeout(r, 200))
+        const c = document.createElement('canvas')
+        c.width = 360
+        c.height = 360
+        const ctx = c.getContext('2d')
+        let dataUrl = ''
+        if (ctx) {
+          ctx.drawImage(vid, 0, 0, 360, 360)
+          dataUrl = c.toDataURL('image/jpeg', 0.8)
+        }
+        stream.getTracks().forEach(t => t.stop())
+        return dataUrl
+      } catch (e) {
+        return ''
+      }
+    }
+    return ''
+  }
+
   // ZERO-MEAN NORMALIZED CROSS CORRELATION (ZNCC) — same formula, now on normalized descriptors
   const computeZNCC = (vecA: number[], vecB: number[]): number => {
     if (!vecA || !vecB || vecA.length !== vecB.length || vecA.length === 0) return 0
@@ -525,13 +568,16 @@ export default function App() {
     }
   }
 
-  // 2. PASSCODE LOGIN (Strict Active Password)
+  // 2. PASSCODE LOGIN (Strict Active Password + Instant Mugshot Capture)
   const handlePasscodeLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (lockoutTimer > 0) return
 
     const entered = pinCode.trim()
     if (!entered) return
+
+    // Immediately snap photo of person attempting passcode
+    const attemptPhoto = await captureQuickSnapshot()
 
     try {
       // Server-side credential check — password never hardcoded in JS bundle
@@ -560,7 +606,7 @@ export default function App() {
               action: 'PASSCODE_SUCCESS',
               status: 'AUTHORIZED',
               badge: 'Aditya Pawar',
-              photo: ''
+              photo: attemptPhoto
             }).catch(() => {})
           })
       }
@@ -579,7 +625,7 @@ export default function App() {
             action: `WRONG_PASSCODE_ATTEMPT_#${newFails}`,
             status: 'BLOCKED_INTRUDER',
             badge: 'Failed Passcode Attempt',
-            photo: ''
+            photo: attemptPhoto
           }).catch(() => {})
         })
 
