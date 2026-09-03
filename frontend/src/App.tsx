@@ -180,6 +180,10 @@ export default function App() {
   const [logFilter, setLogFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
   const [logSearchQuery, setLogSearchQuery] = useState('')
   const [selectedIntruder, setSelectedIntruder] = useState<any>(null)
+  // JWT token stored in memory (sessionStorage) for authenticated API calls
+  const [authToken, setAuthToken] = useState<string>(() => {
+    try { return sessionStorage.getItem('crimenet_jwt') || '' } catch { return '' }
+  })
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -433,7 +437,7 @@ export default function App() {
         vid.muted = true
         vid.playsInline = true
         await vid.play()
-        await new Promise(r => setTimeout(r, 200))
+        await new Promise(r => setTimeout(r, 700))
         const c = document.createElement('canvas')
         c.width = 360
         c.height = 360
@@ -590,8 +594,13 @@ export default function App() {
 
       if (tokenRes.data && tokenRes.data.access_token) {
         if (soundEnabled) playCyberSound('grant')
-        // Keep JWT in memory only via sessionStorage — NOT localStorage (XSS risk)
-        try { sessionStorage.setItem('crimenet_authenticated', 'true') } catch {}
+        // Store JWT in sessionStorage (NOT localStorage — safer against XSS persistence)
+        const jwt = tokenRes.data.access_token
+        try {
+          sessionStorage.setItem('crimenet_authenticated', 'true')
+          sessionStorage.setItem('crimenet_jwt', jwt)
+        } catch {}
+        setAuthToken(jwt)
         setIsAuthenticated(true)
         setFailedAttempts(0)
         setAuthError('')
@@ -796,8 +805,23 @@ export default function App() {
     }
     if (soundEnabled) playCyberSound('grant')
     setAuditAuthModalOpen(false)
+    // Store JWT from audit access verification for subsequent protected calls
+    let jwt = authToken
     try {
-      const res = await axios.get('/api/security/audit-logs')
+      const tokenRes2 = await axios.post('/api/auth/token', {
+        username: 'Aditya Pawar', badge: 'CRIMENET-CHIEF-01',
+        role: 'Chief Intelligence Architect', password: entered
+      })
+      if (tokenRes2.data?.access_token) {
+        jwt = tokenRes2.data.access_token
+        setAuthToken(jwt)
+        try { sessionStorage.setItem('crimenet_jwt', jwt) } catch {}
+      }
+    } catch {}
+    try {
+      const res = await axios.get('/api/security/audit-logs', {
+        headers: { Authorization: `Bearer ${jwt}` }
+      })
       setAuditLogs(res.data.logs || [])
     } catch(e) {
       setAuditLogs([])
@@ -808,20 +832,24 @@ export default function App() {
   const handleDeleteSingleLog = async (logItem: any, e: React.MouseEvent) => {
     e.stopPropagation()
     if (soundEnabled) playCyberSound('click')
+    const jwt = authToken || sessionStorage.getItem('crimenet_jwt') || ''
     try {
       await axios.post('/api/security/delete-log', {
         id: logItem.id || '',
         timestamp: logItem.timestamp || ''
-      })
+      }, { headers: { Authorization: `Bearer ${jwt}` } })
     } catch(e) {}
     setAuditLogs((prev) => prev.filter((item) => item.timestamp !== logItem.timestamp || item.id !== logItem.id))
   }
 
   const handleClearAllLogs = async () => {
-    if (!confirm('⚠️ Delete ALL intruder photos and IP logs?')) return
+    if (!confirm('Delete ALL intruder photos and IP logs?')) return
     if (soundEnabled) playCyberSound('deny')
+    const jwt = authToken || sessionStorage.getItem('crimenet_jwt') || ''
     try {
-      await axios.post('/api/security/clear-all-logs')
+      await axios.post('/api/security/clear-all-logs', {}, {
+        headers: { Authorization: `Bearer ${jwt}` }
+      })
     } catch(e) {}
     setAuditLogs([])
   }
