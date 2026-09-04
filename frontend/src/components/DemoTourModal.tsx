@@ -296,14 +296,14 @@ export default function DemoTourModal({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 900, color: 'white', letterSpacing: '0.04em' }}>
-                  5-MINUTE EVALUATOR & JUDGE DEMO TOUR
+                  5-MINUTE EXECUTIVE FORENSIC PLATFORM TOUR
                 </h2>
                 <span style={{ padding: '2px 8px', borderRadius: 20, background: activeStep.badgeColor, color: '#030712', fontSize: 10, fontWeight: 900 }}>
                   {activeStep.badgeText}
                 </span>
               </div>
               <p style={{ fontSize: 11.5, color: '#94a3b8', margin: '2px 0 0' }}>
-                Guided Pitch Walkthrough based on <code style={{ color: '#38bdf8' }}>DEMO_SCRIPT.md</code> · Presenter: <b>Aditya Pawar</b>
+                Enterprise Technical Walkthrough · Chief Architect: <b>Aditya Pawar</b>
               </p>
             </div>
           </div>

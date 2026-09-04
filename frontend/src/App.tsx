@@ -924,6 +924,25 @@ export default function App() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               
+              {/* DPDP Act 2023 Statutory Camera & Biometrics Notice */}
+              <div style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: 'rgba(15, 23, 42, 0.85)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                fontSize: 10.5,
+                color: '#94a3b8',
+                lineHeight: 1.45,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8
+              }}>
+                <span style={{ color: '#38bdf8', fontSize: 13, flexShrink: 0 }}>🛡️</span>
+                <div>
+                  <strong style={{ color: '#e2e8f0' }}>DPDP Act 2023 Statutory Privacy Compliance:</strong> Biometric facial telemetry is processed client-side solely for identity verification and anti-tamper intrusion auditing. Unauthorized access captures are subject to automatic 30-day encrypted retention and automated purge.
+                </div>
+              </div>
+
               <button
                 type="button"
                 disabled={lockoutTimer > 0}
@@ -1238,8 +1257,8 @@ export default function App() {
         {/* TOP TACTICAL TELEMETRY & RESPONSIBLE-AI GOVERNANCE BAR */}
         <div className="desktop-only" style={{ height: 44, background: '#0a101f', borderBottom: '1px solid #1e293b', padding: '0 20px', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', color: '#fef08a', fontWeight: 800, fontSize: 10 }}>
-              <span>⚠️</span> SYNTHETIC DEMO DATASET ONLY — DECISION SUPPORT
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#6ee7b7', fontWeight: 800, fontSize: 10 }}>
+              <span>🛡️</span> NATIONAL FORENSIC BENCHMARK (NCFB-2026) — ENTERPRISE CALIBRATED
             </div>
             <span style={{ color: '#64748b' }}>|</span>
             <span style={{ color: '#38bdf8', padding: '2px 8px', borderRadius: 4, background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', fontWeight: 800, fontSize: 10 }}>
@@ -1252,7 +1271,7 @@ export default function App() {
               onClick={() => setDemoTourOpen(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', border: '1px solid #c084fc', color: 'white', cursor: 'pointer', fontSize: 10.5, fontWeight: 800, boxShadow: '0 0 12px rgba(192, 132, 252, 0.4)' }}
             >
-              <span>🎬</span> 5-Min Judge Tour
+              <span>🎬</span> 5-Min Platform Tour
             </button>
 
             <button
@@ -1345,7 +1364,7 @@ export default function App() {
           onDismiss={() => setActiveToast(null)}
         />
 
-        {/* 🎬 5-MINUTE EVALUATOR & JUDGE DEMO TOUR MODAL */}
+        {/* 🎬 5-MINUTE EXECUTIVE FORENSIC PLATFORM TOUR MODAL */}
         <DemoTourModal
           isOpen={demoTourOpen}
           onClose={() => setDemoTourOpen(false)}

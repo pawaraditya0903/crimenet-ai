@@ -318,10 +318,10 @@ export default function CommandBar({
                 boxShadow: '0 0 15px rgba(192, 132, 252, 0.4)',
                 transition: '0.2s'
               }}
-              title="Launch 5-Minute Interactive Evaluator & Judge Presentation Tour"
+              title="Launch 5-Minute Interactive Executive & Forensic Walkthrough"
             >
               <span>🎬</span>
-              <span>5-MIN JUDGE TOUR</span>
+              <span>5-MIN PLATFORM TOUR</span>
             </button>
           )}
 
