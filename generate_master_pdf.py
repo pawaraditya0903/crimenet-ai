@@ -215,11 +215,11 @@ def build_pdf():
     # ══════════════════════════════════════════════════════════════════════
     story.append(Paragraph("PART 1 — EXECUTIVE PROJECT INTRODUCTION", h1_style))
     story.append(Paragraph(
-        "<b>1. One-Line Project Definition:</b> CrimeNet AI is an end-to-end investigative decision-support platform that fuses cellular records, hawala ledgers, dark-web intercepts, and vehicle surveillance cameras into an interactive knowledge graph to uncover syndicate kingpins and money-laundering loops with court-admissible cryptographic evidence ledgers.",
+        "<b>1. One-Line Project Definition:</b> CrimeNet AI is an end-to-end investigative decision-support platform that fuses cellular records, hawala ledgers, dark-web intercepts, and vehicle surveillance cameras into an interactive knowledge graph to uncover syndicate kingpins and money-laundering loops with cryptographically verifiable electronic evidence ledgers.",
         body_style
     ))
     story.append(Paragraph(
-        "<b>2. 30-Second Recruiter Pitch:</b> <i>\"Modern crime investigations suffer from data fragmentation—telecom records, bank statements, and toll cameras are trapped in isolated spreadsheets. I built CrimeNet AI to fuse these streams into an interactive knowledge graph. Using NetworkX graph theory, 2D Kalman filters, and an Isolation Forest anomaly ensemble with 96.8% precision, it exposes syndicate masterminds and laundering paths, anchoring every artifact in a SHA-256 Merkle tree compliant with Section 63 of Bharatiya Sakshya Adhiniyam 2023.\"</i>",
+        "<b>2. 30-Second Recruiter Pitch:</b> <i>\"Modern crime investigations suffer from data fragmentation—telecom records, bank statements, and toll cameras are trapped in isolated spreadsheets. I built CrimeNet AI to fuse these streams into an interactive knowledge graph. Using NetworkX graph theory, 2D Kalman filters, and a live Scikit-Learn Isolation Forest anomaly ensemble with 96.8% precision, it exposes syndicate masterminds and laundering paths, anchoring every artifact in a SHA-256 Merkle tree compliant with Section 63 of Bharatiya Sakshya Adhiniyam 2023.\"</i>",
         body_style
     ))
     story.append(Paragraph(
@@ -236,7 +236,7 @@ def build_pdf():
         "• <b>Step 2 (Officer Review):</b> Investigator Aditya authenticates via webcam biometric face verification, inspects Explainable AI feature baselines, confirms the alert, and signs Badge INV-2026-AP01.<br/>"
         "• <b>Step 3 (Graph Link Analysis):</b> Graph Explorer runs PageRank on suspect 'Arjun Mehta' (Score: 0.081) and discovers a 3-hop proxy link to Hawala operator Mohammed Rafiq.<br/>"
         "• <b>Step 4 (Geospatial & Telecom):</b> Cellular trilateration isolates a burner phone to Sector 1 Industrial Depot (±12.4m), while Mapbox ANPR Radar tracks suspect vehicle MH-04-AZ-9901 passing the nearby Goregaon toll.<br/>"
-        "• <b>Step 5 (Court Submission):</b> The officer generates a Section 63 BSA 2023 certified PDF dossier featuring an immutable 64-character SHA-256 Merkle root hash for judicial trial.",
+        "• <b>Step 5 (Court Submission):</b> The officer generates a Section 63 BSA 2023 certified PDF dossier featuring an immutable 64-character SHA-256 Merkle root hash for judicial proceedings.",
         body_style
     ))
     story.append(Spacer(1, 8))
@@ -259,8 +259,8 @@ def build_pdf():
         [Paragraph("Real-Time Comms", table_cell_bold), Paragraph("Python-SocketIO", table_cell), Paragraph("Broadcasts simulated radar blips and alert ticks", table_cell), Paragraph("WebSocket pipe pushing live server updates", table_cell)],
         [Paragraph("Database", table_cell_bold), Paragraph("SQLite (crimenet.db)", table_cell), Paragraph("8 persistent tables: cases, evidence, audit logs", table_cell), Paragraph("Zero-config SQL engine storing data in one file", table_cell)],
         [Paragraph("Graph Theory", table_cell_bold), Paragraph("NetworkX (>=3.0)", table_cell), Paragraph("Brandes Betweenness Centrality, PageRank, Dijkstra", table_cell), Paragraph("Scientific Python math package for complex graphs", table_cell)],
-        [Paragraph("AI / ML Package", table_cell_bold), Paragraph("Scikit-Learn & NumPy", table_cell), Paragraph("Isolation Forest ensemble (250 trees, 96.8% Prec)", table_cell), Paragraph("Python machine learning and numerical matrices", table_cell)],
-        [Paragraph("PDF Compilation", table_cell_bold), Paragraph("ReportLab (>=4.0)", table_cell), Paragraph("Section 65B / Section 63 BSA legal PDF dossiers", table_cell), Paragraph("Programmatically generates court-admissible PDFs", table_cell)],
+        [Paragraph("AI / ML Package", table_cell_bold), Paragraph("Scikit-Learn & NumPy", table_cell), Paragraph("Live Isolation Forest pipeline (200 trees, Mahalanobis)", table_cell), Paragraph("Python machine learning and numerical matrices", table_cell)],
+        [Paragraph("PDF Compilation", table_cell_bold), Paragraph("ReportLab (>=4.0)", table_cell), Paragraph("Section 65B / Section 63 BSA legal PDF dossiers", table_cell), Paragraph("Programmatically generates verified forensic PDFs", table_cell)],
         [Paragraph("Biometrics & Image", table_cell_bold), Paragraph("Pillow / PIL (>=10.0)", table_cell), Paragraph("Webcam intruder capture & ZNCC face verification", table_cell), Paragraph("Python library for cropping and analyzing images", table_cell)],
         [Paragraph("Cloud Hosting", table_cell_bold), Paragraph("Vercel + Render", table_cell), Paragraph("Global CDN frontend + Containerized Python server", table_cell), Paragraph("Cloud infrastructure hosting web apps 24/7", table_cell)]
     ]
