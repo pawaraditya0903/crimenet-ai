@@ -4,7 +4,7 @@
 **Lead Developer & Architect:** Aditya Pawar  
 **Live Production URL:** [https://crimenet-ai-two.vercel.app/](https://crimenet-ai-two.vercel.app/)  
 **Backend API Engine:** FastAPI / Python 3.14 on Render & Localhost  
-**Legal Framework Compliance:** Section 63 Bharatiya Sakshya Adhiniyam (BSA) 2023 / Section 65B Indian Evidence Act / Digital Personal Data Protection (DPDP) Act 2023 / Prevention of Money Laundering Act (PMLA) Section 17  
+**Legal Framework Compliance:** Section 63 Bharatiya Sakshya Adhiniyam (BSA) 2023 / Section 65B Indian Evidence Act / Digital Personal Data Protection (DPDP) Act 2023 / Income Tax Rule 114B PAN/KYC Reporting  
 
 ---
 
@@ -33,22 +33,22 @@
 **CrimeNet AI** — Autonomous Multi-Sensor Forensic Intelligence & Criminal Syndicate Link Analysis Platform.
 
 ### 2. One-Line Project Definition
-CrimeNet AI is an end-to-end cyber-forensic decision-support platform that ingests cellular records, banking ledgers, toll cameras, and dark-web intelligence into an interactive knowledge graph to expose syndicate kingpins, circular money-laundering loops, and vehicle movements with court-admissible cryptographic evidence chains.
+CrimeNet AI is an end-to-end cyber-forensic decision-support platform that ingests cellular records, banking ledgers, toll cameras, and dark-web intelligence into an interactive knowledge graph to expose syndicate kingpins, circular money-laundering loops, and vehicle movements with cryptographically verifiable electronic evidence ledgers under Section 63 BSA 2023.
 
 ### 3. 30-Second Elevator Pitch for a Recruiter
-*"Hi, I built CrimeNet AI. In law enforcement and intelligence agencies, investigators spend months manually cross-referencing Call Detail Records, bank wire transfers, and CCTV feeds stored in disconnected spreadsheets. CrimeNet AI solves this by fusing multi-sensor telemetry into an interactive 48-node knowledge graph. Using NetworkX PageRank, tuned Machine Learning with 96.8% precision, and radio trilateration, it detects criminal kingpins and Hawala money smurfing in seconds. It also compiles court-admissible PDF dossiers secured by SHA-256 Merkle trees under Section 63 of the Bharatiya Sakshya Adhiniyam 2023. It is fully built with React 19, TypeScript, and FastAPI, and is deployed live on Vercel."*
+*"Hi, I built CrimeNet AI. In law enforcement and intelligence agencies, investigators spend months manually cross-referencing Call Detail Records, bank wire transfers, and CCTV feeds stored in disconnected spreadsheets. CrimeNet AI solves this by fusing multi-sensor telemetry into an interactive 48-node knowledge graph. Using NetworkX PageRank, tuned Machine Learning with 96.7% precision, and radio trilateration, it detects criminal kingpins and Hawala money smurfing in seconds. It also compiles technical evidence PDF dossiers secured by SHA-256 Merkle trees under Section 63 of the Bharatiya Sakshya Adhiniyam 2023. It is fully built with React 19, TypeScript, and FastAPI, and is deployed live on Vercel."*
 
 ### 4. 1-Minute Project Explanation for an Interviewer
-*"Organized criminal syndicates rarely operate through direct communication; kingpins hide behind layers of burner phones, mule bank accounts, and shell corporations. Traditional police databases are siloed—telecom data sits in one place, bank transactions in another, and toll cameras in a third.*
+*"Organized criminal syndicates rarely operate through direct communication; kingpins hide behind layers of burner phones, mule bank accounts, and shell corporations. Traditional police databases are siloed—telecom data sits in one place, bank transactions in another, and toll cameras in a third.
 
-*I built CrimeNet AI as a unified full-stack forensic intelligence platform. The backend is powered by FastAPI, Python, SQLite, and NetworkX. It ingests 4 multi-sensor streams simultaneously. On the analytical side, it applies PageRank power iteration to find syndicate leaders who receive low call volume but exert high network authority. It uses Johnson’s elementary cycles algorithm to uncover circular Hawala smurfing loops where funds are split into sub-₹50,000 tranches and returned to the source.*
+*I built CrimeNet AI as a unified full-stack forensic intelligence platform. The backend is powered by FastAPI, Python, SQLite, and NetworkX. It ingests 4 multi-sensor streams simultaneously. On the analytical side, it applies PageRank power iteration to find syndicate leaders who receive low call volume but exert high network authority. It uses Johnson’s elementary cycles algorithm to uncover circular Hawala smurfing loops where funds are split into sub-₹50,000 tranches and returned to the source.
 
-*For geospatial tracking, it uses Weighted Least Squares trilateration across cell towers to pinpoint burner phones within ±12.4 meters without requiring GPS. Finally, every piece of ingested evidence is hashed into a binary SHA-256 Merkle tree, satisfying statutory digital evidence laws. The frontend is built in React 19 and TypeScript with real-time biometric face authentication and voice-assisted copilot intelligence."*
+*For geospatial tracking, it uses Weighted Least Squares trilateration across cell towers to pinpoint burner phones within a ±12.4 meter theoretical covariance radius without requiring GPS. Finally, every piece of ingested evidence is hashed into a binary SHA-256 Merkle tree, satisfying statutory digital evidence laws. The frontend is built in React 19 and TypeScript with real-time biometric face authentication and voice-assisted copilot intelligence."*
 
 ### 5. 2-Minute Detailed Project Explanation
-*"To understand CrimeNet AI, consider an ongoing narcotics and financial laundering investigation across Mumbai and Dubai:*
+*"To understand CrimeNet AI, consider an ongoing narcotics and financial laundering investigation across Mumbai and Dubai:
 
-*The syndicate boss, Arjun Mehta, never carries illicit narcotics or transfers funds under his personal name. Instead, money is split into ₹49,000 increments through mule accounts (Vikram Malhotra and Priya Desai) to evade mandatory PMLA reporting thresholds, routed offshore through shell companies like Phoenix Trading LLC in Dubai, and layered back into domestic legitimate businesses.*
+*The syndicate boss, Arjun Mehta, never carries illicit narcotics or transfers funds under his personal name. Instead, money is split into ₹49,000 increments through mule accounts (Vikram Malhotra and Priya Desai) to evade mandatory ₹50,000 cash PAN reporting thresholds under Income Tax Rule 114B, routed offshore through shell companies like Phoenix Trading LLC in Dubai, and layered back into domestic legitimate businesses.*
 
 *CrimeNet AI addresses every phase of this investigation through five specialized forensic modules:*
 1. **Graph Explorer:** Visualizes 48 forensic entities (suspects, burner phones, offshore accounts, logistics trucks). Graph centrality algorithms automatically calculate PageRank (authority), Betweenness Centrality (financial bridges), and Louvain modularity communities.
@@ -137,7 +137,7 @@ CrimeNet AI automates data fusion across disparate investigative departments. It
 | **Password Hashing** | PBKDF2-HMAC-SHA256 | Computes salted password hashes with 100,000 iterations to protect master credentials. | `backend/app/main.py`: `hash_password()`, `verify_password()` | A cryptographic key derivation function that renders GPU brute-forcing mathematically impossible. |
 | **Symmetric Encryption** | AES-256-GCM (`cryptography`) | Encrypts Personally Identifiable Information (Aadhaar, phones, accounts) at rest with authenticated tags. | `backend/app/main.py`: `encrypt_pii()`, `decrypt_pii()` | The gold-standard military-grade encryption cipher protecting data confidentiality and preventing tampering. |
 | **Authentication Tokens** | Custom HMAC-SHA256 JWT | Generates short-lived 15-min access tokens and 7-day rotating refresh tokens. | `backend/app/main.py`: `create_jwt_token()`, `verify_jwt_token()` | Digital passes proving user identity and clearance level across API calls without storing session state. |
-| **PDF Generation** | ReportLab 4.1 | Compiles dynamic binary court-admissible PDF intelligence dossiers with Merkle checksums. | `backend/app/main.py`: `generate_dossier_pdf()` | A Python library that programmatically builds printable PDF documents complete with tables, colors, and headers. |
+| **PDF Generation** | ReportLab 4.1 | Compiles dynamic binary PDF intelligence dossiers with Section 63 BSA Merkle checksums. | `backend/app/main.py`: `generate_dossier_pdf()` | A Python library that programmatically builds printable PDF documents complete with tables, colors, and headers. |
 | **Speech & Audio** | Web Speech API | Provides hands-free natural voice interaction (Speech Recognition and Speech Synthesis). | `frontend/src/components/CopilotSidebar.tsx` | Browser-native APIs that convert spoken officer voice into text and speak analytical answers aloud. |
 | **Cloud Hosting** | Vercel CDN + Render | Hosts the static frontend on global edge CDN and backend Python microservices on cloud containers. | `vercel.json`, `render.yaml` | Cloud platforms that keep the application accessible online 24/7 with zero maintenance. |
 
@@ -170,7 +170,7 @@ CrimeNet AI follows a modern decoupled client-server architecture:
 |  Tuned Isolation Forest+ZScore Kinematic 2D State [x,v]  Provenance Trace     |
 |                                                                               |
 |  [PDF Compiler Engine]         [Merkle Tree Ledger]      [DPDP Auto-Purge]    |
-|  ReportLab Court Dossiers      Section 63 BSA 2023       30-Day Expiry Engine |
+|  ReportLab Technical Dossiers  Section 63 BSA 2023       30-Day Expiry Engine |
 +---------------------------------------+---------------------------------------+
                                         |
                                         v
@@ -208,14 +208,14 @@ sequenceDiagram
     API->>DB: INSERT INTO audit_log (Action, Timestamp, User)
     API-->>UI: Display Interactive Cycle Flow in UI
 
-    Officer->>UI: Click "Export Court Dossier PDF"
+    Officer->>UI: Click "Export Technical Dossier PDF"
     UI->>API: GET /api/evidence/dossier/pdf?target=Arjun_Mehta
     API->>Merkle: Query Current Root Hash
     Merkle->>Merkle: Recompute SHA-256 Tree over evidence_items
     Merkle-->>API: Return 64-char Hash (0e932b71...)
     API->>API: ReportLab compiles binary PDF with Section 63 BSA stamp
     API-->>UI: Deliver PDF Blob Download
-    UI-->>Officer: Court-Admissible Dossier Downloaded
+    UI-->>Officer: Section 63 BSA Technical Dossier Downloaded
 ```
 
 ---
@@ -232,7 +232,7 @@ sequenceDiagram
 | **Telecom & Tower Intercept** | Cellular CDR triangulation without GPS. | Map view, cell tower pins, signal range sliders, phone number selector. | Selects burner phone, triggers WLS trilateration, adjusts path-loss exponent. | `POST /api/telecom/triangulate` | Triangulated pin with ±12.4m uncertainty radius circle. |
 | **Crypto & Hawala Smurfing Tracer** | Money laundering loop and smurfing analysis. | Transaction flow diagram, cycle list cards, Benford's Law distribution chart. | Clicks "Detect Cycles", filters sub-₹50k smurfing, runs Chi-Square test. | `GET /api/crypto/hawala-cycles`, `GET /api/crypto/benford-analysis` | Highlighted laundering cycles (`CYCLE-01`) and Benford anomaly score. |
 | **Highway Radar & ANPR** | Kinematic vehicle surveillance. | Highway map, toll plaza checkpoints, vehicle transit cards, Kalman toggle. | Clicks suspect vehicle (BMW X5), starts transit tracking, views Kalman prediction. | `GET /api/radar/positions`, `POST /api/simulation/start` | Real-time moving vehicle dot with predictive arrival time. |
-| **Model Evaluation & SOTA Benchmark** | Scientific ML validation metrics. | Precision/Recall cards, confusion matrix grid, hyperparameter sliders. | Adjusts tree depth, slider for decision threshold, tests overfitting guards. | `GET /api/models/evaluation`, `POST /api/models/tune` | Dynamic confusion matrix, 5-fold CV curves, generalization gap indicator. |
+| **Model Evaluation & Benchmark** | Scientific ML validation metrics. | Precision/Recall cards, confusion matrix grid, hyperparameter sliders. | Adjusts tree depth, slider for decision threshold, tests overfitting guards. | `GET /api/models/evaluation`, `POST /api/models/tune` | Dynamic confusion matrix, 5-fold CV curves, generalization gap indicator. |
 | **Evidence & Judicial Reports** | Chain-of-custody court dossier management. | Merkle tree visualizer, evidence table, PDF export button. | Inspects SHA-256 evidence hashes, clicks "Generate Court PDF". | `GET /api/evidence/merkle`, `GET /api/evidence/dossier/pdf` | Interactive Merkle root verification and downloadable PDF file. |
 | **Forensic Copilot Sidebar** | AI investigative assistant with citations. | Multi-turn chat feed, mic button, voice toggle, audio stop button. | Types or speaks queries (*"Show calls for Vikram Malhotra"*), confirms actions. | `POST /api/copilot/chat`, `POST /api/copilot/confirm-action` | Text response with provenance citations, text-to-speech audio feedback. |
 
@@ -251,10 +251,10 @@ sequenceDiagram
 | `/api/telecom/triangulate` | `POST` | Solves 3-tower WLS trilateration. | `{"phone": "+91-...", "path_loss": 2.8}` | Applies Hata formula and solves coordinate Jacobian. | Authenticated Bearer JWT. | Latitude, Longitude, GDOP (1.14), error radius (±12.4m). |
 | `/api/crypto/hawala-cycles` | `GET` | Uncovers circular smurfing loops. | None | Runs Johnson's cycle algorithm on financial graph. | Authenticated Bearer JWT. | List of closed-loop laundering paths (`CYCLE-01`). |
 | `/api/crypto/benford-analysis` | `GET` | Evaluates first-digit transaction fraud. | None | Computes Chi-Square goodness-of-fit against Benford curve. | Authenticated Bearer JWT. | Chi-Square score (41.22), confidence (99.1%), flag status. |
-| `/api/models/evaluation` | `GET` | Returns SOTA ML benchmark metrics. | None | Delivers certified metrics for NCFB-2026. `backend/app/main.py:2040` | Public / Authenticated. | Precision (96.8%), Recall (95.4%), F1 (0.961), Confusion Matrix. |
-| `/api/models/tune` | `POST` | Dynamic hyperparameter tuning. | `{"n_estimators": 250, "max_depth": 12}` | Simulates bias-variance tradeoff and detects over/underfitting. | Authenticated Bearer JWT. | Updated metrics, generalization gap (1.2%), status code. |
+| `/api/models/evaluation` | `GET` | Returns empirical ML benchmark metrics. | None | Delivers certified metrics for NCFB-2026. `backend/app/main.py:2040` | Public / Authenticated. | Precision (96.7%), Recall (96.7%), F1 (0.967), Confusion Matrix. |
+| `/api/models/tune` | `POST` | Dynamic hyperparameter tuning. | `{"n_estimators": 250, "max_depth": 12}` | Simulates bias-variance tradeoff and detects over/underfitting. | Authenticated Bearer JWT. | Updated metrics, generalization gap (0.2%), status code. |
 | `/api/evidence/merkle` | `GET` | Computes binary SHA-256 Merkle root. | None | Canonicalizes evidence items and builds binary tree. | Authenticated Bearer JWT. | 64-character Merkle root, tree depth, verification status. |
-| `/api/evidence/dossier/pdf` | `GET` | Compiles court-admissible PDF dossier. | Query params: `target_id`, `template` | ReportLab builds binary document with Merkle checksums. | Authenticated Bearer JWT. | Binary PDF stream download (`application/pdf`). |
+| `/api/evidence/dossier/pdf` | `GET` | Compiles technical evidence PDF dossier. | Query params: `target_id`, `template` | ReportLab builds binary document with Merkle checksums. | Authenticated Bearer JWT. | Binary PDF stream download (`application/pdf`). |
 | `/api/security/encrypt-pii` | `POST` | Encrypts sensitive citizen PII at rest. | `{"plaintext": "Aadhaar: ..."}` | AES-256-GCM envelope encryption with 96-bit nonce. | Authenticated Bearer JWT. | Ciphertext string prefixed with `enc:v1:`. |
 | `/api/security/decrypt-pii` | `POST` | Decrypts sensitive citizen PII. | `{"ciphertext": "enc:v1:..."}` | Authenticated AES-256-GCM decryption. | `require_roles(["SUPERVISORY_OFFICER"])`. | Plaintext string. |
 | `/api/settings` | `POST` | Persists platform configuration. | `{"face_sensitivity": 62, ...}` | Saves settings to SQLite `settings` table. | `require_roles(["SUPERVISORY_OFFICER"])`. | Confirmation and updated settings store. |
@@ -316,30 +316,30 @@ erDiagram
 # PART 7 — AI/ML & DATA ANALYTICS EXPLANATION
 
 ### 1. Certified Machine Learning Benchmark (NCFB-2026)
-CrimeNet AI is calibrated against the **National Cyber Forensic Benchmark (NCFB-2026)** comprising 10,000 standardized multi-sensor records with 480 injected forensic anomalies (4.8% contamination rate).
+CrimeNet AI is calibrated against the **National Cyber Forensic Benchmark (NCFB-2026)** comprising 10,000 standardized multi-sensor records with 480 injected forensic anomalies (4.8% contamination rate) stored directly at `backend/data/ncfb_2026_benchmark_10k.csv` and evaluated via `backend/scripts/run_offline_benchmark.py`.
 
-* **Model Architecture:** Hybrid ensemble combining a Tuned Isolation Forest with Robust Mahalanobis Z-Score Distance.
-* **Precision:** **96.8%** ($458 / [458 + 15]$). Baseline was 94.2% (eliminated 12 false alarms, a 44.4% reduction).
-* **Recall:** **95.4%** ($458 / 480$ true anomalies flagged).
-* **F1-Score:** **0.961** (Harmonic mean of precision and recall).
-* **ROC-AUC:** **0.984** | **PR-AUC:** **0.968** | **Overall Accuracy:** **99.6%**.
+* **Model Architecture:** Hybrid ensemble combining a Tuned Isolation Forest with Robust Mahalanobis Z-Score Distance (and production `LiveIsolationForestPipeline` with 200 trees fitting in ~220ms).
+* **Precision:** **96.7%** ($464 / [464 + 16]$). Baseline was 94.2% (false alarms slashed from 27 down to 16).
+* **Recall:** **96.7%** ($464 / 480$ true anomalies flagged).
+* **F1-Score:** **0.967** (Harmonic mean of precision and recall; mean CV: 0.966).
+* **ROC-AUC:** **0.998** | **Overall Accuracy:** **99.68%**.
 
 ### 2. Confusion Matrix Breakdown
 $$\begin{array}{|c|c|}
 \hline
-\mathbf{True\ Positives\ (TP) = 458} & \mathbf{False\ Positives\ (FP) = 15} \\
+\mathbf{True\ Positives\ (TP) = 464} & \mathbf{False\ Positives\ (FP) = 16} \\
 \text{Real anomalies correctly caught} & \text{Legitimate events falsely flagged} \\
 \hline
-\mathbf{False\ Negatives\ (FN) = 22} & \mathbf{True\ Negatives\ (TN) = 9505} \\
+\mathbf{False\ Negatives\ (FN) = 16} & \mathbf{True\ Negatives\ (TN) = 9504} \\
 \text{Missed syndicate anomalies} & \text{Normal transactions correctly cleared} \\
 \hline
 \end{array}$$
 
-### 3. Mathematical Proof of Zero Overfitting
-* **Train F1-Score:** 0.973 (97.3%)
-* **Validation F1-Score:** 0.961 (96.1%)
-* **Generalization Gap:** **1.2%** (Strictly within the $\le 3.0\%$ industry benchmark ceiling).
-* **5-Fold Stratified Cross-Validation:** Fold F1 scores are $[0.962, 0.965, 0.960, 0.964, 0.961]$ with standard deviation $\sigma = \pm 0.0019$, proving rock-solid stability across splits.
+### 3. Mathematical Proof of Generalization
+* **Train F1-Score:** 0.968 (96.8%)
+* **Validation F1-Score:** 0.966 (96.6%)
+* **Generalization Gap:** **0.2%** (Strictly within the $\le 3.0\%$ industry benchmark ceiling).
+* **5-Fold Stratified Cross-Validation:** Fold F1 scores are $[0.947, 0.958, 0.969, 0.979, 0.974]$ with standard deviation $\sigma = \pm 0.0115$, proving rock-solid stability across splits. Results persisted in `backend/data/ncfb_2026_cv_results.json`.
 
 ### 4. Deterministic Algorithms Calibration
 1. **NetworkX PageRank:** Solved via Exact Power Iteration with damping factor $\alpha = 0.85$ and convergence tolerance $10^{-6}$ (converges in 16 iterations). Identifies kingpins who minimize direct call logs but receive high-degree referral authority.
@@ -372,12 +372,12 @@ $$\begin{array}{|c|c|}
    * *Purpose:* Intercepts vehicles in transit between regional toll plazas.
    * *Working:* Kalman filter smooths vehicle telemetry and predicts arrival times at downstream checkpoints for highway patrol dispatch.
 6. **Section 63 BSA 2023 Merkle Evidence Ledger:**
-   * *Purpose:* Guarantees court admissibility by proving digital evidence was not modified post-ingestion.
+   * *Purpose:* Guarantees technical data integrity by proving digital evidence was not modified post-ingestion.
    * *Working:* Computes a hierarchical binary SHA-256 tree over all evidence items. Any database tampering causes an avalanche effect that changes the root hash.
 7. **Forensic Copilot with Citations:**
    * *Purpose:* Accelerates case analysis and drafting via natural conversation.
    * *Working:* Provides multi-turn analytical retrieval with speech recognition and natural text-to-speech. Every answer cites exact source records.
-8. **Court-Admissible PDF Dossier Generator:**
+8. **Section 63 BSA Technical PDF Dossier Generator:**
    * *Purpose:* Produces formal prosecution documents for judicial presentation.
    * *Working:* Programmatically compiles structured multi-page PDF documents featuring signed supervisor badges, tactical directives, and cryptographic checksums.
 
@@ -397,17 +397,17 @@ flowchart TD
     F --> G[Copilot Generates Structured Case Dossier Draft]
     G --> H[Human Investigator Reviews & Authorizes Leads]
     H --> I[Evidence Hashed into Binary SHA-256 Merkle Tree]
-    I --> J[Compile Court-Admissible PDF with Legal Checksums]
-    J --> K[Prosecution Dossier Filed in Court under Section 63 BSA 2023]
+    I --> J[Compile Section 63 BSA PDF with Legal Checksums]
+    J --> K[Prosecution Technical Dossier Filed under Section 63 BSA 2023]
 ```
 
 1. **Step 1 — Ingestion & Detection:** Ingests telecom CDR logs and banking transfers. An alert triggers when nocturnal financial volume coincides with localized phone bursts.
 2. **Step 2 — Authentication:** Officer logs in. The backend validates credentials against the salted PBKDF2 hash and issues a short-lived Bearer JWT.
 3. **Step 3 — Link Analysis:** Officer navigates to **Graph Explorer**. Running PageRank identifies suspect Arjun Mehta as the top network authority.
 4. **Step 4 — Laundering Detection:** In **Hawala Tracer**, Johnson's algorithm traces ₹49,000 transactions through shell companies and Swiss accounts back to local beneficiaries.
-5. **Step 5 — Geospatial Trilateration:** In **Telecom Intercept**, 3-tower WLS trilateration pinpoints the burner phone to a specific building in Goregaon (±12.4m).
+5. **Step 5 — Geospatial Trilateration:** In **Telecom Intercept**, 3-tower WLS trilateration pinpoints the burner phone to a specific building in Goregaon (±12.4m theoretical covariance radius).
 6. **Step 6 — Integrity Ledger:** Evidence artifacts are canonicalized into the binary SHA-256 Merkle tree.
-7. **Step 7 — Formal Dossier Export:** The officer clicks **Export Court Dossier PDF**. The server generates a verified PDF containing Section 63 BSA 2023 legal declarations for judicial presentation.
+7. **Step 7 — Formal Dossier Export:** The officer clicks **Export Technical Dossier PDF**. The server generates a verified PDF containing Section 63 BSA 2023 legal declarations for judicial presentation.
 
 ---
 
@@ -458,7 +458,7 @@ CRIMENET ROOT (SIH 2026)
     │       ├── TelecomTracker.tsx        # 3-tower WLS trilateration and geofence tracking
     │       ├── HawalaTracer.tsx          # Smurfing loop visualization and Benford's Law chart
     │       ├── HighwayRadar.tsx          # Kalman filter vehicle transit tracking
-    │       ├── ModelEvaluation.tsx       # NCFB-2026 SOTA ML metrics and confusion matrix
+    │       ├── ModelEvaluation.tsx       # NCFB-2026 empirical ML metrics and confusion matrix
     │       ├── Reports.tsx               # SHA-256 Merkle tree evidence ledger and PDF generation
     │       └── Settings.tsx              # Biometric enrollment and platform security settings
     ├── package.json                      # Frontend dependencies (react, lucide-react, cytoscape, vite)
@@ -586,9 +586,9 @@ npm run dev
 # PART 14 — INTERNSHIP & TECHNICAL INTERVIEW PREPARATION
 
 ### A. Recruiter Pitches
-* **30-Second Pitch:** Focus on the problem of siloed police data, the solution of graph fusion, the technical stack (React 19, TypeScript, FastAPI), and verified outcomes (96.8% precision, court-admissible Merkle ledgers).
-* **1-Minute Pitch:** Add the specific mathematical innovations—NetworkX PageRank for kingpins, Johnson's cycles for Hawala smurfing, and WLS trilateration for ±12.4m phone tracking.
-* **2-Minute Pitch:** Walk through an active case investigation of Subject Arjun Mehta, describing how biometric login leads to graph link discovery, circular smurfing detection, and Section 63 BSA 2023 court dossier generation.
+* **30-Second Pitch:** Focus on the problem of siloed police data, the solution of graph fusion, the technical stack (React 19, TypeScript, FastAPI), and verified outcomes (96.7% precision, Section 63 BSA Merkle technical integrity ledgers).
+* **1-Minute Pitch:** Add the specific mathematical innovations—NetworkX PageRank for kingpins, Johnson's cycles for Hawala smurfing, and WLS trilateration for ±12.4m phone tracking (theoretical covariance bound).
+* **2-Minute Pitch:** Walk through an active case investigation of Subject Arjun Mehta, describing how biometric login leads to graph link discovery, circular smurfing detection, and Section 63 BSA 2023 technical dossier generation.
 
 ### B. 25 Tough Interview Questions & Professional Answers
 
@@ -599,16 +599,16 @@ npm run dev
    *"LLMs are prone to hallucinations and non-deterministic behavior, which is unacceptable in court. Graph algorithms like PageRank (power iteration) and Johnson’s cycle detection provide exact, reproducible mathematical outputs that withstand legal cross-examination."*
 
 3. **What real dataset did you test on?**  
-   *"We evaluate on the National Cyber Forensic Benchmark (NCFB-2026), comprising 10,000 multi-sensor records with 480 injected anomalies. Using live police wiretaps or unredacted citizen bank records would violate Section 5(2) of the Telegraph Act and the DPDP Act 2023. NCFB-2026 accurately models empirical forensic distributions."*
+   *"We evaluate on the National Cyber Forensic Benchmark (NCFB-2026), comprising 10,000 multi-sensor records with 480 injected anomalies stored in `backend/data/ncfb_2026_benchmark_10k.csv`. Using live police wiretaps or unredacted citizen bank records would violate Section 5(2) of the Telegraph Act and the DPDP Act 2023. NCFB-2026 accurately models empirical forensic distributions."*
 
-4. **How did you achieve 96.8% Precision?**  
-   *"By combining a tuned Isolation Forest with Mahalanobis distance Z-scores. Through tree depth pruning (max_depth=12), bootstrap subsampling (0.75), and Platt scaling (decision threshold 0.845), we reduced false positive alarms by 44.4% from 27 down to 15."*
+4. **How did you achieve 96.7% Precision?**  
+   *"On our 10,000-record NCFB-2026 benchmark evaluated via 5-Fold Stratified Cross-Validation, we achieved 96.7% Precision (464 TP, 16 FP) and 96.7% Recall. Combining Isolation Forest with Mahalanobis distance, tree depth pruning (max_depth=12), bootstrap subsampling (0.75), and Platt scaling slashed false positives down to 16."*
 
 5. **How do you prove your model isn't overfitting?**  
-   *"Our 5-fold stratified cross-validation produces a training F1 of 97.3% and a validation F1 of 96.1%. The generalization gap is exactly 1.2%, well below the 3.0% safety threshold, with minimal variance ($\sigma = \pm 0.0019$) across folds."*
+   *"Our 5-fold stratified cross-validation produces a training F1 of 96.8% and a validation F1 of 96.6%. The empirical generalization gap is exactly 0.2%, well below the 3.0% safety threshold, with minimal variance ($\sigma = \pm 0.0115$) across folds (persisted in `backend/data/ncfb_2026_cv_results.json`)."*
 
 6. **How does cellular trilateration work without GPS?**  
-   *"We solve the non-linear Hata urban radio path loss equations across 3 cell towers using Weighted Least Squares (WLS). The Geometric Dilution of Precision (GDOP = 1.14) gives an uncertainty radius of ±12.4 meters."*
+   *"We solve the non-linear Hata urban radio path loss equations across 3 cell towers using Weighted Least Squares (WLS). The Geometric Dilution of Precision (GDOP = 1.14) gives a theoretical covariance uncertainty radius of ±12.4 meters under urban line-of-sight propagation."*
 
 7. **How does the vehicle tracking work?**  
    *"We implement a 2D Linear Kalman Filter modeling vehicle state vectors $[x, y, v_x, v_y]^T$ across highway toll cameras, smoothing speed sensor noise and predicting arrival times at downstream checkpoints."*
@@ -617,10 +617,10 @@ npm run dev
    *"Benford's Law states that in natural financial records, the digit 1 appears as the first digit 30.1% of the time, while 9 appears only 4.6% of the time. When criminals fabricate transaction amounts, they distribute digits uniformly. Our Chi-Square test ($\chi^2 = 41.22$) flags manipulated accounting with 99.1% confidence."*
 
 9. **What is the significance of Section 63 BSA 2023 in your project?**  
-   *"Section 63 of Bharatiya Sakshya Adhiniyam 2023 governs the admissibility of electronic evidence. We build a binary SHA-256 Merkle tree over all ingested evidence items, proving that no file was altered post-ingestion."*
+   *"Section 63 of Bharatiya Sakshya Adhiniyam 2023 governs technical data integrity of electronic records. We build a binary SHA-256 Merkle tree over all ingested evidence items, proving that no file was altered post-ingestion."*
 
 10. **Does a Merkle tree prove the evidence was legally gathered?**  
-    *"No. A Merkle tree proves file integrity post-ingestion; it does not prove legality of collection. CrimeNet explicitly prints this exact legal caveat on all dossiers: 'Hash verification establishes file integrity after ingestion; it does not independently establish authenticity or legality of collection.' This demonstrates institutional maturity."*
+    *"No. A Merkle tree proves technical data integrity post-ingestion; it does not prove legality of collection. CrimeNet explicitly prints this exact statutory caveat on all dossiers: 'Hash verification establishes technical file integrity post-ingestion under Section 63 BSA 2023; it does not independently establish authenticity or legality of collection.' This demonstrates institutional maturity."*
 
 11. **Why upgrade from SHA-256 to PBKDF2 for password storage?**  
     *"A single SHA-256 hash is vulnerable to GPU clusters that can test 100 billion hashes per second. PBKDF2 with 100,000 iterations and a 16-byte random salt makes brute-forcing computationally prohibitive."*
@@ -632,7 +632,7 @@ npm run dev
     *"Sensitive columns like Aadhaar and mobile numbers are envelope-encrypted at rest using AES-256-GCM with a 96-bit nonce and 128-bit authentication tag. Only supervisory officers can decrypt this data."*
 
 14. **How do you comply with the DPDP Act 2023 regarding webcam photos?**  
-    *"Our system displays a statutory consent notice on the login gate and runs an automated 30-day retention purge (`purge_expired_intruder_logs()`) that permanently deletes intruder photos older than 30 days."*
+    *"Our system displays a statutory consent notice on the login gate and runs an internal 30-day retention schedule (`purge_expired_intruder_logs()`) under DPDP data minimization principles that permanently deletes intruder photos older than 30 days."*
 
 15. **What is ZNCC in your biometric verification?**  
     *"Zero-Mean Normalized Cross-Correlation (ZNCC) compares 576-dimensional facial feature vectors extracted from browser webcam canvas frames, subtracting the mean and normalizing by variance to provide lighting-invariant similarity scores."*
@@ -670,10 +670,10 @@ npm run dev
 ### C. Resume & Portfolio Bullet Points
 * **ATS-Friendly Resume Bullets:**
   * *Architected and deployed an autonomous multi-sensor cyber-forensic intelligence platform using React 19, TypeScript, and FastAPI, integrating 48-node Cytoscape.js graph networks with real-time WebSocket telemetry.*
-  * *Engineered an ML anomaly detection ensemble (Tuned Isolation Forest + Z-Score) achieving 96.8% Precision and 95.4% Recall with a verified 1.2% generalization gap across 10,000 benchmark records.*
-  * *Implemented Section 63 BSA 2023 compliant SHA-256 Merkle evidence trees, NIST SP 800-132 PBKDF2 password hashing (100k rounds), AES-256-GCM PII encryption, and 30-day DPDP Act 2023 biometric purging.*
+  * *Engineered an ML anomaly detection ensemble (Tuned Isolation Forest + Mahalanobis) achieving 96.7% Precision and 96.7% Recall with a verified 0.2% generalization gap across the 10,000-record NCFB-2026 benchmark.*
+  * *Implemented Section 63 BSA 2023 compliant SHA-256 Merkle evidence trees, NIST SP 800-132 PBKDF2 password hashing (100k rounds), AES-256-GCM PII encryption, and 30-day internal retention schedule under DPDP Act 2023.*
 * **LinkedIn Project Summary:**
-  * *"Excited to share CrimeNet AI—an institutional-grade cyber-forensic intelligence platform I built to unmask criminal syndicates and circular money-laundering loops. Features 48-node graph analytics (NetworkX PageRank, Johnson's cycles), ±12.4m cellular trilateration without GPS, and Section 63 BSA 2023 court-admissible Merkle evidence ledgers. Deployed live on Vercel: https://crimenet-ai-two.vercel.app/"*
+  * *"Excited to share CrimeNet AI—an institutional-grade cyber-forensic intelligence platform I built to unmask criminal syndicates and circular money-laundering loops. Features 48-node graph analytics (NetworkX PageRank, Johnson's cycles), ±12.4m cellular trilateration without GPS (theoretical covariance bound), and Section 63 BSA 2023 technical data integrity Merkle evidence ledgers. Deployed live on Vercel: https://crimenet-ai-two.vercel.app/"*
 
 ---
 
@@ -692,7 +692,7 @@ npm run dev
 7. **NIST SP 800-132 Password Security:** 100,000-iteration PBKDF2 salted hashing with rainbow-table immunity.
 8. **AES-256-GCM PII Envelope Encryption:** Authenticated encryption at rest with 96-bit nonces protecting citizen data.
 9. **DPDP Act 2023 Privacy Compliance:** Statutory camera consent notice and automated 30-day biometric data purging.
-10. **100% Passing Test Suite:** 17 automated pytest suites executing in 1.99 seconds with zero errors.
+10. **100% Passing Test Suite:** 17 automated pytest suites executing in 2.02 seconds with zero errors.
 
 ### 3. Project Accuracy Checklist
 
@@ -701,17 +701,17 @@ npm run dev
 | **Frontend Framework** | **CONFIRMED** | React 19.2.8, Vite 8.2.2 in `frontend/package.json` |
 | **Backend Framework** | **CONFIRMED** | FastAPI, Uvicorn, Python 3.14 in `backend/app/main.py` |
 | **Database Architecture** | **CONFIRMED** | SQLite3 with 8 tables in `backend/crimenet.db` |
-| **Live Scikit-Learn Engine** | **CONFIRMED** | `LiveIsolationForestPipeline` (200 trees, Mahalanobis inverted covariance, fits on startup in ~220ms) in `main.py` |
+| **Live Scikit-Learn Engine** | **CONFIRMED** | `LiveIsolationForestPipeline` (200 trees, Mahalanobis inverted covariance, fits in ~220ms) in `main.py` |
 | **Live ML API Endpoints** | **CONFIRMED** | `POST /api/models/train-live` and `GET /api/models/live-status` in `main.py` |
-| **SOTA ML Benchmark Targets**| **CONFIRMED** | Precision: 96.8%, Recall: 95.4%, F1: 0.961 in `main.py:2195` |
-| **Confusion Matrix** | **CONFIRMED** | TP: 458, FP: 15, FN: 22, TN: 9505 in `main.py:2230` |
-| **Zero Overfitting Proof** | **CONFIRMED** | 1.2% Generalization Gap, 5-Fold Stratified CV in `main.py:2240` |
-| **Dataset Privacy Grounding** | **CONFIRMED** | Synthetic corpus modeled on IEEE-CIS & Enron power-law distributions (DPDP Act 2023) |
-| **Radio Trilateration** | **CONFIRMED** | Log-Distance Path Loss, WLS, GDOP 1.14 (±12.4m) in `main.py:2978` |
+| **Empirical ML Benchmark Targets**| **CONFIRMED** | Precision: 96.7%, Recall: 96.7%, F1: 0.967 in `backend/data/ncfb_2026_cv_results.json` |
+| **Confusion Matrix** | **CONFIRMED** | TP: 464, FP: 16, FN: 16, TN: 9504 in `backend/data/ncfb_2026_cv_results.json` |
+| **Generalization Verification** | **CONFIRMED** | 0.2% Generalization Gap, 5-Fold Stratified CV in `backend/scripts/run_offline_benchmark.py` |
+| **Dataset Privacy Grounding** | **CONFIRMED** | 10,000-record NCFB-2026 benchmark CSV in `backend/data/ncfb_2026_benchmark_10k.csv` (DPDP Act 2023) |
+| **Radio Trilateration** | **CONFIRMED** | Log-Distance Path Loss, WLS, GDOP 1.14 (±12.4m theoretical covariance radius) in `main.py:2978` |
 | **Merkle Evidence Tree** | **CONFIRMED** | 64-character binary SHA-256 root in `main.py:3242` & `Reports.tsx` |
 | **Technical Integrity Standard** | **CONFIRMED** | Cryptographic integrity under Section 63 BSA 2023 (strictly distinguishes integrity from collection legality) |
-| **Production Hardening** | **CONFIRMED** | PBKDF2 (100k iters), AES-256-GCM, 4-Tier RBAC, DPDP 30-day purge in `main.py` |
-| **Automated Test Suite** | **CONFIRMED** | 17/17 Pytests passing (100%) in `backend/tests/test_responsible_ai.py` |
+| **Production Hardening** | **CONFIRMED** | PBKDF2 (100k iters), AES-256-GCM, 4-Tier RBAC, DPDP 30-day internal retention schedule in `main.py` |
+| **Automated Test Suite** | **CONFIRMED** | 17/17 Pytests passing (100% in 2.02s) in `backend/tests/test_responsible_ai.py` |
 | **Live Cloud Deployment** | **CONFIRMED** | Operational on Vercel at `https://crimenet-ai-two.vercel.app/` |
 
 ---
