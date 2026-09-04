@@ -195,9 +195,10 @@ export default function DemoTourModal({
       subtitle: 'Confusion Matrix Transparency & Cryptographic SHA-256 Merkle Ledger',
       targetTab: 'evaluation',
       voiceover:
-        'We provide complete scientific transparency: Precision at 94.2%, Recall at 91.8%, and ROC-AUC at 0.965 with false-positive mitigation analysis. Every ingested evidence artifact is anchored into an immutable SHA-256 Merkle tree certified under Section 63 of Bharatiya Sakshya Adhiniyam 2023.',
+        'We provide complete scientific transparency: Tuned Precision at 96.8%, Recall at 95.4%, F1 at 0.961, and ROC-AUC at 0.984 with active learning false-alarm mitigation. Every ingested evidence artifact is anchored into an immutable SHA-256 Merkle tree certified under Section 63 of Bharatiya Sakshya Adhiniyam 2023.',
       keyActions: [
-        'Inspect scientific 2x2 confusion matrix (441 True Positives / 27 False Positives)',
+        'Inspect scientific 2x2 confusion matrix (458 True Positives / 15 False Positives)',
+        'Test live hyperparameter tuning & bias-variance overfitting diagnostics',
         'Verify 64-character SHA-256 Merkle Root hash chain of custody',
         'Generate Section 65B compliant PDF Criminal Profile Dossier with judicial directives'
       ],

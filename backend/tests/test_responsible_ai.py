@@ -24,6 +24,8 @@ from app.main import (
     get_alert_explainability,
     review_alert_endpoint,
     get_model_evaluation,
+    tune_model_hyperparameters,
+    ModelTuneRequest,
     get_merkle_evidence_ledger,
     benford_fraud_analysis,
     AlertReviewRequest,
@@ -77,17 +79,46 @@ async def test_human_investigator_review_lifecycle():
 
 @pytest.mark.asyncio
 async def test_model_evaluation_metrics_and_confusion_matrix():
-    """Verify scientific benchmark metrics: precision, recall, F1, and confusion matrix."""
+    """Verify tuned benchmark metrics: precision, recall, F1, and confusion matrix."""
     ev = await get_model_evaluation()
     metrics = ev["supervised_anomaly_metrics"]
     cm = ev["confusion_matrix"]
+    base = ev["baseline_comparison"]
+    diag = ev["overfitting_underfitting_diagnostics"]
     
-    assert 0.80 <= metrics["precision"] <= 1.0
-    assert 0.80 <= metrics["recall"] <= 1.0
-    assert 0.80 <= metrics["f1_score"] <= 1.0
-    assert cm["true_positives"] > 0
-    assert cm["true_negatives"] > 0
+    # Assert tuned metrics >= 94%
+    assert metrics["precision"] >= 0.95
+    assert metrics["recall"] >= 0.94
+    assert metrics["f1_score"] >= 0.95
+    assert metrics["roc_auc"] >= 0.97
+    assert cm["true_positives"] == 458
+    assert cm["false_positives"] == 15
+    assert cm["false_negatives"] == 22
+    assert cm["true_negatives"] == 9505
+    assert base["precision_uplift"] == "+2.6%"
+    assert diag["bias_variance_status"] == "OPTIMAL_EQUILIBRIUM_NO_OVERFITTING"
     assert "synthetic" in ev["dataset"]["classification"].lower()
+
+@pytest.mark.asyncio
+async def test_hyperparameter_tuning_and_overfitting_guard():
+    """Verify real-time hyperparameter tuning and bias-variance overfitting guards."""
+    # 1. Optimal tuning test
+    opt_req = ModelTuneRequest(n_estimators=250, max_depth=12, contamination=0.044, decision_threshold=0.845)
+    opt_res = await tune_model_hyperparameters(opt_req)
+    assert opt_res["status"] == "TUNING_SUCCESS"
+    assert opt_res["tuning_status_code"] == "OPTIMAL_EQUILIBRIUM"
+    assert opt_res["metrics"]["f1_score"] >= 0.95
+    assert len(opt_res["k_fold_cross_validation"]) == 5
+
+    # 2. Overfitting detection test (deep trees with minimal estimators)
+    overfit_req = ModelTuneRequest(n_estimators=30, max_depth=24)
+    overfit_res = await tune_model_hyperparameters(overfit_req)
+    assert overfit_res["tuning_status_code"] == "OVERFITTING_WARNING"
+
+    # 3. Underfitting detection test (shallow trees)
+    underfit_req = ModelTuneRequest(n_estimators=20, max_depth=4)
+    underfit_res = await tune_model_hyperparameters(underfit_req)
+    assert underfit_res["tuning_status_code"] == "UNDERFITTING_WARNING"
 
 @pytest.mark.asyncio
 async def test_merkle_evidence_integrity_root():
@@ -164,9 +195,10 @@ if __name__ == "__main__":
         await test_human_investigator_review_lifecycle()
         print("  ✓ Human decision recording and investigator audit notes verified.")
 
-        print("\n[4/10] Testing Scientific Benchmark & Confusion Matrix...")
+        print("\n[4/10] Testing Scientific Benchmark, Tuned Hyperparameters & Overfitting Guards...")
         await test_model_evaluation_metrics_and_confusion_matrix()
-        print("  ✓ Precision (94.2%), Recall (91.8%), F1 (0.930), and Confusion Matrix verified.")
+        await test_hyperparameter_tuning_and_overfitting_guard()
+        print("  ✓ Tuned Precision (96.8%), Recall (95.4%), F1 (0.961), Cross-Validation, and Overfit Guards verified.")
 
         print("\n[5/10] Testing Cryptographic Merkle Evidence Ledger...")
         await test_merkle_evidence_integrity_root()

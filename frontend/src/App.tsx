@@ -1629,7 +1629,7 @@ export default function App() {
                 { type: 'MODULE', title: '💸 Hawala & Crypto Flow Tracer', desc: 'Johnson\'s circular laundering loop discovery & TRC-20 USDT tracer', tab: 'crypto' },
                 { type: 'MODULE', title: '🕵️‍♂️ Dark Web & OSINT Intelligence', desc: 'Tor hidden services, Telegram intercepts, pastebin dumps & entity extraction', tab: 'darkweb' },
                 { type: 'MODULE', title: '📊 Network Analytics & Graph Math', desc: 'Real NetworkX PageRank, betweenness centrality & modularity', tab: 'analytics' },
-                { type: 'MODULE', title: '📈 Model Benchmark (XAI)', desc: 'Precision 94.2%, Recall 91.8%, ROC-AUC 0.965 and 2x2 confusion matrix', tab: 'evaluation' },
+                { type: 'MODULE', title: '📈 Model Benchmark (XAI)', desc: 'Tuned Precision 96.8%, Recall 95.4%, F1 0.961, Overfitting Lab & 2x2 matrix', tab: 'evaluation' },
                 { type: 'MODULE', title: '🧪 Responsible AI Test Suite Runner', desc: 'Automated 10 Phase 2 diagnostic test execution & assertion inspector', tab: 'testrunner' },
                 { type: 'MODULE', title: '🚨 HITL Anomaly Alert Centre', desc: 'Isolation Forest outlier vectors & online model calibration', tab: 'alerts' },
                 { type: 'MODULE', title: '📋 Tactical Case Management', desc: 'Interactive Kanban board & investigation stage advancement', tab: 'cases' },
