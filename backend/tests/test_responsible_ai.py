@@ -48,7 +48,11 @@ from app.main import (
     refresh_access_token_endpoint,
     ForensicRole,
     require_roles,
-    purge_expired_intruder_logs
+    purge_expired_intruder_logs,
+    LIVE_IFOREST,
+    get_live_model_status,
+    trigger_live_training,
+    LiveTrainRequest
 )
 
 @pytest.mark.asyncio
@@ -285,6 +289,27 @@ async def test_dpdp_30_day_intruder_log_auto_purge():
     retained = [l for l in mock_logs if l["epoch"] >= cutoff]
     assert len(retained) == 1
     assert retained[0]["id"] == "log_recent"
+
+@pytest.mark.asyncio
+async def test_live_isolation_forest_sklearn_pipeline():
+    """Verify genuine Scikit-Learn IsolationForest training, Mahalanobis covariance, and inference scoring."""
+    assert LIVE_IFOREST.is_fitted is True
+    assert LIVE_IFOREST.trained_trees_count >= 100
+    assert len(LIVE_IFOREST.feature_names) == 5
+    
+    status_res = await get_live_model_status()
+    assert status_res["engine_status"]["is_fitted"] is True
+    assert "scoring_output" in status_res["live_inference_verification"]
+    
+    score_out = status_res["live_inference_verification"]["scoring_output"]
+    assert "isolation_score" in score_out
+    assert "mahalanobis_distance" in score_out
+    assert "ensemble_anomaly_confidence" in score_out
+    
+    # Test triggering dynamic live training
+    train_res = await trigger_live_training(LiveTrainRequest(n_estimators=50, num_samples=300))
+    assert train_res["status"] == "LIVE_SKLEARN_FITTED_SUCCESSFULLY"
+    assert train_res["estimators_trained"] == 50
 
 if __name__ == "__main__":
     import sys

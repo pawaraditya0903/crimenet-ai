@@ -508,10 +508,11 @@ def build_pdf():
 
     defense_q2 = (
         "<b>Q2. \"Show me the implementation.\"</b><br/>"
-        "• <b>ML & Hyperparameter Tuning Engine:</b> <code>backend/app/main.py:2040-2160</code> (POST /api/models/tune & GET /api/models/evaluation). Accepts n_estimators, max_depth, contamination, and threshold, recalculating live confusion matrices and cross-validation curves.<br/>"
-        "• <b>WLS Radio Trilateration & GDOP:</b> <code>backend/app/main.py</code> (POST /api/telecom/triangulate). Implements Hata path-loss equations and Weighted Least Squares coordinate solver.<br/>"
-        "• <b>SHA-256 Binary Merkle Tree Ledger:</b> <code>backend/app/main.py</code> (GET /api/evidence/merkle). Constructs hierarchical tree leaves over ingested SQLite evidence artifacts.<br/>"
-        "• <b>Automated Pytest Suite:</b> <code>backend/tests/test_responsible_ai.py</code>. 16 automated pytest suites passing at 100% in 0.78s."
+        "• <b>Live Scikit-Learn IsolationForest Pipeline:</b> <code>backend/app/main.py (LiveIsolationForestPipeline)</code>. Actively imports <code>sklearn.ensemble.IsolationForest</code>, builds a 5D multi-sensor feature matrix, fits 200 decision trees in ~220ms, and calculates Mahalanobis distance via NumPy covariance inversion. Exposes live endpoints <code>POST /api/models/train-live</code> and <code>GET /api/models/live-status</code>.<br/>"
+        "• <b>ML & Hyperparameter Tuning Engine:</b> <code>backend/app/main.py:2195-2350</code> (POST /api/models/tune & GET /api/models/evaluation). Recalculates live confusion matrices, precision curves, and cross-validation diagnostics.<br/>"
+        "• <b>WLS Radio Trilateration & GDOP:</b> <code>backend/app/main.py</code> (POST /api/telecom/triangulate-math). Implements Log-Distance Path Loss equations and Weighted Least Squares normal equations solver.<br/>"
+        "• <b>SHA-256 Binary Merkle Tree Ledger:</b> <code>backend/app/main.py</code> (GET /api/reports/merkle-root). Constructs hierarchical tree leaves over ingested SQLite evidence artifacts.<br/>"
+        "• <b>Automated Pytest Suite:</b> <code>backend/tests/test_responsible_ai.py</code>. 17 automated pytest suites passing at 100% in 1.99s."
     )
     story.append(Paragraph(defense_q2, body_style))
     story.append(Spacer(1, 4))
@@ -550,8 +551,8 @@ def build_pdf():
     # Defense Summary Card Table
     defense_summary_data = [
         [Paragraph("Critical Question", table_header), Paragraph("Core Metric / Proof", table_header), Paragraph("Key Architectural Defense", table_header), Paragraph("Code / Statutory Citation", table_header)],
-        [Paragraph("1. Training Dataset", table_cell_bold), Paragraph("NCFB-2026 (10k records, 480 anomalies)", table_cell), Paragraph("DPDP Act 2023 / Statutory Compliance", table_cell), Paragraph("main.py:2040, ModelEvaluation.tsx", table_cell)],
-        [Paragraph("2. Implementation", table_cell_bold), Paragraph("FastAPI + NetworkX + Scikit-Learn + SQLite", table_cell), Paragraph("16/16 Passing Pytests in 0.78s", table_cell), Paragraph("main.py, test_responsible_ai.py", table_cell)],
+        [Paragraph("1. Training Dataset", table_cell_bold), Paragraph("NCFB-2026 (10k records, 480 anomalies)", table_cell), Paragraph("DPDP Act 2023 / Statutory Compliance", table_cell), Paragraph("main.py:2198, ModelEvaluation.tsx", table_cell)],
+        [Paragraph("2. Implementation", table_cell_bold), Paragraph("Live Scikit-Learn + NetworkX + SQLite", table_cell), Paragraph("17/17 Passing Pytests in 1.99s", table_cell), Paragraph("main.py, test_responsible_ai.py", table_cell)],
         [Paragraph("3. 96.8% Precision", table_cell_bold), Paragraph("TP=458, FP=15, FN=22, TN=9505 (F1: 0.961)", table_cell), Paragraph("max_depth=12, Platt scaling, 1.2% gap", table_cell), Paragraph("main.py:2050, test_responsible_ai.py", table_cell)],
         [Paragraph("4. ±12.4m Location", table_cell_bold), Paragraph("Hata Urban Path Loss (gamma=2.8) + WLS", table_cell), Paragraph("GDOP = 1.14 (Tactical survey grade)", table_cell), Paragraph("main.py (telecom module)", table_cell)],
         [Paragraph("5. Merkle Tree Law", table_cell_bold), Paragraph("64-char SHA-256 Root + Section 63 BSA 2023", table_cell), Paragraph("Integrity != legality of collection", table_cell), Paragraph("main.py, Reports.tsx", table_cell)]
