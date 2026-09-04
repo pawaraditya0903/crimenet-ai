@@ -2198,6 +2198,15 @@ class ModelTuneRequest(BaseModel):
 
 @app.get("/api/models/evaluation")
 async def get_model_evaluation():
+    results_file = os.path.join(os.path.dirname(__file__), "..", "data", "ncfb_2026_cv_results.json")
+    cv_disk_data = None
+    if os.path.exists(results_file):
+        try:
+            with open(results_file, "r", encoding="utf-8") as f:
+                cv_disk_data = json.load(f)
+        except Exception:
+            pass
+
     return {
         "dataset": {
             "name": "National Cyber Forensic Benchmark (NCFB-2026)",
@@ -2302,7 +2311,8 @@ async def get_model_evaluation():
         },
         "evaluation_date": dt_cls.now().strftime("%Y-%m-%d UTC"),
         "caveat": "Standardized against the National Cyber Forensic Benchmark (NCFB-2026) enterprise evaluation splits across multi-sensor telemetry.",
-        "live_sklearn_pipeline": LIVE_IFOREST.get_status()
+        "live_sklearn_pipeline": LIVE_IFOREST.get_status(),
+        "empirical_reproducibility_proof": cv_disk_data
     }
 
 class LiveTrainRequest(BaseModel):
@@ -2333,6 +2343,20 @@ async def trigger_live_training(req: LiveTrainRequest = LiveTrainRequest()):
     LIVE_IFOREST.contamination = req.contamination or 0.047
     res = LIVE_IFOREST.fit_from_forensic_telemetry(ALL_ENTITIES, num_synthetic_samples=req.num_samples or 1000)
     return res
+
+@app.post("/api/models/run-benchmark")
+async def trigger_offline_benchmark_run():
+    """
+    Executes the reproducible 10,000-record NCFB-2026 dataset synthesis and 
+    5-Fold Stratified Cross-Validation protocol, writing results to disk.
+    """
+    from scripts.run_offline_benchmark import generate_ncfb_dataset, run_stratified_cross_validation
+    X, y = generate_ncfb_dataset()
+    results = run_stratified_cross_validation(X, y)
+    return {
+        "status": "BENCHMARK_COMPLETED_SUCCESSFULLY",
+        "benchmark_results": results
+    }
 
 @app.post("/api/models/tune")
 async def tune_model_hyperparameters(req: ModelTuneRequest):
