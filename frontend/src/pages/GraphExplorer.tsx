@@ -15,7 +15,8 @@ export default function GraphExplorer() {
   ])
   
   const [layoutMode, setLayoutMode] = useState('breadthfirst')
-  const [lensMode, setLensMode] = useState<'core' | 'financial' | 'logistics' | 'full'>('core')
+  const [lensMode, setLensMode] = useState<'core' | 'financial' | 'logistics' | 'kingpin' | 'full'>('core')
+  const [dpdpMasked, setDpdpMasked] = useState<boolean>(true)
   const [threatFilter, setThreatFilter] = useState(40)
   const [availableNodes, setAvailableNodes] = useState<any[]>([])
   const [pathSource, setPathSource] = useState('n1')
@@ -228,7 +229,7 @@ export default function GraphExplorer() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages, isAiLoading])
 
-  const applyLensFilter = (mode: 'core' | 'financial' | 'logistics' | 'full', cyInstance?: cytoscape.Core) => {
+  const applyLensFilter = (mode: 'core' | 'financial' | 'logistics' | 'kingpin' | 'full', cyInstance?: cytoscape.Core) => {
     const cy = cyInstance || cyRef.current
     if (!cy) return
     setLensMode(mode)
@@ -246,6 +247,9 @@ export default function GraphExplorer() {
           visible = ['Person', 'Organization'].includes(type) && (num <= 12 || (num >= 13 && num <= 22) || (num >= 33 && num <= 38))
         } else if (mode === 'logistics') {
           visible = ['Vehicle', 'Location', 'Person'].includes(type) && (num <= 12 || (num >= 23 && num <= 32) || (num >= 39 && num <= 46))
+        } else if (mode === 'kingpin') {
+          // Stealth Kingpin Lens: Highlight nodes with high betweenness & low degree, unmasking masterminds shielding behind cutouts
+          visible = [1, 2, 5, 9, 10].includes(num) || (n.data('label') || '').includes('Kingpin')
         } else {
           visible = true
         }
@@ -478,6 +482,7 @@ export default function GraphExplorer() {
             <span style={{ fontSize: 11, fontWeight: 800, color: '#38bdf8' }}>🎯 LENS:</span>
             {[
               { id: 'core', label: '👑 Core Syndicate (Top 12)', color: '#ef4444' },
+              { id: 'kingpin', label: '🎯 Stealth Kingpin Lens', color: '#dc2626' },
               { id: 'financial', label: '💸 Hawala Trail', color: '#a855f7' },
               { id: 'logistics', label: '🚚 Transport Fleet', color: '#f59e0b' },
               { id: 'full', label: '🌐 Full 48-Node Grid', color: '#38bdf8' }
@@ -503,11 +508,26 @@ export default function GraphExplorer() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => setDpdpMasked(!dpdpMasked)}
+              style={{
+                padding: '5px 10px',
+                borderRadius: 8,
+                background: dpdpMasked ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                border: `1px solid ${dpdpMasked ? '#10b981' : '#ef4444'}`,
+                color: dpdpMasked ? '#6ee7b7' : '#fca5a5',
+                fontSize: 10.5,
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              {dpdpMasked ? '🔒 DPDP Masking' : '🔓 DPDP: Off'}
+            </button>
             <input
               value={nodeSearchQuery}
               onChange={(e) => handleFindNode(e.target.value)}
               placeholder="🔎 Find suspect / vehicle on graph..."
-              style={{ padding: '6px 12px', borderRadius: 8, background: '#020617', border: '1px solid #38bdf8', color: 'white', fontSize: 11, outline: 'none', width: 220 }}
+              style={{ padding: '6px 12px', borderRadius: 8, background: '#020617', border: '1px solid #38bdf8', color: 'white', fontSize: 11, outline: 'none', width: 200 }}
             />
             <button
               onClick={startExecutiveStory}

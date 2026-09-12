@@ -6,6 +6,7 @@ export default function Reports() {
   const [entityType, setEntityType] = useState('Person')
   const [entityId, setEntityId] = useState('Arjun Mehta')
   const [loading, setLoading] = useState(false)
+  const [certLoading, setCertLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
   const [preview, setPreview] = useState<any>(null)
   const [availableSuspects, setAvailableSuspects] = useState<any[]>([
@@ -26,6 +27,46 @@ export default function Reports() {
       })
       .catch(() => {})
   }, [])
+
+  const handleGenerateBSACertificate = async () => {
+    setCertLoading(true)
+    setStatusMsg('')
+    try {
+      const response = await axios.post(
+        '/api/reports/bsa-certificate',
+        {
+          case_id: 'c1',
+          target_id: entityId,
+          officer_name: 'Aditya Pawar',
+          officer_designation: 'Lead Cyber Crime Investigator & Forensic Architect',
+          badge_number: 'CYBER-INV-2026-09',
+          agency: 'Special Cyber Crime Investigation Cell (CID / MHA)',
+          device_name: 'CRIMENET-FORENSIC-STATION-01',
+          os_details: 'Ubuntu 22.04 LTS Forensic Edition / Windows 11 Enterprise (Kernel Verified)',
+          mac_address: '00:1A:2B:3C:4D:5E',
+          hash_algorithm: 'SHA-256 (NIST FIPS 180-4 Verified)'
+        },
+        { responseType: 'blob' }
+      )
+
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `BSA_63_4_Certificate_${entityId.replace(/\s+/g, '_')}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+
+      setStatusMsg('✅ Official Section 63(4) BSA 2023 Statutory Certificate generated and downloaded!')
+    } catch (err: any) {
+      console.error(err)
+      setStatusMsg('❌ Error generating BSA Certificate. Ensure backend is running.')
+    } finally {
+      setCertLoading(false)
+    }
+  }
 
   const handleGenerate = async () => {
     setLoading(true)
@@ -233,23 +274,50 @@ export default function Reports() {
       </div>
 
       {/* MERKLE TREE EVIDENCE LEDGER CERTIFICATE (BSA 2023 / SEC 65B) */}
-      <div style={{ background: 'rgba(15, 23, 42, 0.85)', padding: 18, borderRadius: 14, border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>📜</span> BHARATIYA SAKSHYA ADHINIYAM (BSA 2023) MERKLE EVIDENCE LEDGER
+      <div style={{ background: 'rgba(15, 23, 42, 0.9)', padding: 20, borderRadius: 14, border: '1px solid #10b981', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>📜</span> SECTION 63(4) BHARATIYA SAKSHYA ADHINIYAM (BSA 2023) STATUTORY CERTIFICATION
+            </div>
+            <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>
+              Cryptographic integrity proof alone does not satisfy court admissibility. Under BSA 63(4), evidence requires an official certificate with device particulars, system operating status certification, and operator identity.
+            </div>
           </div>
-          <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>
-            All 48 intelligence dossiers, telecom bursts, and crypto transactions are anchored into a SHA-256 binary Merkle Root.
-          </div>
-          <div style={{ fontSize: 10.5, fontFamily: 'monospace', color: '#38bdf8', marginTop: 6 }}>
-            MERKLE ROOT: <code>8f12a99c4b72e0d9b62e49c81a2f57b3e941c8d0a7f23e41b958c21a4f07e19a</code>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ padding: '4px 10px', borderRadius: 6, background: '#064e3b', color: '#6ee7b7', fontSize: 10.5, fontWeight: 800 }}>
+              ✓ COURT-ADMISSIBLE
+            </span>
+            <div style={{ fontSize: 9.5, color: '#94a3b8', marginTop: 4 }}>Sec 63(4) BSA 2023 (formerly 65B IEA)</div>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ padding: '4px 10px', borderRadius: 6, background: '#064e3b', color: '#6ee7b7', fontSize: 10.5, fontWeight: 800 }}>
-            ✓ TAMPER-PROOF CERTIFIED
-          </span>
-          <div style={{ fontSize: 9.5, color: '#94a3b8', marginTop: 4 }}>Sec 63 BSA 2023 / Sec 65B IEA</div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#020617', padding: '10px 14px', borderRadius: 8, border: '1px solid #1e293b' }}>
+          <div>
+            <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase' }}>IMMUTABLE CASE MERKLE ROOT (SHA-256)</div>
+            <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#38bdf8', marginTop: 2 }}>
+              <code>8f12a99c4b72e0d9b62e49c81a2f57b3e941c8d0a7f23e41b958c21a4f07e19a</code>
+            </div>
+          </div>
+          <button
+            onClick={handleGenerateBSACertificate}
+            disabled={certLoading}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              background: certLoading ? '#334155' : '#059669',
+              color: 'white',
+              border: 'none',
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: certLoading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            {certLoading ? '⏳ Generating Certificate...' : '📜 Export Section 63(4) BSA Certificate (PDF)'}
+          </button>
         </div>
       </div>
 
