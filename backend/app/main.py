@@ -1883,6 +1883,9 @@ async def generate_pdf(data: dict):
     target_id = str(data.get("entity_id", "Arjun Mehta")).strip()
     now_str = dt_cls.now().strftime("%d-%b-%Y %H:%M:%S UTC")
 
+    if template in ["bsa", "bsa_cert", "bsa_certificate", "bsa-certificate"]:
+        return await generate_bsa_63_certificate(BSACertificateRequest(target_id=target_id))
+
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
