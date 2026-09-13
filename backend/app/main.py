@@ -57,6 +57,8 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing CrimeNet AI Relational Store...")
     init_db()
     seed_database_if_empty()
+    yield
+
 # Ensure database is initialized on import
 init_db()
 seed_database_if_empty()
