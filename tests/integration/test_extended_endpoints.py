@@ -191,3 +191,40 @@ def test_dynamic_pdf_generation_content():
     assert priya_pdf.status_code == 200
     assert priya_pdf.headers["content-type"] == "application/pdf"
     assert len(priya_pdf.content) > 1000
+
+def test_simulation_controls_and_notifications():
+    # 1. Simulation start, speed, pause, status
+    start_res = client.post("/api/simulation/start")
+    assert start_res.status_code == 200
+    assert start_res.json()["simulation"]["is_running"] is True
+
+    speed_res = client.post("/api/simulation/speed", json={"speed": 2.5})
+    assert speed_res.status_code == 200
+    assert speed_res.json()["speed"] == 2.5
+
+    pause_res = client.post("/api/simulation/pause")
+    assert pause_res.status_code == 200
+    assert pause_res.json()["simulation"]["is_running"] is False
+
+    status_res = client.get("/api/simulation/status")
+    assert status_res.status_code == 200
+
+    # 2. Biometric token login
+    bio_res = client.post("/api/auth/biometric-token", json={
+        "badge": "Chief Officer Aditya Pawar",
+        "similarity_score": 84.5
+    })
+    assert bio_res.status_code == 200
+    assert "access_token" in bio_res.json()
+    bio_token = bio_res.json()["access_token"]
+    
+    # Verify the issued biometric token works with protected endpoints
+    verify_res = client.get("/api/auth/verify-token", headers={"Authorization": f"Bearer {bio_token}"})
+    assert verify_res.status_code == 200
+    assert verify_res.json()["valid"] is True
+
+    # 3. Notifications clear-all
+    clear_res = client.post("/api/notifications/clear-all", headers={"Authorization": f"Bearer {bio_token}"})
+    assert clear_res.status_code == 200
+    assert clear_res.json()["success"] is True
+

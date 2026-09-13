@@ -141,6 +141,7 @@ async def mark_notification_read(notif_id: str, claims: dict = Depends(require_a
     return {"success": True}
 
 @app.post("/api/notifications/clear")
+@app.post("/api/notifications/clear-all")
 async def clear_all_notifications(claims: dict = Depends(require_authenticated_user)):
     with get_db() as conn:
         cursor = conn.cursor()
@@ -151,21 +152,31 @@ async def clear_all_notifications(claims: dict = Depends(require_authenticated_u
 SIMULATION_STATE = {"is_running": False, "speed": 1.0, "tick": 0}
 
 @app.post("/api/sim/start")
+@app.post("/api/simulation/start")
 async def start_sim():
     SIMULATION_STATE["is_running"] = True
     return {"status": "started", "simulation": SIMULATION_STATE}
 
 @app.post("/api/sim/pause")
+@app.post("/api/simulation/pause")
 async def pause_sim():
     SIMULATION_STATE["is_running"] = False
     return {"status": "paused", "simulation": SIMULATION_STATE}
 
 @app.post("/api/sim/reset")
+@app.post("/api/simulation/reset")
 async def reset_sim():
     SIMULATION_STATE["tick"] = 0
     return {"status": "reset", "simulation": SIMULATION_STATE}
 
+@app.post("/api/simulation/speed")
+async def set_sim_speed(payload: Dict[str, Any] = {}):
+    speed = float(payload.get("speed", 1.0))
+    SIMULATION_STATE["speed"] = speed
+    return {"status": "speed_updated", "speed": speed, "simulation": SIMULATION_STATE}
+
 @app.get("/api/sim/status")
+@app.get("/api/simulation/status")
 async def get_sim_status():
     return SIMULATION_STATE
 

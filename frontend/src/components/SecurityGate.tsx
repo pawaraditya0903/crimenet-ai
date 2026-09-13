@@ -293,11 +293,22 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
           }).catch(() => {})
         } catch {}
 
-        setTimeout(() => {
+        setTimeout(async () => {
           if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-          // For biometric quick-entry, request session token or proceed with cached session
-          const cachedToken = localStorage.getItem('crimenet_jwt_token') || 'biometric-session'
-          onAuthenticated(cachedToken, { role: 'SUPERVISORY_OFFICER', badge: badgeId })
+          let token = localStorage.getItem('crimenet_jwt_token') || sessionStorage.getItem('crimenet_jwt') || ''
+          try {
+            const bioRes = await axios.post('/api/auth/biometric-token', {
+              badge: badgeId || 'Chief Officer Aditya Pawar',
+              similarity_score: znccScore
+            })
+            if (bioRes.data && bioRes.data.access_token) {
+              token = bioRes.data.access_token
+              sessionStorage.setItem('crimenet_authenticated', 'true')
+              sessionStorage.setItem('crimenet_jwt', token)
+              localStorage.setItem('crimenet_jwt_token', token)
+            }
+          } catch {}
+          onAuthenticated(token || 'biometric-session', { role: 'SUPERVISORY_OFFICER', badge: badgeId })
           setFaceScanActive(false)
         }, 800)
       } else if (!savedDescriptor) {
