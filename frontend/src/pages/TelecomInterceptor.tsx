@@ -266,21 +266,21 @@ export default function TelecomInterceptor() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 1200, margin: '0 auto', boxSizing: 'border-box' }}>
       
       {/* Header Search Bar with Dual Mode Switcher */}
-      <div style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '14px 20px', borderRadius: 14, border: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '14px 18px', borderRadius: 14, border: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+        <div style={{ flex: '1 1 300px' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
             <span>📡</span> CELLULAR CDR & STATISTICAL TELECOM INTERCEPTOR
           </h2>
-          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Z-Score Burst Anomaly Engine & Multi-SIM Co-Location Analyzer · Operator: <b>Aditya Pawar</b></p>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', borderRadius: 4, background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38bdf8', color: '#38bdf8', fontSize: 10, fontWeight: 700, marginTop: 4 }}>
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0' }}>Z-Score Burst Anomaly Engine & Multi-SIM Co-Location Analyzer · Operator: <b>Aditya Pawar</b></p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 4, background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38bdf8', color: '#38bdf8', fontSize: 10, fontWeight: 700, marginTop: 6 }}>
             <span>🔬</span> SYNTHETIC TELECOM TELEMETRY · REAL WLS TRILATERATION & NOCTURNAL Z-SCORE BURST STATS
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', background: '#020617', padding: 2, borderRadius: 8, border: '1px solid #334155' }}>
             <button
               onClick={() => setActiveMode('single')}
@@ -313,12 +313,12 @@ export default function TelecomInterceptor() {
           </button>
 
           {activeMode === 'single' ? (
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <input
                 value={targetNumber}
                 onChange={(e) => setTargetNumber(e.target.value)}
                 placeholder="Enter MSISDN (e.g. 9834702432)..."
-                style={{ padding: '7px 12px', borderRadius: 8, background: '#020617', border: '1px solid #38bdf8', color: 'white', fontSize: 11.5, outline: 'none', width: 190 }}
+                style={{ padding: '7px 12px', borderRadius: 8, background: '#020617', border: '1px solid #38bdf8', color: 'white', fontSize: 11.5, outline: 'none', width: 170 }}
               />
               <button
                 onClick={handleScan}
@@ -342,8 +342,8 @@ export default function TelecomInterceptor() {
 
       {activeMode === 'single' ? (
         <>
-          {/* Grid: 4 Metric Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {/* Grid: Responsive Metric Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
             <div style={{ padding: 14, background: 'rgba(15, 23, 42, 0.8)', borderRadius: 10, border: '1px solid #334155' }}>
               <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase' }}>TARGET SUBSCRIBER</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginTop: 2 }}>{maskPhone(intel.number)}</div>
@@ -370,11 +370,11 @@ export default function TelecomInterceptor() {
           </div>
 
           {/* Adaptive Multi-Tier Tower Coverage Density Selector */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '10px 16px', borderRadius: 10, border: '1px solid #334155' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: '10px 16px', borderRadius: 10, border: '1px solid #334155', flexWrap: 'wrap', gap: 10 }}>
             <div style={{ fontSize: 11, color: '#cbd5e1' }}>
               <b>Adaptive Geolocation Coverage Engine:</b> Select tower coverage density to test graceful mathematical fallback:
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button onClick={() => setCoverageMode('3-tower')} style={{ padding: '5px 10px', borderRadius: 6, background: coverageMode === '3-tower' ? '#1d4ed8' : '#020617', border: '1px solid #38bdf8', color: 'white', fontSize: 10.5, fontWeight: 700, cursor: 'pointer' }}>
                 3 Towers: Urban 4G/5G (WLS ±12.4m)
               </button>
@@ -391,7 +391,7 @@ export default function TelecomInterceptor() {
           <CellTowerTriangulationCanvas targetNumber={maskPhone(intel.number)} threatScore={intel.threatScore} coverageMode={coverageMode} />
 
           {/* Dual SIM & Hardware Forensic Module */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
             <div style={{ background: 'rgba(15, 23, 42, 0.8)', padding: 16, borderRadius: 12, border: '1px solid #1e293b' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#38bdf8', marginBottom: 8 }}>📱 DUAL-SIM HARDWARE PAIRING MATRIX</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11 }}>
@@ -423,13 +423,13 @@ export default function TelecomInterceptor() {
             <div style={{ fontSize: 12, fontWeight: 800, color: '#38bdf8', marginBottom: 10 }}>📋 REAL-TIME INTERCEPTED CALL DETAIL RECORDS (CDR)</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {intel.logs.map((log: any, idx: number) => (
-                <div key={idx} style={{ padding: '8px 12px', background: '#020617', borderRadius: 6, border: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                <div key={idx} style={{ padding: '8px 12px', background: '#020617', borderRadius: 6, border: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, flexWrap: 'wrap', gap: 8 }}>
                   <div>
                     <span style={{ color: '#94a3b8', marginRight: 10 }}>{log.time}</span>
                     <span style={{ color: 'white', fontWeight: 700 }}>{log.target}</span>
                     <span style={{ color: '#38bdf8', marginLeft: 10 }}>({log.type})</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ color: '#94a3b8' }}>{log.tower}</span>
                     <span style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{log.duration}</span>
                     <span style={{ padding: '2px 6px', borderRadius: 4, background: log.flag === 'BURST' ? '#7f1d1d' : '#78350f', color: 'white', fontSize: 9.5, fontWeight: 800 }}>
@@ -445,7 +445,7 @@ export default function TelecomInterceptor() {
         /* BATCH CSV CDR STATISTICAL ENGINE */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {batchResults?.analysis && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
               <div style={{ padding: 14, background: 'rgba(15, 23, 42, 0.8)', borderRadius: 10, border: '1px solid #ef4444' }}>
                 <div style={{ fontSize: 10, color: '#f87171', textTransform: 'uppercase' }}>Z-SCORE BURST SIGMA</div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444', marginTop: 2 }}>{batchResults.analysis.z_score_burst} σ</div>
@@ -475,19 +475,19 @@ export default function TelecomInterceptor() {
           )}
 
           {/* PRE-INGESTION CHAIN-OF-CUSTODY & TSP MANIFEST VERIFICATION (LOOPHOLE 6 RESOLUTION) */}
-          <div style={{ background: 'rgba(15, 23, 42, 0.9)', padding: 16, borderRadius: 12, border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
+          <div style={{ background: 'rgba(15, 23, 42, 0.9)', padding: 16, borderRadius: 12, border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
+            <div style={{ flex: '1 1 280px' }}>
               <div style={{ fontSize: 12.5, fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>🛡️</span> PRE-INGESTION EVIDENCE CHAIN-OF-CUSTODY (TSP MANIFEST VERIFIED)
               </div>
               <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 3 }}>
                 Telecom Operator: <b>Reliance Jio Infocomm Ltd (NOC Gateway)</b> · Source File: <code>CDR_MUMBAI_WEST_BATCH_0313.csv</code>
               </div>
-              <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#38bdf8', marginTop: 3 }}>
+              <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#38bdf8', marginTop: 3, wordBreak: 'break-all' }}>
                 TSP DIGEST: <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <span style={{ padding: '4px 10px', borderRadius: 6, background: '#064e3b', color: '#6ee7b7', fontSize: 10.5, fontWeight: 800 }}>
                 ✓ MATCH CONFIRMED · ZERO TAMPERING
               </span>
@@ -497,7 +497,7 @@ export default function TelecomInterceptor() {
 
           {/* Parsed Batch Records Table */}
           <div style={{ background: 'rgba(15, 23, 42, 0.85)', padding: 16, borderRadius: 12, border: '1px solid #1e293b' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#38bdf8' }}>
                 📂 INGESTED BATCH CDR TIME-SERIES LOGS ({batchResults?.records?.length || 0} CALLS AUDITED)
               </div>
@@ -506,13 +506,13 @@ export default function TelecomInterceptor() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
               {batchResults?.records?.map((r: any, i: number) => (
-                <div key={i} style={{ padding: '8px 12px', background: '#020617', borderRadius: 6, border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                <div key={i} style={{ padding: '8px 12px', background: '#020617', borderRadius: 6, border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, flexWrap: 'wrap', gap: 8 }}>
                   <div>
                     <span style={{ color: '#f59e0b', fontWeight: 700, marginRight: 8 }}>[{r.call_id}]</span>
                     <span style={{ color: '#94a3b8', marginRight: 10 }}>{r.timestamp}</span>
                     <span style={{ color: 'white', fontWeight: 700 }}>{maskPhone(r.caller)} ➔ {maskPhone(r.receiver)}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ color: '#38bdf8' }}>IMEI: {r.imei}</span>
                     <span style={{ color: '#94a3b8' }}>IMSI: {r.imsi}</span>
                     <span style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{r.duration_sec}s</span>

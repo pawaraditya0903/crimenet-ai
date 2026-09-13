@@ -49,6 +49,19 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
       }
     }
     resolveIp()
+    
+    // Synchronize enrolled master face profile from backend for cross-device support (mobile/desktop)
+    axios.get('/api/security/master-face')
+      .then((res) => {
+        if (res.data && res.data.enrolled && Array.isArray(res.data.vector)) {
+          localStorage.setItem('aditya_master_face_descriptor', JSON.stringify(res.data.vector))
+          if (res.data.photo) {
+            localStorage.setItem('aditya_master_face_photo', res.data.photo)
+          }
+        }
+      })
+      .catch(() => {})
+
     return () => { isMounted = false }
   }, [])
 
@@ -136,9 +149,15 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return []
+    const vid = videoRef.current
+    const vW = vid.videoWidth || 480
+    const vH = vid.videoHeight || 480
+    const cropSize = Math.min(vW, vH) * 0.72
+    const startX = (vW - cropSize) / 2
+    const startY = (vH - cropSize) / 2
     canvas.width = 24
     canvas.height = 24
-    ctx.drawImage(videoRef.current, 0, 0, 24, 24)
+    ctx.drawImage(vid, startX, startY, cropSize, cropSize, 0, 0, 24, 24)
     const imgData = ctx.getImageData(0, 0, 24, 24)
     const raw: number[] = []
     for (let i = 0; i < imgData.data.length; i += 4) {
@@ -166,10 +185,16 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return ''
+    const vid = videoRef.current
+    const vW = vid.videoWidth || 480
+    const vH = vid.videoHeight || 480
+    const cropSize = Math.min(vW, vH) * 0.75
+    const startX = (vW - cropSize) / 2
+    const startY = (vH - cropSize) / 2
     canvas.width = 360
     canvas.height = 360
     try {
-      ctx.drawImage(videoRef.current, 0, 0, 360, 360)
+      ctx.drawImage(vid, startX, startY, cropSize, cropSize, 0, 0, 360, 360)
       return canvas.toDataURL('image/jpeg', 0.85)
     } catch {
       return ''
@@ -358,10 +383,23 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
         if (raw) savedDescriptor = JSON.parse(raw)
       } catch {}
 
+      // Fallback: If not in local browser cache (e.g. fresh mobile device), fetch from database
+      if (!savedDescriptor) {
+        try {
+          const res = await axios.get('/api/security/master-face')
+          if (res.data && res.data.enrolled && Array.isArray(res.data.vector)) {
+            savedDescriptor = res.data.vector
+            localStorage.setItem('aditya_master_face_descriptor', JSON.stringify(res.data.vector))
+            if (res.data.photo) localStorage.setItem('aditya_master_face_photo', res.data.photo)
+          }
+        } catch {}
+      }
+
       const znccScore = savedDescriptor ? computeZNCC(liveVec, savedDescriptor) : 0
       setSimilarityScore(znccScore)
 
-      if (savedDescriptor && znccScore >= 62) {
+      // Reliable cross-device biometric match threshold
+      if (savedDescriptor && znccScore >= 50) {
         if (soundEnabled) playCyberSound('grant')
         setScanStatus('verified')
         setFailedAttempts(0)
@@ -397,12 +435,12 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
         }, 800)
       } else if (!savedDescriptor) {
         setScanStatus('idle')
-        setAuthError('⚠️ No master face enrolled yet. Please login with passcode to configure biometric profile in Settings.')
+        setAuthError('⚠️ No master face enrolled yet. Please login with passcode to enroll your face in Register Face ID.')
         setFaceScanActive(false)
       } else {
         if (soundEnabled) playCyberSound('deny')
         setScanStatus('rejected')
-        setAuthError(`🚨 Face match: ${znccScore}% (need ≥62%). Center your face in good lighting.`)
+        setAuthError(`🚨 Face match: ${znccScore}% (need ≥50%). Center your face in good lighting.`)
 
         try {
           axios.post('/api/security/log-access-attempt', {

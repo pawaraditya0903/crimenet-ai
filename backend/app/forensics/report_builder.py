@@ -443,19 +443,22 @@ def build_bsa_certificate_pdf(
     # Part 1 Table
     story.append(Paragraph("<b>PART 1: CASE IDENTIFICATION & INVESTIGATION CREDENTIALS</b>", ParagraphStyle('P1', fontName='Helvetica-Bold', fontSize=9, textColor=rc.HexColor('#065f46'))))
     story.append(Spacer(1, 3))
+
+    cell_th = ParagraphStyle('CertTH', fontName='Helvetica-Bold', fontSize=7.5, leading=9.5, textColor=rc.HexColor('#065f46'))
+    cell_td = ParagraphStyle('CertTD', fontName='Helvetica', fontSize=7.5, leading=9.5, textColor=rc.HexColor('#0f172a'))
+    cell_mono = ParagraphStyle('CertMono', fontName='Courier', fontSize=6.8, leading=8.5, textColor=rc.HexColor('#0f172a'))
+
     part1_data = [
-        ["Certificate Ref No:", cert_no, "Date & Timestamp:", now_ist],
-        ["Investigation Case ID:", f"{case_id} (Operation Blue Thunder)", "Target Subject:", target_id],
-        ["Investigating Agency:", agency, "Certifying Officer:", f"{officer_name} ({badge_number})"],
-        ["Officer Designation:", officer_designation, "", ""]
+        [Paragraph("Certificate Ref No:", cell_th), Paragraph(cert_no, cell_td), Paragraph("Date &amp; Timestamp:", cell_th), Paragraph(now_ist, cell_td)],
+        [Paragraph("Investigation Case ID:", cell_th), Paragraph(f"{case_id} (Operation Blue Thunder)", cell_td), Paragraph("Target Subject:", cell_th), Paragraph(target_id, cell_td)],
+        [Paragraph("Investigating Agency:", cell_th), Paragraph(agency, cell_td), Paragraph("Certifying Officer:", cell_th), Paragraph(f"{officer_name} ({badge_number})", cell_td)],
+        [Paragraph("Officer Designation:", cell_th), Paragraph(officer_designation, cell_td), "", ""]
     ]
-    story.append(Table(part1_data, colWidths=[120, 140, 110, 150], style=TableStyle([
+    story.append(Table(part1_data, colWidths=[120, 145, 110, 148], style=TableStyle([
         ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f0fdf4')),
         ('BACKGROUND', (2,0), (2,-1), rc.HexColor('#f0fdf4')),
-        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 7.5),
         ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#a7f3d0')),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('SPAN', (1, 3), (3, 3)),
         ('PADDING', (0,0), (-1,-1), 4),
     ])))
@@ -465,18 +468,16 @@ def build_bsa_certificate_pdf(
     story.append(Paragraph("<b>PART 2: PRODUCING DEVICE & FORENSIC INTEGRITY AUDIT</b>", ParagraphStyle('P2', fontName='Helvetica-Bold', fontSize=9, textColor=rc.HexColor('#065f46'))))
     story.append(Spacer(1, 3))
     part2_data = [
-        ["Producing Device Name:", device_name, "Hardware MAC Address:", mac_address],
-        ["Operating Environment:", "Ubuntu 22.04 LTS Forensic / Windows 11 Enterprise", "Hash Algorithm:", "SHA-256 (NIST FIPS 180-4)"],
-        ["Immutable Case Merkle Root:", CASE_MERKLE_ROOT, "", ""],
-        ["Operating Condition:", "The computing device was operating properly during all material periods. No unauthorized modification occurred.", "", ""]
+        [Paragraph("Producing Device Name:", cell_th), Paragraph(device_name, cell_td), Paragraph("Hardware MAC Address:", cell_th), Paragraph(mac_address, cell_td)],
+        [Paragraph("Operating Environment:", cell_th), Paragraph("Ubuntu 22.04 LTS Forensic / Windows 11 Enterprise", cell_td), Paragraph("Hash Algorithm:", cell_th), Paragraph("SHA-256 (NIST FIPS 180-4)", cell_td)],
+        [Paragraph("Immutable Case Merkle Root:", cell_th), Paragraph(CASE_MERKLE_ROOT, cell_mono), "", ""],
+        [Paragraph("Operating Condition:", cell_th), Paragraph("The computing device was operating properly during all material periods. No unauthorized modification occurred.", cell_td), "", ""]
     ]
-    story.append(Table(part2_data, colWidths=[130, 130, 120, 140], style=TableStyle([
+    story.append(Table(part2_data, colWidths=[125, 140, 110, 148], style=TableStyle([
         ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f0fdf4')),
         ('BACKGROUND', (2,0), (2,-1), rc.HexColor('#f0fdf4')),
-        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 7.5),
         ('GRID', (0,0), (-1,-1), 0.5, rc.HexColor('#a7f3d0')),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('SPAN', (1, 2), (3, 2)),
         ('SPAN', (1, 3), (3, 3)),
         ('PADDING', (0,0), (-1,-1), 4),

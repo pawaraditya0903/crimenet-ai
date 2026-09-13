@@ -102,15 +102,16 @@ export default function DarkWebOSINT() {
   }
 
   const filteredFeeds = feeds.filter((f) => {
-    if (channelFilter === 'TOR') return f.channel.includes('TOR')
-    if (channelFilter === 'TELEGRAM') return f.channel.includes('TELEGRAM')
-    if (channelFilter === 'PASTEBIN') return f.channel.includes('PASTEBIN')
-    if (channelFilter === 'FORUM') return f.channel.includes('FORUM')
+    const ch = (f.channel || f.source_channel || 'TOR').toUpperCase()
+    if (channelFilter === 'TOR') return ch.includes('TOR')
+    if (channelFilter === 'TELEGRAM') return ch.includes('TELEGRAM')
+    if (channelFilter === 'PASTEBIN') return ch.includes('PASTEBIN')
+    if (channelFilter === 'FORUM') return ch.includes('FORUM')
     return true
   })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1200, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
@@ -134,7 +135,7 @@ export default function DarkWebOSINT() {
 
       {/* Search & Channel Filters */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)', padding: 12, borderRadius: 12, border: '1px solid #1e293b', flexWrap: 'wrap' }}>
-        <form onSubmit={handleDarknetSearch} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 280 }}>
+        <form onSubmit={handleDarknetSearch} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260, flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="🔍 Scan Darknet by keyword, MSISDN, TRC-20 wallet (e.g., 'Arjun', '0x89c', 'Hawala')..."
@@ -142,6 +143,7 @@ export default function DarkWebOSINT() {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               flex: 1,
+              minWidth: 180,
               padding: '10px 14px',
               borderRadius: 8,
               background: '#020617',
@@ -169,7 +171,7 @@ export default function DarkWebOSINT() {
           </button>
         </form>
 
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(['ALL', 'TOR', 'TELEGRAM', 'PASTEBIN', 'FORUM'] as const).map((ch) => (
             <button
               key={ch}
@@ -194,11 +196,13 @@ export default function DarkWebOSINT() {
         </div>
       </div>
 
-      {/* Main 2-Pane Feed and Entity Extractor */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
+      {/* Main 2-Pane Feed and Entity Extractor (Responsive Grid) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         {/* Left Column: Live Darknet Feed Stream */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '65vh', overflowY: 'auto' }}>
-          {filteredFeeds.map((feed) => (
+          {filteredFeeds.map((feed) => {
+            const chName = (feed.channel || feed.source_channel || 'TOR').toUpperCase()
+            return (
             <div
               key={feed.id}
               onClick={() => setSelectedFeed(feed)}
@@ -216,10 +220,10 @@ export default function DarkWebOSINT() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 9.5, padding: '2px 8px', borderRadius: 4, background: feed.channel.includes('TOR') ? '#4c1d95' : feed.channel.includes('TELEGRAM') ? '#0369a1' : '#78350f', color: 'white', fontWeight: 900 }}>
-                    {feed.channel.replace(/_/g, ' ')}
+                  <span style={{ fontSize: 9.5, padding: '2px 8px', borderRadius: 4, background: chName.includes('TOR') ? '#4c1d95' : chName.includes('TELEGRAM') ? '#0369a1' : '#78350f', color: 'white', fontWeight: 900 }}>
+                    {chName.replace(/_/g, ' ')}
                   </span>
-                  <span style={{ fontSize: 11, color: '#94a3b8' }}>{feed.source_name}</span>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>{feed.source_name || 'Dark Web Feed'}</span>
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 900, color: feed.threat_score >= 90 ? '#ef4444' : '#f59e0b', fontFamily: 'monospace' }}>
                   Threat: {feed.threat_score}%
@@ -234,12 +238,13 @@ export default function DarkWebOSINT() {
                 "{feed.raw_snippet}"
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, fontSize: 10.5 }}>
-                <span style={{ color: '#38bdf8', fontWeight: 700 }}>🎯 Extracted: {feed.extracted_entity.name}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, fontSize: 10.5, flexWrap: 'wrap', gap: 4 }}>
+                <span style={{ color: '#38bdf8', fontWeight: 700 }}>🎯 Extracted: {feed.extracted_entity?.name}</span>
                 <span style={{ color: '#fef08a' }}>⚖️ {feed.pmla_flag}</span>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Right Column: Entity Extraction & 1-Click Graph Ingestion */}

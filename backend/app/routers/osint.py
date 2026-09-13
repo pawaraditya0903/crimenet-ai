@@ -12,7 +12,10 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
     {
         "id": "osint-001",
         "title": "TOR Dread Forum: Escrow Release for TRC20 Mixer Cluster",
+        "channel": "TOR",
         "source_channel": "TOR",
+        "source_name": "Tor Onion Dread Forum",
+        "threat_severity": "critical",
         "threat_score": 94,
         "timestamp": "2026-03-12 23:45:12 UTC",
         "extracted_entity": {
@@ -22,6 +25,7 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
             "city": "Offshore / Deira",
             "risk_score": 92.0,
             "linked_suspect": "Mohammed Rafiq",
+            "crypto_wallet": "TX9vQrZ1b2...pmlaMixer88",
             "dossier": "Decentralized automated escrow contract advertising instant USDT to INR bank wire settlement at 3.5% commission."
         },
         "raw_snippet": "Vendor @HawalaBridge confirms release of 280,000 USDT via TRC20 tumbler pool for recipient account linked to Arjun Mehta network.",
@@ -30,7 +34,10 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
     {
         "id": "osint-002",
         "title": "Telegram Channel 'Deira Express FX': Token Order Cleared",
+        "channel": "TELEGRAM",
         "source_channel": "TELEGRAM",
+        "source_name": "Telegram Hawala Channel",
+        "threat_severity": "high",
         "threat_score": 88,
         "timestamp": "2026-03-12 21:18:04 UTC",
         "extracted_entity": {
@@ -48,7 +55,10 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
     {
         "id": "osint-003",
         "title": "Pastebin Leak: Exfiltrated Invoices of Shell Entity",
+        "channel": "PASTEBIN",
         "source_channel": "PASTEBIN",
+        "source_name": "Pastebin Exfiltration Dump",
+        "threat_severity": "high",
         "threat_score": 85,
         "timestamp": "2026-03-11 18:22:40 UTC",
         "extracted_entity": {
@@ -66,7 +76,10 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
     {
         "id": "osint-004",
         "title": "Darknet Market 'Genesis Market': Leaked Telecom IMSI Registry",
+        "channel": "TOR",
         "source_channel": "TOR",
+        "source_name": "Genesis Market Tor Hidden Service",
+        "threat_severity": "high",
         "threat_score": 89,
         "timestamp": "2026-03-11 14:10:15 UTC",
         "extracted_entity": {
@@ -84,7 +97,10 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
     {
         "id": "osint-005",
         "title": "Breached Forum 'Exploit.in': Offshore Corporate Filings",
+        "channel": "FORUM",
         "source_channel": "FORUM",
+        "source_name": "Exploit.in Underground Forum",
+        "threat_severity": "high",
         "threat_score": 82,
         "timestamp": "2026-03-10 09:34:55 UTC",
         "extracted_entity": {
@@ -102,7 +118,10 @@ INITIAL_OSINT_FEEDS: List[Dict[str, Any]] = [
     {
         "id": "osint-006",
         "title": "Telegram Bot 'HawkEye Signals': Smurfing Mule Network",
+        "channel": "TELEGRAM",
         "source_channel": "TELEGRAM",
+        "source_name": "Telegram HawkEye Signals Bot",
+        "threat_severity": "medium",
         "threat_score": 79,
         "timestamp": "2026-03-09 17:05:11 UTC",
         "extracted_entity": {
@@ -164,7 +183,10 @@ async def scan_osint_network(req: OSINTScanRequest):
         dynamic_feed = {
             "id": f"osint-dyn-{uuid.uuid4().hex[:6]}",
             "title": f"Targeted Darknet Hit for '{req.query}'",
+            "channel": "TOR" if req.deep_tor_scan else "FORUM",
             "source_channel": "TOR" if req.deep_tor_scan else "FORUM",
+            "source_name": "Tor Onion Dark Web Crawler" if req.deep_tor_scan else "Underground Forum Intercept",
+            "threat_severity": "critical",
             "threat_score": 87,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "extracted_entity": {

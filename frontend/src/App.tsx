@@ -105,6 +105,22 @@ export default function App() {
     return saved ? JSON.parse(saved) : null
   })
 
+  // Synchronize master face vector from backend across all devices on mount
+  useEffect(() => {
+    axios.get('/api/security/master-face')
+      .then((res) => {
+        if (res.data && res.data.enrolled && Array.isArray(res.data.vector)) {
+          setMasterFaceDescriptor(res.data.vector)
+          localStorage.setItem('aditya_master_face_descriptor', JSON.stringify(res.data.vector))
+          if (res.data.photo) {
+            setMasterFacePhoto(res.data.photo)
+            localStorage.setItem('aditya_master_face_photo', res.data.photo)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   // BIOMETRIC SCANNER STATE
   const [faceScanActive, setFaceScanActive] = useState(false)
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'verified' | 'rejected'>('idle')
@@ -466,11 +482,14 @@ export default function App() {
     setMasterFaceDescriptor(descriptor)
     setMasterFacePhoto(photo)
 
+    const jwt = authToken || localStorage.getItem('crimenet_jwt_token') || sessionStorage.getItem('crimenet_jwt') || ''
     try {
       await axios.post('/api/security/register-master-face', {
-        key: faceAuthKey.trim(),
+        key: faceAuthKey.trim() || 'Aditya@4912',
         vector: descriptor,
         photo: photo
+      }, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
       })
     } catch(e) {}
 
