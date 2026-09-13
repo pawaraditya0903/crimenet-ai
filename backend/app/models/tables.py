@@ -174,10 +174,10 @@ def seed_database_if_empty():
         cursor.execute("SELECT COUNT(*) as count FROM intruder_logs")
         if cursor.fetchone()["count"] == 0:
             intruder_logs_to_seed = [
-                ("log-01", "2026-03-12 02:14:22", "103.21.244.12", "Linux x86_64 / Tor Relay Node", "BRUTE_FORCE_PROBE", "BLOCKED (429 Rate Limit)", "UNKNOWN-INTRUDER", generate_forensic_mugshot("UNKNOWN-INTRUDER", "BLOCKED (429 Rate Limit)", "BRUTE_FORCE_PROBE", "103.21.244.12"), 1773281062.0),
-                ("log-02", "2026-03-12 03:45:10", "49.36.120.88", "Win32 / Chrome 122 (Unverified)", "PASSCODE_FAILED", "BLOCKED (5 Fails Lockdown)", "PROBE-ATTEMPT", generate_forensic_mugshot("PROBE-ATTEMPT", "BLOCKED (5 Fails Lockdown)", "PASSCODE_FAILED", "49.36.120.88"), 1773286510.0),
-                ("log-03", "2026-03-12 10:15:00", "182.72.19.45", "CRIMENET-FORENSIC-STATION-01", "BIOMETRIC_ZNCC_SCAN", "AUTHORIZED (Match: 89%)", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED (Match: 89%)", "BIOMETRIC_ZNCC_SCAN", "182.72.19.45"), 1773309900.0),
-                ("log-04", "2026-03-13 01:22:45", "103.21.244.82", "Android 14 / Burner Proxy", "PROBE_API_INTRUSION", "BLOCKED (Bearer Missing)", "UNAUTHORIZED", generate_forensic_mugshot("UNAUTHORIZED", "BLOCKED (Bearer Missing)", "PROBE_API_INTRUSION", "103.21.244.82"), 1773364365.0)
+                ("log-01", "23-Aug-2026 13:11:50 IST", "122.170.196.103", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0", "PASSCODE_AUTHORIZED", "AUTHORIZED (Passcode Verified)", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED"), 1787470910.0),
+                ("log-02", "23-Aug-2026 13:11:02 IST", "203.192.223.68", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "INTRUDER_FACE_FAILED_0%", "BLOCKED (0% Face Match)", "UNKNOWN-INTRUDER", generate_forensic_mugshot("UNKNOWN-INTRUDER", "BLOCKED"), 1787470862.0),
+                ("log-03", "23-Aug-2026 12:53:27 IST", "152.58.32.96", "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile", "PASSCODE_FAILED", "BLOCKED (Invalid Passcode)", "REMOTE-PROBE", generate_forensic_mugshot("REMOTE-PROBE", "BLOCKED"), 1787469807.0),
+                ("log-04", "23-Aug-2026 12:52:52 IST", "152.58.32.96", "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile", "PORTAL_VISITOR_CAPTURED", "MONITORED (Gateway Visit)", "UNAUTHORIZED", generate_forensic_mugshot("UNAUTHORIZED", "BLOCKED"), 1787469772.0)
             ]
             cursor.executemany(
                 "INSERT INTO intruder_logs (id, timestamp, ip, device, action, status, badge, photo, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
