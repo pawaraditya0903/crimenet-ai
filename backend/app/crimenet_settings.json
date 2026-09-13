@@ -1,0 +1,67 @@
+{
+  "settings": {
+    "agency": "CrimeNet Special Operations Intelligence Directorate (Central Command)",
+    "jurisdiction": "Multi-Jurisdictional Inter-State Cyber & Hawala Taskforce (India)",
+    "retention": "7 Years (PMLA & IT Act Statutory Requirement)",
+    "telegram_alerts": true,
+    "sms_raid_broadcast": false,
+    "face_sensitivity": 0.82,
+    "auto_lock_timeout": 15,
+    "require_password_complexity": true,
+    "multi_frame_averaging": true,
+    "sound_enabled": true,
+    "audio_theme": "cyber_subtle",
+    "desktop_notifications": true,
+    "toast_duration": 6,
+    "critical_alerts_only_sound": false,
+    "accent_theme": "cyan",
+    "compact_mode": true,
+    "scanlines_effect": true,
+    "reduce_motion": false,
+    "high_contrast": false,
+    "default_case": "c1",
+    "graph_layout": "force_directed",
+    "simulation_tick_rate": 1.5,
+    "anomaly_contamination": 0.044,
+    "pmla_threshold_inr": 50000.0
+  },
+  "investigators": [
+    {
+      "id": "inv-1",
+      "name": "Aditya Pawar",
+      "email": "aditya.pawar@crimenet.ai",
+      "badge": "INV-2026-AP01",
+      "role": "Chief Intelligence Architect & Lead",
+      "clearance": "Top Secret / Level 5",
+      "skills": [
+        "Telecom CDR & Tower Triangulation",
+        "Cyber Forensics & Dark Web Tracing",
+        "PMLA & Hawala Financial Auditing"
+      ]
+    },
+    {
+      "id": "inv-2",
+      "name": "Ramesh Sharma",
+      "email": "ramesh.sharma@crimenet.ai",
+      "badge": "INV-2026-RS02",
+      "role": "Hawala & PMLA Financial Auditor",
+      "clearance": "Secret / Level 4",
+      "skills": [
+        "PMLA & Hawala Financial Auditing",
+        "Cryptocurrency & Blockchain Forensics"
+      ]
+    },
+    {
+      "id": "inv-3",
+      "name": "Suresh Kadam",
+      "email": "suresh.kadam@crimenet.ai",
+      "badge": "INV-2026-SK03",
+      "role": "Cellular CDR & Tower Analyst",
+      "clearance": "Secret / Level 4",
+      "skills": [
+        "Telecom CDR & Tower Triangulation",
+        "ANPR Vehicle Toll Interception"
+      ]
+    }
+  ]
+}

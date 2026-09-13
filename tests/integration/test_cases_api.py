@@ -41,3 +41,8 @@ def test_case_crud_and_stage_advancement():
     # 4. Verify stage updated in database
     verify_res = client.get(f"/api/cases/{case_id}", headers=headers)
     assert verify_res.json()["stage"] == "surveillance"
+
+    # 5. Teardown: Delete the test case so database is not polluted with duplicates
+    del_res = client.delete(f"/api/cases/{case_id}", headers=headers)
+    assert del_res.status_code == 200
+

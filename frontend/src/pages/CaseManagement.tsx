@@ -77,6 +77,14 @@ export default function CaseManagement() {
     setShowModal(false)
   }
 
+  const handleDeleteCase = async (caseId: string) => {
+    if (!window.confirm('Are you sure you want to close and archive this investigation case?')) return
+    setCases(prev => prev.filter(c => c.id !== caseId))
+    try {
+      await axios.delete(`/api/cases/${caseId}`)
+    } catch {}
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100vh - 120px)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -105,9 +113,12 @@ export default function CaseManagement() {
                 <div key={c.id} style={{ background: '#0c1324', borderRadius: 8, padding: 12, border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>{c.title}</span>
-                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: c.priority === 'critical' ? '#7f1d1d' : '#1e3a8a', color: 'white', fontWeight: 800 }}>
-                      {c.priority ? c.priority.toUpperCase() : 'HIGH'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: c.priority === 'critical' ? '#7f1d1d' : '#1e3a8a', color: 'white', fontWeight: 800 }}>
+                        {c.priority ? c.priority.toUpperCase() : 'HIGH'}
+                      </span>
+                      <button onClick={() => handleDeleteCase(c.id)} title="Archive / Delete Case" style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: 11, cursor: 'pointer', padding: '0 2px' }}>✕</button>
+                    </div>
                   </div>
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>{c.description || c.desc}</div>
                   <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 700 }}>🎯 Suspects: {(c.suspects || []).join(', ')}</div>
@@ -120,7 +131,7 @@ export default function CaseManagement() {
                         ◀ Back
                       </button>
                     )}
-                    {st.id !== 'court' && (
+                    {st.id !== 'trial' && (
                       <button onClick={() => moveStage(c.id, STAGES[STAGES.findIndex(s => s.id === st.id) + 1].id)} style={{ flex: 1, padding: 4, borderRadius: 4, background: '#1d4ed8', border: 'none', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
                         Advance ▶
                       </button>

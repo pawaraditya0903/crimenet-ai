@@ -23,7 +23,7 @@ async def get_network():
         "Mehta Enterprises Ltd": "n5",
         "+91-9876543210": "n6",
         "Goregaon Warehouse": "n7",
-        "Goregaon Tower 4041": "n7",
+        "Goregaon Tower 4041": "n7_tower",
         "BMW X5 (MH-01-AB)": "n8",
         "Phoenix Trading LLC": "n9",
         "Phoenix Trading LLC (Dubai)": "n9",
@@ -47,10 +47,25 @@ async def get_network():
         "CellTower": "#f59e0b"
     }
 
+    name_to_nid = {}
     nodes = []
+    seen_node_ids = set()
+
     for idx, e in enumerate(entities, 1):
         name = e["name"]
-        nid = ID_MAP.get(name, e.get("id") or f"n{idx}")
+        raw_id = e.get("id") or f"n{idx}"
+        nid = ID_MAP.get(name, raw_id)
+        if nid in seen_node_ids:
+            nid = f"{nid}_{idx}"
+        seen_node_ids.add(nid)
+
+        name_to_nid[name] = nid
+        name_to_nid[name.strip()] = nid
+        name_to_nid[name.lower()] = nid
+        if raw_id:
+            name_to_nid[raw_id] = nid
+        name_to_nid[nid] = nid
+
         risk = float(e.get("risk_score", 50.0))
         ntype = e.get("type", "Person")
         color = color_map.get(ntype, "#38bdf8")
@@ -73,21 +88,31 @@ async def get_network():
             "city": e.get("city", "")
         })
 
-    edges = []
-    for idx, r in enumerate(relationships, 1):
-        src_name = r["source"]
-        tgt_name = r["target"]
-        src_id = ID_MAP.get(src_name, src_name)
-        tgt_id = ID_MAP.get(tgt_name, tgt_name)
+    valid_node_ids = {n["id"] for n in nodes}
 
-        edges.append({
-            "id": r.get("id") or f"e{idx}",
-            "source": src_id,
-            "target": tgt_id,
-            "label": r.get("label", "LINKED"),
-            "type": r.get("type", "DIRECT_LINK"),
-            "weight": float(r.get("weight", 1.0))
-        })
+    edges = []
+    seen_edge_ids = set()
+    for idx, r in enumerate(relationships, 1):
+        src_raw = r["source"]
+        tgt_raw = r["target"]
+        src_id = name_to_nid.get(src_raw) or name_to_nid.get(src_raw.strip()) or name_to_nid.get(src_raw.lower())
+        tgt_id = name_to_nid.get(tgt_raw) or name_to_nid.get(tgt_raw.strip()) or name_to_nid.get(tgt_raw.lower())
+
+        # Crucial for Cytoscape: only create edge if both source and target exist in nodes
+        if src_id and tgt_id and src_id in valid_node_ids and tgt_id in valid_node_ids:
+            eid = r.get("id") or f"e{idx}"
+            if eid in seen_edge_ids:
+                eid = f"{eid}_{idx}"
+            seen_edge_ids.add(eid)
+
+            edges.append({
+                "id": eid,
+                "source": src_id,
+                "target": tgt_id,
+                "label": r.get("label", "LINKED"),
+                "type": r.get("type", "DIRECT_LINK"),
+                "weight": float(r.get("weight", 1.0))
+            })
 
     elements = [{"data": n} for n in nodes] + [{"data": e} for e in edges]
 

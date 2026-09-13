@@ -130,3 +130,40 @@ async def update_case_stage(
     )
 
     return {"status": "updated", "case_id": case_id, "stage": req.stage, "previous_stage": old_stage}
+
+@router.delete("/{case_id}")
+async def delete_case(
+    case_id: str,
+    request: Request,
+    claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER, ForensicRole.LEAD_INVESTIGATOR]))
+):
+    """Deletes an investigation case and associated assignments and suspects."""
+    user_id = claims.get("sub")
+    role = claims.get("role")
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title FROM cases WHERE id = ?", (case_id,))
+        case_row = cursor.fetchone()
+        if not case_row:
+            raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found.")
+        title = case_row["title"]
+
+        cursor.execute("DELETE FROM case_assignments WHERE case_id = ?", (case_id,))
+        cursor.execute("DELETE FROM suspects WHERE case_id = ?", (case_id,))
+        cursor.execute("DELETE FROM cases WHERE id = ?", (case_id,))
+
+    append_audit_event(
+        actor_id=user_id,
+        role=role,
+        action="CASE_DELETED",
+        resource=f"case:{case_id}",
+        payload={"title": title},
+        ip_address=client_ip,
+        correlation_id=correlation_id
+    )
+
+    return {"status": "deleted", "case_id": case_id}
+

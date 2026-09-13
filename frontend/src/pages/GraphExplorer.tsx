@@ -68,121 +68,164 @@ export default function GraphExplorer() {
       .finally(() => {
         if (!containerRef.current) return
         
-        const nodesOnly = elementsToRender.filter((el: any) => !el.data.source)
-        setAvailableNodes(nodesOnly)
-
-        const cy = cytoscape({
-          container: containerRef.current,
-          elements: elementsToRender,
-          style: [
-            {
-              selector: 'node',
-              style: {
-                'label': 'data(label)',
-                'background-color': 'data(color)',
-                'width': 'data(size)',
-                'height': 'data(size)',
-                'color': '#f8fafc',
-                'font-size': '10.5px',
-                'font-weight': 'bold',
-                'text-valign': 'bottom',
-                'text-margin-y': 5,
-                'text-outline-color': '#020617',
-                'text-outline-width': 2.5,
-                'border-width': 2.5,
-                'border-color': '#38bdf8'
-              }
-            },
-            {
-              selector: 'node[id = "n1"]',
-              style: {
-                'border-color': '#ef4444',
-                'border-width': 4.5,
-                'font-size': '12px',
-                'color': '#fef08a'
-              }
-            },
-            {
-              selector: 'edge',
-              style: {
-                'label': 'data(label)',
-                'width': 2.5,
-                'line-color': '#38bdf8',
-                'target-arrow-color': '#38bdf8',
-                'target-arrow-shape': 'triangle',
-                'arrow-scale': 1.2,
-                'curve-style': 'bezier',
-                'font-size': '8.5px',
-                'font-weight': 'bold',
-                'color': '#7dd3fc',
-                'text-background-color': 'rgba(2, 6, 23, 0.9)',
-                'text-background-opacity': 1,
-                'text-background-padding': '2px',
-                'text-background-shape': 'roundrectangle',
-                'text-rotation': 'autorotate',
-                'opacity': 0.85
-              }
-            },
-            {
-              selector: 'edge[label *= "HAWALA"], edge[label *= "WIRE"], edge[label *= "CRYPTO"], edge[label *= "FUNDS"]',
-              style: {
-                'line-color': '#f59e0b',
-                'target-arrow-color': '#f59e0b',
-                'color': '#fef08a'
-              }
-            },
-            {
-              selector: 'edge[label *= "CALLS"], edge[label *= "PHONE"], edge[label *= "SIM"]',
-              style: {
-                'line-color': '#a855f7',
-                'target-arrow-color': '#a855f7',
-                'color': '#e9d5ff'
-              }
-            },
-            {
-              selector: 'edge:selected, edge.highlighted',
-              style: {
-                'label': 'data(label)',
-                'width': 4.5,
-                'line-color': '#fbbf24',
-                'target-arrow-color': '#fbbf24',
-                'font-size': '10px',
-                'color': '#fbbf24',
-                'text-background-color': '#020617',
-                'text-outline-color': '#020617',
-                'text-outline-width': 2,
-                'text-rotation': 'autorotate',
-                'opacity': 1,
-                'z-index': 999
-              }
-            },
-            {
-              selector: 'node:selected, node.highlighted',
-              style: {
-                'border-color': '#fbbf24',
-                'border-width': 5,
-                'shadow-blur': 25,
-                'shadow-color': '#fbbf24',
-                'shadow-opacity': 0.8,
-                'opacity': 1,
-                'z-index': 999
-              }
-            },
-            {
-              selector: '.faded',
-              style: {
-                'opacity': 0.15
-              }
-            }
-          ],
-          layout: {
-            name: 'breadthfirst',
-            directed: true,
-            roots: '#n1',
-            spacingFactor: 1.6,
-            animate: false
+        // 1. Extract valid node IDs
+        const validNodeIdSet = new Set<string>()
+        elementsToRender.forEach((el: any) => {
+          if (el && el.data && !el.data.source && el.data.id) {
+            validNodeIdSet.add(String(el.data.id))
           }
         })
+
+        // 2. Filter dangling edges to guarantee Cytoscape never crashes on non-existent endpoints
+        const sanitizedElements = elementsToRender.filter((el: any) => {
+          if (!el || !el.data) return false
+          if (!el.data.source) return true // Node
+          const hasSrc = validNodeIdSet.has(String(el.data.source))
+          const hasTgt = validNodeIdSet.has(String(el.data.target))
+          return hasSrc && hasTgt
+        })
+
+        const elementsForCy = sanitizedElements.length > 0 ? sanitizedElements : defaultElementsData
+        const nodesOnly = elementsForCy.filter((el: any) => !el.data.source)
+        setAvailableNodes(nodesOnly)
+
+        // Destroy prior instance if present
+        if (cyRef.current) {
+          try { cyRef.current.destroy() } catch {}
+          cyRef.current = null
+        }
+
+        const cyStyle: any = [
+          {
+            selector: 'node',
+            style: {
+              'label': 'data(label)',
+              'background-color': 'data(color)',
+              'width': 'data(size)',
+              'height': 'data(size)',
+              'color': '#f8fafc',
+              'font-size': '10.5px',
+              'font-weight': 'bold',
+              'text-valign': 'bottom',
+              'text-margin-y': 5,
+              'text-outline-color': '#020617',
+              'text-outline-width': 2.5,
+              'border-width': 2.5,
+              'border-color': '#38bdf8'
+            }
+          },
+          {
+            selector: 'node[id = "n1"]',
+            style: {
+              'border-color': '#ef4444',
+              'border-width': 4.5,
+              'font-size': '12px',
+              'color': '#fef08a'
+            }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'label': 'data(label)',
+              'width': 2.5,
+              'line-color': '#38bdf8',
+              'target-arrow-color': '#38bdf8',
+              'target-arrow-shape': 'triangle',
+              'arrow-scale': 1.2,
+              'curve-style': 'bezier',
+              'font-size': '8.5px',
+              'font-weight': 'bold',
+              'color': '#7dd3fc',
+              'text-background-color': 'rgba(2, 6, 23, 0.9)',
+              'text-background-opacity': 1,
+              'text-background-padding': '2px',
+              'text-background-shape': 'roundrectangle',
+              'text-rotation': 'autorotate',
+              'opacity': 0.85
+            }
+          },
+          {
+            selector: 'edge[label *= "HAWALA"], edge[label *= "WIRE"], edge[label *= "CRYPTO"], edge[label *= "FUNDS"]',
+            style: {
+              'line-color': '#f59e0b',
+              'target-arrow-color': '#f59e0b',
+              'color': '#fef08a'
+            }
+          },
+          {
+            selector: 'edge[label *= "CALLS"], edge[label *= "PHONE"], edge[label *= "SIM"]',
+            style: {
+              'line-color': '#a855f7',
+              'target-arrow-color': '#a855f7',
+              'color': '#e9d5ff'
+            }
+          },
+          {
+            selector: 'edge:selected, edge.highlighted',
+            style: {
+              'label': 'data(label)',
+              'width': 4.5,
+              'line-color': '#fbbf24',
+              'target-arrow-color': '#fbbf24',
+              'font-size': '10px',
+              'color': '#fbbf24',
+              'text-background-color': '#020617',
+              'text-outline-color': '#020617',
+              'text-outline-width': 2,
+              'text-rotation': 'autorotate',
+              'opacity': 1,
+              'z-index': 999
+            }
+          },
+          {
+            selector: 'node:selected, node.highlighted',
+            style: {
+              'border-color': '#fbbf24',
+              'border-width': 5,
+              'shadow-blur': 25,
+              'shadow-color': '#fbbf24',
+              'shadow-opacity': 0.8,
+              'opacity': 1,
+              'z-index': 999
+            }
+          },
+          {
+            selector: '.faded',
+            style: {
+              'opacity': 0.15
+            }
+          }
+        ]
+
+        let cy: cytoscape.Core
+        try {
+          cy = cytoscape({
+            container: containerRef.current,
+            elements: elementsForCy,
+            style: cyStyle,
+            layout: {
+              name: 'breadthfirst',
+              directed: true,
+              roots: '#n1',
+              spacingFactor: 1.6,
+              animate: false
+            }
+          })
+        } catch (err) {
+          console.error("Cytoscape init error, falling back to core syndicate:", err)
+          cy = cytoscape({
+            container: containerRef.current,
+            elements: defaultElementsData,
+            style: cyStyle,
+            layout: {
+              name: 'breadthfirst',
+              directed: true,
+              roots: '#n1',
+              spacingFactor: 1.6,
+              animate: false
+            }
+          })
+        }
 
         // Highlight connected links and neighbors on node tap
         cy.on('tap', 'node', (evt) => {
@@ -275,30 +318,70 @@ export default function GraphExplorer() {
     const cy = cyInstance || cyRef.current
     if (!cy) return
 
-    let layoutConfig: any = { name, animate: true, animationDuration: 500 }
+    let layoutConfig: any = { name, animate: true, animationDuration: 400, fit: true, padding: 35 }
     if (name === 'breadthfirst') {
-      layoutConfig = { name: 'breadthfirst', directed: true, roots: '#n1', spacingFactor: 1.5 }
+      layoutConfig = { name: 'breadthfirst', directed: true, roots: '#n1', spacingFactor: 1.5, fit: true, padding: 35 }
     } else if (name === 'cose') {
       layoutConfig = {
         name: 'cose',
         nodeRepulsion: () => 18000,
         idealEdgeLength: () => 140,
         gravity: 0.2,
-        numIter: 1000
+        numIter: 1000,
+        fit: true,
+        padding: 35
       }
     } else if (name === 'concentric') {
       layoutConfig = {
         name: 'concentric',
         concentric: (node: any) => (node.data('id') === 'n1' ? 10 : (node.data('risk') || 50)),
         levelWidth: () => 20,
-        minNodeSpacing: 90
+        minNodeSpacing: 90,
+        fit: true,
+        padding: 35
       }
     } else if (name === 'circle') {
-      layoutConfig = { name: 'circle', radius: 260 }
+      layoutConfig = { name: 'circle', radius: 260, fit: true, padding: 35 }
     }
 
-    cy.layout(layoutConfig).run()
+    try {
+      const layout = cy.layout(layoutConfig)
+      layout.on('layoutstop', () => {
+        try {
+          const visibleNodes = cy.nodes().filter((n) => n.style('display') !== 'none')
+          if (visibleNodes.length > 0) {
+            cy.fit(visibleNodes, 35)
+          } else {
+            cy.fit(undefined, 35)
+          }
+        } catch {}
+      })
+      layout.run()
+    } catch (e) {
+      console.error("Layout error, falling back to basic fit:", e)
+      cy.fit(undefined, 35)
+    }
   }
+
+  // Reactive DPDP PII data masking toggle
+  useEffect(() => {
+    if (!cyRef.current) return
+    cyRef.current.batch(() => {
+      cyRef.current?.nodes().forEach((n) => {
+        const rawName = n.data('name') || ''
+        const ntype = n.data('type') || ''
+        if (dpdpMasked) {
+          if (ntype === 'PhoneNumber' || rawName.startsWith('+91') || rawName.startsWith('+971')) {
+            n.data('label', rawName.replace(/(\+\d{2,3}-)\d{5}(\d{4})/, '$1XXXXX-$2'))
+          } else if (ntype === 'FinancialAccount' || rawName.startsWith('ACC-')) {
+            n.data('label', rawName.replace(/(ACC-)\d{3}(\d{3})/, '$1XXX-$2'))
+          }
+        } else {
+          n.data('label', rawName === 'Arjun Mehta' ? 'Arjun Mehta (Kingpin)' : rawName)
+        }
+      })
+    })
+  }, [dpdpMasked])
 
   // Instant Target Search & Zoom
   const handleFindNode = (query: string) => {
