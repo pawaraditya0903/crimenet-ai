@@ -1024,6 +1024,8 @@ export default function App() {
           onClose={() => setAuditModalOpen(false)}
           logs={auditLogs}
           onSelectIntruder={(log) => setSelectedIntruder(log)}
+          onDeleteLog={handleDeleteSingleLog}
+          onClearAll={handleClearAllLogs}
           soundEnabled={soundEnabled}
         />
       )}

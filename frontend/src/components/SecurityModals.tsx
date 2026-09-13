@@ -17,8 +17,33 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
   logs,
   onClose,
   onSelectIntruder,
+  onDeleteLog,
+  onClearAll,
+  soundEnabled = true
 }) => {
   if (!isOpen) return null
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
+
+  const filteredLogs = logs.filter((l) => {
+    const s = ((l.status || '') + ' ' + (l.action || '')).toUpperCase()
+    if (activeFilter === 'BLOCKED') {
+      if (s.includes('AUTHORIZED') && !s.includes('FAILED') && !s.includes('BLOCKED')) return false
+    }
+    if (activeFilter === 'AUTHORIZED') {
+      if (!s.includes('AUTHORIZED')) return false
+    }
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      (l.ip && l.ip.toLowerCase().includes(q)) ||
+      (l.device && l.device.toLowerCase().includes(q)) ||
+      (l.action && l.action.toLowerCase().includes(q)) ||
+      (l.status && l.status.toLowerCase().includes(q)) ||
+      (l.timestamp && l.timestamp.toLowerCase().includes(q))
+    )
+  })
 
   const formatLogTimestamp = (log: any): string => {
     if (!log) return 'Just now'
@@ -66,38 +91,144 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
           boxShadow: '0 0 50px rgba(0, 0, 0, 0.95), 0 0 35px rgba(14, 165, 233, 0.25)'
         }}
       >
-        {/* Header matching exact user screenshot */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 16 }}>
-          <div>
-            <h3 style={{ color: 'white', fontSize: 18, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, letterSpacing: '0.04em', margin: 0 }}>
-              <span style={{ fontSize: 20 }}>🛡️</span> LIVE INTRUDER & VISITOR ACCESS LOGS
-            </h3>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-              Real-time IP, device fingerprints & camera mugshots snapped by CrimeNet AI
-            </div>
-          </div>
+        {/* Top bar with Title and Clear All / Close buttons matching screenshot */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ color: 'white', fontSize: 18, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, letterSpacing: '0.04em', margin: 0 }}>
+            <span style={{ fontSize: 20 }}>🛡️</span> LIVE INTRUDER & VISITOR ACCESS LOGS
+          </h3>
 
+          <div style={{ display: 'flex', gap: 10 }}>
+            {onClearAll && (
+              <button
+                onClick={onClearAll}
+                style={{
+                  background: '#991b1b',
+                  border: '1px solid #ef4444',
+                  color: 'white',
+                  padding: '7px 14px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <span>🗑️</span> Clear All
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                background: '#334155',
+                border: 'none',
+                color: 'white',
+                padding: '7px 16px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              ✕ Close
+            </button>
+          </div>
+        </div>
+
+        {/* Search bar row with "Showing X of Y Total Logs" count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
+          <div style={{ position: 'relative', width: 260 }}>
+            <input
+              type="text"
+              placeholder="🔍 Search IP, Device, Timestamp..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '7px 12px',
+                borderRadius: 8,
+                background: '#040816',
+                border: '1px solid #1e293b',
+                color: 'white',
+                fontSize: 11.5,
+                outline: 'none'
+              }}
+            />
+          </div>
+          <span style={{ color: '#38bdf8', fontSize: 12, fontWeight: 700 }}>
+            Showing {filteredLogs.length} of {logs.length} Total Logs
+          </span>
+        </div>
+
+        {/* Filter buttons row: All Records | Blocked Intruders | Authorized Access */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (soundEnabled) playCyberSound('click')
+              setActiveFilter('ALL')
+            }}
             style={{
-              background: '#1e293b',
-              border: '1px solid #334155',
-              color: '#cbd5e1',
-              padding: '6px 16px',
+              padding: '6px 14px',
               borderRadius: 8,
+              background: activeFilter === 'ALL' ? '#0284c7' : '#1e293b',
+              border: activeFilter === 'ALL' ? '1px solid #38bdf8' : '1px solid #334155',
+              color: 'white',
+              fontSize: 11.5,
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            All Records
+          </button>
+          <button
+            onClick={() => {
+              if (soundEnabled) playCyberSound('click')
+              setActiveFilter('BLOCKED')
+            }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              background: activeFilter === 'BLOCKED' ? '#0284c7' : '#1e293b',
+              border: activeFilter === 'BLOCKED' ? '1px solid #38bdf8' : '1px solid #334155',
+              color: '#cbd5e1',
+              fontSize: 11.5,
+              fontWeight: 800,
               cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: 6
             }}
           >
-            ✕ Close
+            <span>🚨</span> Blocked Intruders
+          </button>
+          <button
+            onClick={() => {
+              if (soundEnabled) playCyberSound('click')
+              setActiveFilter('AUTHORIZED')
+            }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              background: activeFilter === 'AUTHORIZED' ? '#0284c7' : '#1e293b',
+              border: activeFilter === 'AUTHORIZED' ? '1px solid #38bdf8' : '1px solid #334155',
+              color: '#cbd5e1',
+              fontSize: 11.5,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <span>✓</span> Authorized Access
           </button>
         </div>
 
-        {/* Table */}
+        {/* 6-Column Table matching user screenshot */}
         <div style={{ flex: 1, overflowY: 'auto', marginTop: 14 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
@@ -105,23 +236,29 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
                 <th style={{ padding: '12px 10px', fontWeight: 800 }}>Timestamp</th>
                 <th style={{ padding: '12px 10px', fontWeight: 800 }}>IP Address</th>
                 <th style={{ padding: '12px 10px', fontWeight: 800 }}>Device / Model</th>
-                <th style={{ padding: '12px 10px', fontWeight: 800 }}>Action & Status</th>
+                <th style={{ padding: '12px 10px', fontWeight: 800 }}>Status & Action</th>
                 <th style={{ padding: '12px 10px', fontWeight: 800 }}>Intruder Mugshot</th>
+                <th style={{ padding: '12px 10px', fontWeight: 800, textAlign: 'center' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {logs.length === 0 ? (
+              {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
                     No security events recorded.
                   </td>
                 </tr>
               ) : (
-                logs.map((log: any, idx: number) => {
-                  const isAuth = (log.status || '').toUpperCase().includes('AUTHORIZED') || (log.action || '').toUpperCase().includes('AUTHORIZED')
+                filteredLogs.map((log: any, idx: number) => {
+                  const s = ((log.status || '') + ' ' + (log.action || '')).toUpperCase()
+                  const isAuth = s.includes('AUTHORIZED')
+                  const isPageView = s.includes('PAGE_VIEW') || s.includes('PORTAL_VISIT')
+                  const badgeText = isPageView ? 'PAGE_VIEW' : isAuth ? 'AUTHORIZED' : 'BLOCKED_INTRUDER'
+                  const badgeBg = isPageView ? '#7f1d1d' : isAuth ? '#065f46' : '#991b1b'
                   const hasPhoto = !!log.photo
+
                   return (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <tr key={log.id || idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace', fontSize: 11.5 }}>
                         {formatLogTimestamp(log)}
                       </td>
@@ -135,16 +272,16 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
                         <span
                           style={{
                             display: 'inline-block',
-                            padding: '3px 10px',
+                            padding: '3px 8px',
                             borderRadius: 4,
                             fontSize: 10.5,
                             fontWeight: 900,
                             letterSpacing: '0.04em',
-                            background: isAuth ? '#15803d' : '#991b1b',
+                            background: badgeBg,
                             color: '#ffffff'
                           }}
                         >
-                          {isAuth ? 'AUTHORIZED' : 'BLOCKED_INTRUDER'}
+                          {badgeText}
                         </span>
                       </td>
                       <td style={{ padding: '12px 10px' }}>
@@ -170,6 +307,25 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
                           </div>
                         ) : (
                           <span style={{ color: '#64748b', fontSize: 11.5 }}>No Photo</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                        {onDeleteLog && (
+                          <button
+                            onClick={(e) => onDeleteLog(log, e)}
+                            title="Delete this record"
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid #ef4444',
+                              color: '#f87171',
+                              padding: '5px 9px',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 11
+                            }}
+                          >
+                            🗑️
+                          </button>
                         )}
                       </td>
                     </tr>
