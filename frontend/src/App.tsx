@@ -60,15 +60,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    try {
-      const isAuth = sessionStorage.getItem('crimenet_authenticated') === 'true'
-      const token = getStoredToken()
-      return isAuth && !!token
-    } catch {
-      return false
-    }
-  })
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const soundEnabledRef = useRef(soundEnabled)
 
@@ -1027,24 +1019,28 @@ export default function App() {
         </div>
       )}
 
-      <AuditLogsModal
-        isOpen={auditModalOpen}
-        onClose={() => setAuditModalOpen(false)}
-        logs={auditLogs}
-        logFilter={logFilter}
-        setLogFilter={setLogFilter}
-        logSearchQuery={logSearchQuery}
-        setLogSearchQuery={setLogSearchQuery}
-        onSelectIntruder={(log) => setSelectedIntruder(log)}
-        onDeleteLog={handleDeleteSingleLog}
-        onClearAll={handleClearAllLogs}
-        soundEnabled={soundEnabled}
-      />
+      {auditModalOpen && (
+        <AuditLogsModal
+          isOpen={auditModalOpen}
+          onClose={() => setAuditModalOpen(false)}
+          logs={auditLogs}
+          logFilter={logFilter}
+          setLogFilter={setLogFilter}
+          logSearchQuery={logSearchQuery}
+          setLogSearchQuery={setLogSearchQuery}
+          onSelectIntruder={(log) => setSelectedIntruder(log)}
+          onDeleteLog={handleDeleteSingleLog}
+          onClearAll={handleClearAllLogs}
+          soundEnabled={soundEnabled}
+        />
+      )}
 
-      <IntruderModal
-        log={selectedIntruder}
-        onClose={() => setSelectedIntruder(null)}
-      />
+      {selectedIntruder && (
+        <IntruderModal
+          log={selectedIntruder}
+          onClose={() => setSelectedIntruder(null)}
+        />
+      )}
 
       {/* REGISTER FACE MODAL */}
       {calibrateModalOpen && (

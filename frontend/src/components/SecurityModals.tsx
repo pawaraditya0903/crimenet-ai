@@ -3,6 +3,7 @@ import { getForensicMugshot } from '../lib/mugshot'
 import { playCyberSound } from '../lib/audio'
 
 interface IntruderLogsModalProps {
+  isOpen?: boolean
   logs: any[]
   onClose: () => void
   onDeleteLog: (log: any, e: React.MouseEvent) => void
@@ -12,6 +13,7 @@ interface IntruderLogsModalProps {
 }
 
 export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
+  isOpen = false,
   logs,
   onClose,
   onDeleteLog,
@@ -19,6 +21,8 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
   onSelectIntruder,
   soundEnabled
 }) => {
+  if (!isOpen) return null
+
   const [logSearchQuery, setLogSearchQuery] = useState('')
   const [logFilter, setLogFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
 
