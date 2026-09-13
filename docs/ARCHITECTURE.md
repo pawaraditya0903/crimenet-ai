@@ -145,3 +145,32 @@ backend/
 4. If stage transition is suggested, Copilot returns an `action_proposal` with parameters.
 5. Action remains inert until investigator explicitly clicks "Confirm Action" hitting `/api/copilot/actions/confirm`.
 6. Database mutation occurs under relational transaction, and an audit event is appended.
+
+---
+
+## 4. Frontend Architecture & Modular Decomposition
+
+The frontend is organized into modular components with strict boundary separation:
+
+```
+frontend/src/
+├── components/
+│   ├── SecurityGate.tsx       # Zero-trust login gate with pure backend JWT auth (no bypass buttons)
+│   ├── SecurityModals.tsx     # Modular audit log table and intruder mugshot preview
+│   ├── CommandBar.tsx         # Unified tactical search and command palette
+│   ├── CopilotDrawer.tsx      # HITL AI copilot drawer
+│   ├── DemoTourModal.tsx      # System architecture tour
+│   └── NotificationToast.tsx  # Event notifications
+├── lib/
+│   ├── api.ts                 # Axios instance with JWT interceptor
+│   └── audio.ts               # Singleton Web Audio API synthesizer
+├── pages/                     # 13 Dedicated analytical modules
+├── App.tsx                    # Master application shell, state router, desktop layout
+└── main.tsx                   # React DOM root entrypoint
+```
+
+- **AudioContext Singleton**: A shared `AudioContext` in `lib/audio.ts` prevents browser resource exhaustion and context starvation.
+- **WebSocket Reconnection Stability**: Real-time event listeners use mutable React refs (`soundEnabledRef`) to isolate UI audio toggles from Socket.IO socket connections, preventing reconnection storms.
+- **Collision-Proof Case Creation**: Relational cases use UUID-backed identifiers (`case-{uuid.uuid4().hex[:8]}`) preventing race-condition collisions during concurrent registrations.
+- **Persistent Biometric Vector Store**: Master face descriptors are persisted directly to SQLite `system_settings`, ensuring durability across multi-worker and server restarts.
+

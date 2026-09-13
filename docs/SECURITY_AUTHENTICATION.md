@@ -93,9 +93,30 @@ Unlike legacy systems that leave WebSockets unauthenticated:
 
 ---
 
-## 7. Edge Biometrics Prototype Notice
+## 7. Edge Biometrics Prototype Notice & API Hardening
 
-CrimeNet AI includes an edge webcam verification module utilizing **Zero-Normalized Cross-Correlation (ZNCC)** with 7-frame multi-frame averaging:
-- **Technical Status**: Clearly labeled as a **Client-Side Prototype / Demonstration**.
-- **Limitations**: ZNCC on 2D video frames does not protect against high-resolution physical photo presentation attacks (liveness detection requires depth/IR sensors).
-- **Production Defense**: Primary authentication relies on strong PBKDF2 passcodes and HMAC-SHA256 JWT tokens; biometric scoring serves as an auxiliary second-factor prototype.
+CrimeNet AI includes an edge webcam verification module utilizing **Zero-Normalized Cross-Correlation (ZNCC)** with multi-frame averaging:
+- **Technical Status**: Explicitly documented and labeled as a **Client-Side Prototype / Demonstration**.
+- **Limitations**: ZNCC on 2D video frames does not satisfy ISO/IEC 30107-3 Presentation Attack Detection (PAD) requirements.
+- **Backend API Protection**:
+  - `POST /api/security/verify-face` requires JWT authentication (`require_authenticated_user`).
+  - Request payloads are strictly parsed via the Pydantic model `FaceVerifyRequest`, enforcing array length bounds ($16 \le \text{length} \le 1024$) and numeric floating-point sanity.
+  - Verification attempts are rate-limited via a sliding-window tracker (`30 requests / 60 seconds` per client IP).
+  - All verification attempts are logged into SQLite `intruder_logs` with timestamps, actor IDs, and snapshots.
+- **Persistent Storage in SQLite**:
+  - Master enrollment descriptors (`POST /api/security/register-master-face`) are serialized into the relational `system_settings` table (`key = 'master_face_descriptor'`).
+  - This eliminates in-memory state loss on server restarts, multi-worker uvicorn scaling, and crashes.
+
+---
+
+## 8. Zero-Trust Access Control & Anti-Bypass Enforcements
+
+1. **Purged Client-Side Bypasses**:
+   - All demo bypass buttons (`🚀 Instant Evaluator / Demo Bypass Access`) and client-side shortcut handlers have been permanently removed.
+   - Hardcoded password strings and fallback mock tokens have been purged. Authentication is strictly negotiated with `POST /api/auth/token`.
+2. **Restricted User Directory**:
+   - `GET /api/auth/users` is restricted to `SUPERVISORY_OFFICER` roles via `@router.get("/users", dependencies=[Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))])`.
+   - The query response explicitly strips sensitive attributes (`email`, `created_at`), returning only non-sensitive roster identities (`id`, `username`, `role`, `badge`).
+3. **Concurrency-Safe Case Identifiers**:
+   - Case IDs use cryptographic pseudorandom hexadecimal UUIDs (`case-{uuid.uuid4().hex[:8]}`) instead of sequential `COUNT(*)` increments, preventing race-condition collisions during concurrent case registrations.
+

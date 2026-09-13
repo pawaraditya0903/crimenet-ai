@@ -49,8 +49,14 @@ This document serves as the **Hostile Technical Interview Defense Guide** for **
 ### Q11: "What prevents production deployment with hardcoded default keys?"
 **Answer**: `config.py` enforces a `verify_production_secrets()` hook. When `CRIMENET_ENV=production`, the application refuses to start if `JWT_SECRET_KEY` or `PII_ENCRYPTION_KEY` contains default words or has fewer than 32 bytes of entropy.
 
-### Q12: "Is your facial recognition claim a marketing exaggeration?"
-**Answer**: We do NOT claim high-entropy facial biometrics or deep neural face embeddings. The face matching module is explicitly labeled as a **Client-Side Prototype** using Zero-Normalized Cross-Correlation (ZNCC) with 7-frame averaging. It serves as a visual demonstration for dual-factor verification.
+### Q12: "Is your facial recognition claim a marketing exaggeration, and how is the endpoint secured?"
+**Answer**: We do NOT claim high-entropy facial biometrics or deep neural face embeddings. The face matching module is explicitly documented as a **Prototype** using Zero-Normalized Cross-Correlation (ZNCC) with multi-frame averaging for dual-factor demonstration. Furthermore, the endpoint is fully hardened:
+1. `POST /api/security/verify-face` requires JWT authentication (`require_authenticated_user`).
+2. Input vectors are bound and validated by Pydantic (`FaceVerifyRequest`: $16 \le \text{length} \le 1024$).
+3. IP sliding-window rate limiting prevents brute-forcing ($30 \text{ req} / 60\text{s}$).
+4. Enrolled master face descriptors are persisted in SQLite `system_settings` rather than transient server memory.
+5. All frontend demo bypass buttons and hardcoded secrets have been completely removed.
+
 
 ---
 

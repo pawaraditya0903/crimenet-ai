@@ -197,9 +197,9 @@ crimenet-ai/
 │   └── crimenet.db             # Local relational and graph database (SQLite)
 ├── frontend/
 │   ├── src/
-│   │   ├── components/         # CommandBar, CopilotDrawer, Toast, ErrorBoundary
+│   │   ├── components/         # SecurityGate, SecurityModals, CommandBar, CopilotDrawer...
 │   │   ├── pages/              # 13 Tactical modules (DatasetPipeline, GraphExplorer...)
-│   │   ├── lib/                # API client configuration & Socket.IO initialization
+│   │   ├── lib/                # API client configuration, singleton Web Audio synthesizer
 │   │   ├── App.tsx             # Master application shell, state router, desktop layout
 │   │   └── main.tsx            # React DOM root entrypoint
 │   ├── package.json            # Verified frontend npm dependencies & scripts
@@ -210,7 +210,7 @@ crimenet-ai/
 │   ├── graph/                  # PageRank, Louvain modularity, cycle detection tests
 │   ├── integration/            # API lifecycle, auth flow, pipeline ingestion tests
 │   ├── ml/                     # Isolation Forest, XAI explainability, synthetic evaluation
-│   ├── security/               # Brute-force, JWT attacks, RBAC & IDOR prevention tests
+│   ├── security/               # Brute-force, JWT attacks, RBAC, IDOR & face security tests
 │   └── unit/                   # Benford's law, encryption, hashing, password tests
 ├── scripts/                    # Offline benchmark runners and operational scripts
 ├── docs/                       # Architecture documentation and legal notes
@@ -366,8 +366,11 @@ MAPBOX_ACCESS_TOKEN=[OPTIONAL_PUBLIC_MAPBOX_TOKEN]
 
 ## 🎯 Usage & Demonstration Flow
 
-1. **Access the Application**: Open your browser at `http://localhost:5173` (or your deployed Vercel URL).
-2. **Authenticate**: Log in using your assigned credentials or use the designated demonstration security pass.
+1. **Access the Application**: Open your browser at `http://localhost:5173` (or your deployed Vercel URL: `https://crimenet-ai-two.vercel.app`).
+2. **Authenticate**: Log in using authorized officer credentials:
+   - **Officer Badge ID / Username**: `admin` or `Aditya Pawar`
+   - **Security Passcode**: `Aditya@4912`
+   *(All authentication is validated via backend PBKDF2 hashing; demo bypass buttons have been removed).*
 3. **Open Ingestion Pipeline**: Select **Data Ingestion & Links** from the left navigation sidebar.
 4. **Load Benchmark Intelligence**:
    - Click **"✨ Load All 5 Datasets & Auto-Generate Links"** to process the unified syndicate dataset.

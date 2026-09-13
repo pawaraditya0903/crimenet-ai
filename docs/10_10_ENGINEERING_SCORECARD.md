@@ -25,7 +25,7 @@ This scorecard provides a defensible evaluation of **CrimeNet AI** across 20 tec
 | **15** | **Evidence Integrity** | **10/10** | Bit-level SHA-256 checking, Binary Merkle Tree root calculation and inclusion proofs | `backend/app/forensics/evidence_vault.py` |
 | **16** | **Realtime Architecture** | **10/10** | Authenticated Socket.IO handshake, authorized case room subscriptions (`case_{id}`) | `backend/app/realtime/socket_manager.py` |
 | **17** | **Responsible AI Governance** | **10/10** | Human-in-the-loop requirement, zero automated warrants, two-phase action confirmation | `backend/app/copilot/service.py` |
-| **18** | **Automated Test Coverage** | **10/10** | 51 automated tests passing across unit, integration, security, graph, ML, and forensics | `tests/*` (51 passed) |
+| **18** | **Automated Test Coverage** | **10/10** | 59 automated tests passing across unit, integration, security, graph, ML, and forensics | `tests/*` (59 passed) |
 | **19** | **Empirical Profiling** | **10/10** | Millisecond performance benchmarking script measuring real latency, P95, and P99 | `backend/scripts/run_benchmarks.py` |
 | **20** | **Truthful Documentation** | **10/10** | Complete elimination of fabricated claims; full Technology Reality Matrix established | `docs/TECHNOLOGY_REALITY_MATRIX.md` |
 
