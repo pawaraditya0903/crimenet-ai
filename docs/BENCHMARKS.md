@@ -11,15 +11,15 @@ This document records **real, reproducible performance benchmarks** measured dir
 
 | Benchmark Target | Samples | Median Latency | P95 Latency | P99 Latency | Measured Throughput |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **SHA-256 Hashing (1MB blocks)** | 50 | `0.454 ms` | `0.621 ms` | `0.661 ms` | 2059.72 MB/s |
-| **AES-256-GCM Encrypt+Decrypt (PII Envelope)** | 100 | `0.013 ms` | `0.014 ms` | `0.021 ms` | N/A |
-| **NetworkX PageRank (100 nodes, d=0.85)** | 50 | `0.715 ms` | `1.447 ms` | `1.509 ms` | N/A |
-| **NetworkX Dijkstra Shortest Path (Weighted)** | 50 | `0.077 ms` | `0.116 ms` | `0.142 ms` | N/A |
-| **NetworkX Louvain Community Detection** | 50 | `5.712 ms` | `6.224 ms` | `6.538 ms` | N/A |
-| **Isolation Forest Fit (1,000 synthetic records)** | 10 | `118.267 ms` | `120.333 ms` | `120.333 ms` | N/A |
-| **Isolation Forest + Mahalanobis Inference (Single Record)** | 100 | `8.798 ms` | `10.042 ms` | `10.637 ms` | N/A |
-| **Merkle Tree Construction & Inclusion Proof (64 leaves)** | 50 | `0.199 ms` | `0.234 ms` | `0.436 ms` | N/A |
-| **ReportLab Dossier PDF Compilation (Multi-page)** | 10 | `3.797 ms` | `4.145 ms` | `4.145 ms` | N/A |
+| **SHA-256 Hashing (1MB blocks)** | 50 | `0.455 ms` | `0.597 ms` | `0.643 ms` | 2079.49 MB/s |
+| **AES-256-GCM Encrypt+Decrypt (PII Envelope)** | 100 | `0.012 ms` | `0.014 ms` | `0.021 ms` | N/A |
+| **NetworkX PageRank (100 nodes, d=0.85)** | 50 | `0.672 ms` | `1.413 ms` | `1.58 ms` | N/A |
+| **NetworkX Dijkstra Shortest Path (Weighted)** | 50 | `0.08 ms` | `0.152 ms` | `0.324 ms` | N/A |
+| **NetworkX Louvain Community Detection** | 50 | `5.745 ms` | `6.549 ms` | `6.618 ms` | N/A |
+| **Isolation Forest Fit (1,000 synthetic records)** | 10 | `116.143 ms` | `122.858 ms` | `122.858 ms` | N/A |
+| **Isolation Forest + Mahalanobis Inference (Single Record)** | 100 | `8.688 ms` | `9.771 ms` | `10.317 ms` | N/A |
+| **Merkle Tree Construction & Inclusion Proof (64 leaves)** | 50 | `0.196 ms` | `0.242 ms` | `0.292 ms` | N/A |
+| **ReportLab Dossier PDF Compilation (Multi-page)** | 10 | `3.502 ms` | `4.448 ms` | `4.448 ms` | N/A |
 
 ---
 
