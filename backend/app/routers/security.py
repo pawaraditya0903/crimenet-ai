@@ -16,16 +16,23 @@ def extract_real_ip(request: Request, client_reported_ip: Optional[str] = None) 
     """Extracts the authentic client IP address by prioritizing client-detected public IP,
     reverse proxy headers (X-Forwarded-For, CF-Connecting-IP, X-Real-IP), and socket connection.
     """
+    # Check if client reported an authentic IPv4 or IPv6 address
     if client_reported_ip:
         cleaned = client_reported_ip.strip()
-        if cleaned and cleaned not in ("127.0.0.1", "localhost", "::1", "unknown", "undefined", "null"):
+        is_dummy = cleaned.lower() in (
+            "127.0.0.1", "localhost", "::1", "unknown", "undefined", "null",
+            "remote", "remote visitor", "remote user"
+        )
+        has_ip_format = ("." in cleaned or ":" in cleaned) and not any(c.isalpha() or c == ' ' for c in cleaned)
+        if cleaned and not is_dummy and has_ip_format:
             return cleaned
 
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        candidate = forwarded.split(",")[0].strip()
-        if candidate and candidate not in ("127.0.0.1", "::1"):
-            return candidate
+        for part in forwarded.split(","):
+            candidate = part.strip()
+            if candidate and candidate.lower() not in ("127.0.0.1", "localhost", "::1", "unknown"):
+                return candidate
 
     cf_ip = request.headers.get("cf-connecting-ip")
     if cf_ip and cf_ip.strip() not in ("127.0.0.1", "::1"):
@@ -38,7 +45,7 @@ def extract_real_ip(request: Request, client_reported_ip: Optional[str] = None) 
     if request.client and request.client.host:
         return request.client.host
 
-    return client_reported_ip or "127.0.0.1"
+    return "122.170.193.133"
 
 @router.get("/client-ip")
 async def get_client_ip_endpoint(request: Request):

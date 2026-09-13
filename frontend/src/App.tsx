@@ -234,10 +234,22 @@ export default function App() {
   useEffect(() => {
     const recordInitialVisit = async () => {
       try {
-        const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote Visitor' } }))
+        let visitorIp = ''
+        try {
+          const ipRes = await axios.get('https://api.ipify.org?format=json')
+          if (ipRes.data?.ip) visitorIp = String(ipRes.data.ip).trim()
+        } catch {}
+
+        if (!visitorIp) {
+          try {
+            const ipRes = await axios.get('/api/security/client-ip')
+            if (ipRes.data?.ip) visitorIp = String(ipRes.data.ip).trim()
+          } catch {}
+        }
+
         await axios.post('/api/security/log-visit', {
           timestamp: getIndianTimestamp(),
-          ip: ipRes.data.ip,
+          ip: visitorIp || undefined,
           device: navigator.userAgent.substring(0, 45),
           action: '🌐 LINK_OPENED_PAGE_VISIT',
           status: 'PAGE_VIEW',
