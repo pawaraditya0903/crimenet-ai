@@ -27,7 +27,11 @@ async def login_for_access_token(req: LoginRequest, request: Request):
 
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, password_hash, salt, role, badge FROM users WHERE username = ?", (req.username,))
+        cursor.execute(
+            """SELECT id, username, password_hash, salt, role, badge FROM users 
+               WHERE username = ? OR LOWER(username) = LOWER(?) OR badge LIKE ?""",
+            (req.username, req.username, f"%{req.username}%")
+        )
         user = cursor.fetchone()
 
     # 2. Verify Credentials

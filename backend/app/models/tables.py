@@ -51,6 +51,7 @@ def seed_database_if_empty():
 
             users_to_seed = [
                 ("usr-01", "admin", "aditya@crimenet.ai", pass_hash, salt_hex, "SUPERVISORY_OFFICER", "Chief Officer Aditya Pawar"),
+                ("usr-aditya", "Aditya Pawar", "aditya@crimenet.ai", pass_hash, salt_hex, "SUPERVISORY_OFFICER", "Chief Officer Aditya Pawar"),
                 ("usr-02", "lead_inv", "sharma@crimenet.ai", pass_hash, salt_hex, "LEAD_INVESTIGATOR", "Lead Inv. Sharma"),
                 ("usr-03", "analyst1", "verma@crimenet.ai", pass_hash, salt_hex, "FORENSIC_ANALYST", "Forensic Analyst Verma"),
                 ("usr-04", "auditor1", "roy@crimenet.ai", pass_hash, salt_hex, "INTELLIGENCE_AUDITOR", "Auditor Roy"),
