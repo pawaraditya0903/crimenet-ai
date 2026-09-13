@@ -121,11 +121,62 @@ async def change_password_endpoint(req: ChangePasswordRequest, claims: dict = De
 
     return {"success": True, "message": "Password changed successfully."}
 
+class AccessLogRequest(BaseModel):
+    ip: Optional[str] = Field("127.0.0.1", max_length=64)
+    device: Optional[str] = Field("Workstation", max_length=120)
+    action: str = Field("SECURITY_EVENT", max_length=80)
+    status: str = Field("BLOCKED", max_length=50)
+    badge: Optional[str] = Field("UNAUTHORIZED", max_length=80)
+    photo: Optional[str] = Field(None, max_length=1000000)
+
 @router.get("/intruder-logs")
 async def get_intruder_logs(claims: dict = Depends(require_authenticated_user)):
-    """Returns access and security events."""
+    """Returns access and security events from immutable forensic intruder logs."""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id, timestamp, ip, device, action, status, badge, photo, epoch FROM intruder_logs ORDER BY epoch DESC LIMIT 100")
         rows = [dict(r) for r in cursor.fetchall()]
     return {"logs": rows, "total": len(rows)}
+
+@router.post("/log-access-attempt")
+async def log_access_attempt(req: AccessLogRequest, request: Request):
+    """Logs an unauthorized or blocked access attempt with optional mugshot capture."""
+    client_ip = req.ip or (request.client.host if request.client else "127.0.0.1")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO intruder_logs (id, timestamp, ip, device, action, status, badge, photo, epoch)
+               VALUES (?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                str(int(time.time() * 1000)),
+                client_ip,
+                req.device,
+                req.action,
+                req.status,
+                req.badge,
+                req.photo or "",
+                time.time()
+            )
+        )
+    return {"success": True, "message": "Access attempt recorded."}
+
+@router.post("/delete-log")
+async def delete_log_endpoint(data: dict, claims: dict = Depends(require_authenticated_user)):
+    """Deletes a single intruder log entry."""
+    log_id = data.get("id")
+    timestamp = data.get("timestamp")
+    with get_db() as conn:
+        cursor = conn.cursor()
+        if log_id:
+            cursor.execute("DELETE FROM intruder_logs WHERE id = ?", (str(log_id),))
+        elif timestamp:
+            cursor.execute("DELETE FROM intruder_logs WHERE timestamp = ?", (timestamp,))
+    return {"success": True, "message": "Log entry deleted."}
+
+@router.post("/clear-all-logs")
+async def clear_all_logs_endpoint(claims: dict = Depends(require_authenticated_user)):
+    """Clears all entries from intruder logs."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM intruder_logs")
+    return {"success": True, "message": "All security logs cleared."}

@@ -194,6 +194,19 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
 
         setFailedAttempts(0)
         setLockoutTimer(0)
+
+        // Log authorized passcode entry into forensic audit logs
+        try {
+          axios.post('/api/security/log-access-attempt', {
+            ip: '127.0.0.1',
+            device: navigator.userAgent?.slice(0, 100) || 'Workstation Terminal',
+            action: 'PASSCODE_AUTHORIZED',
+            status: 'AUTHORIZED',
+            badge: badgeId || 'Aditya Pawar',
+            photo: attemptPhoto || ''
+          }).catch(() => {})
+        } catch {}
+
         onAuthenticated(token, response.data)
         return
       }
@@ -214,6 +227,18 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
       } else {
         setAuthError(msg || `❌ Invalid passcode. Attempt ${newFails}/5 before lockout.`)
       }
+
+      // Record intrusion attempt in SQLite forensic audit telemetry
+      try {
+        axios.post('/api/security/log-access-attempt', {
+          ip: '127.0.0.1',
+          device: navigator.userAgent?.slice(0, 100) || 'Workstation Terminal',
+          action: 'PASSCODE_FAILED',
+          status: newFails >= 5 ? 'BLOCKED (Hardware Lockdown)' : `BLOCKED (${newFails}/5 Fails)`,
+          badge: badgeId || 'UNKNOWN-PROBE',
+          photo: attemptPhoto || ''
+        }).catch(() => {})
+      } catch {}
     } finally {
       setIsSubmitting(false)
     }
@@ -257,6 +282,17 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
         setScanStatus('verified')
         setFailedAttempts(0)
 
+        try {
+          axios.post('/api/security/log-access-attempt', {
+            ip: '127.0.0.1',
+            device: navigator.userAgent?.slice(0, 100) || 'Biometric Scanner Station',
+            action: 'BIOMETRIC_ZNCC_SCAN',
+            status: `AUTHORIZED (Match: ${znccScore}%)`,
+            badge: badgeId || 'Chief Officer Aditya Pawar',
+            photo: photo || ''
+          }).catch(() => {})
+        } catch {}
+
         setTimeout(() => {
           if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
           // For biometric quick-entry, request session token or proceed with cached session
@@ -273,6 +309,17 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
         if (soundEnabled) playCyberSound('deny')
         setScanStatus('rejected')
         setAuthError(`🚨 Face match: ${znccScore}% (need ≥62%). Center your face in good lighting.`)
+
+        try {
+          axios.post('/api/security/log-access-attempt', {
+            ip: '127.0.0.1',
+            device: navigator.userAgent?.slice(0, 100) || 'Biometric Scanner Station',
+            action: 'BIOMETRIC_ZNCC_PROBE',
+            status: `BLOCKED (Low Match: ${znccScore}%)`,
+            badge: badgeId || 'UNAUTHORIZED-PROBE',
+            photo: photo || ''
+          }).catch(() => {})
+        } catch {}
 
         setTimeout(() => {
           if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())

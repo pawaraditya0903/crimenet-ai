@@ -165,4 +165,18 @@ def seed_database_if_empty():
                 ("evt-genesis", "2026-03-01 00:00:00 UTC", "SYSTEM_CORE", "SYSTEM", "SYSTEM_INITIALIZED", "system:core", "127.0.0.1", "genesis-001", genesis_payload, genesis_prev, genesis_curr)
             )
 
+        # 8. Seed Initial Forensic Intruder Logs & Biometric Telemetry
+        cursor.execute("SELECT COUNT(*) as count FROM intruder_logs")
+        if cursor.fetchone()["count"] == 0:
+            intruder_logs_to_seed = [
+                ("log-01", "2026-03-12 02:14:22", "198.51.100.42", "Linux x86_64 / Tor Relay Node", "BRUTE_FORCE_PROBE", "BLOCKED (429 Rate Limit)", "UNKNOWN-INTRUDER", "", 1773281062.0),
+                ("log-02", "2026-03-12 03:45:10", "203.0.113.19", "Win32 / Chrome 122 (Unverified)", "PASSCODE_FAILED", "BLOCKED (5 Fails Lockdown)", "PROBE-ATTEMPT", "", 1773286510.0),
+                ("log-03", "2026-03-12 10:15:00", "127.0.0.1", "CRIMENET-FORENSIC-STATION-01", "BIOMETRIC_ZNCC_SCAN", "AUTHORIZED (Match: 89%)", "Chief Officer Aditya Pawar", "", 1773309900.0),
+                ("log-04", "2026-03-13 01:22:45", "103.21.244.0", "Android 14 / Burner Proxy", "PROBE_API_INTRUSION", "BLOCKED (Bearer Missing)", "UNAUTHORIZED", "", 1773364365.0)
+            ]
+            cursor.executemany(
+                "INSERT INTO intruder_logs (id, timestamp, ip, device, action, status, badge, photo, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                intruder_logs_to_seed
+            )
+
     logger.info("Database seeding check complete.")

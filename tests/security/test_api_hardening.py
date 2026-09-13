@@ -50,3 +50,29 @@ def test_verify_face_requires_auth_and_pydantic_validation():
     assert data["status"] == "AUTHORIZED_DEMO"
     assert "PROTOTYPE DISCLAIMER" in data["disclaimer"]
 
+def test_forensic_intruder_logs_endpoints():
+    # 1. Access logs unauthenticated post (gate probe)
+    log_res = client.post("/api/security/log-access-attempt", json={
+        "ip": "198.51.100.99",
+        "device": "ProbeBrowser",
+        "action": "PASSCODE_FAILED",
+        "status": "BLOCKED (1/5 Fails)",
+        "badge": "UNAUTHORIZED_PROBE"
+    })
+    assert log_res.status_code == 200
+    assert log_res.json()["success"] is True
+
+    # 2. Intruder logs requires authentication
+    unauth_res = client.get("/api/security/intruder-logs")
+    assert unauth_res.status_code == 401
+
+    # 3. Authenticated retrieval works for /intruder-logs
+    login_res = client.post("/api/auth/token", json={"username": "admin", "password": "Aditya@4912"})
+    token = login_res.json()["access_token"]
+    auth_headers = {"Authorization": f"Bearer {token}"}
+
+    intruder_res = client.get("/api/security/intruder-logs", headers=auth_headers)
+    assert intruder_res.status_code == 200
+    assert "logs" in intruder_res.json()
+    assert intruder_res.json()["total"] >= 1
+
