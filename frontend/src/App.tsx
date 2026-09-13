@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import { io } from 'socket.io-client'
+import { getStoredToken } from './lib/api'
 import GraphExplorer from './pages/GraphExplorer'
 import GeospatialRadar from './pages/GeospatialRadar'
 import TelecomInterceptor from './pages/TelecomInterceptor'
@@ -60,7 +61,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      return sessionStorage.getItem('crimenet_authenticated') === 'true'
+      const isAuth = sessionStorage.getItem('crimenet_authenticated') === 'true'
+      const token = getStoredToken()
+      return isAuth && !!token
     } catch {
       return false
     }
@@ -119,9 +122,9 @@ export default function App() {
   const [logFilter, setLogFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
   const [logSearchQuery, setLogSearchQuery] = useState('')
   const [selectedIntruder, setSelectedIntruder] = useState<any>(null)
-  // JWT token stored in memory (sessionStorage) for authenticated API calls
+  // JWT token stored in memory (sessionStorage/localStorage) for authenticated API calls
   const [authToken, setAuthToken] = useState<string>(() => {
-    try { return sessionStorage.getItem('crimenet_jwt') || '' } catch { return '' }
+    return getStoredToken()
   })
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -140,22 +143,28 @@ export default function App() {
 
   // ── REAL-TIME INVESTIGATION EVENT ENGINE (SOCKET.IO CLIENT) ──
   useEffect(() => {
+    if (!isAuthenticated) return
+
     const backendUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
       ? 'http://localhost:8000'
       : 'https://crimenet-ai.onrender.com'
     
+    const token = authToken || getStoredToken()
+
     let socket: any = null
     try {
       socket = io(backendUrl, {
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
         reconnectionDelay: 3000,
-        timeout: 8000
+        timeout: 8000,
+        auth: { token },
+        query: { token }
       })
 
       socket.on('connect', () => {
         setConnectionState('connected')
-        try { socket.emit('join_case_room', { case_id: selectedCase }) } catch {}
+        try { socket.emit('join_case_room', { case_id: selectedCase, token }) } catch {}
       })
 
       socket.on('disconnect', () => {
@@ -185,7 +194,7 @@ export default function App() {
     return () => {
       if (socket) socket.disconnect()
     }
-  }, [selectedCase])
+  }, [selectedCase, isAuthenticated, authToken])
 
   // INDIAN STANDARD TIME (IST) HELPERS
   const getIndianTimestamp = () => {
@@ -691,7 +700,12 @@ export default function App() {
           <button
             onClick={() => {
               if (soundEnabled) playCyberSound('deny')
-              try { sessionStorage.removeItem('crimenet_authenticated') } catch {}
+              try {
+                sessionStorage.removeItem('crimenet_authenticated')
+                sessionStorage.removeItem('crimenet_jwt')
+                localStorage.removeItem('crimenet_jwt_token')
+              } catch {}
+              setAuthToken('')
               setIsAuthenticated(false)
             }}
             style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', fontSize: 10.5, fontWeight: 800, cursor: 'pointer' }}
@@ -776,7 +790,12 @@ export default function App() {
 
               <button
                 onClick={() => {
-                  try { sessionStorage.removeItem('crimenet_authenticated') } catch {}
+                  try {
+                    sessionStorage.removeItem('crimenet_authenticated')
+                    sessionStorage.removeItem('crimenet_jwt')
+                    localStorage.removeItem('crimenet_jwt_token')
+                  } catch {}
+                  setAuthToken('')
                   setIsAuthenticated(false)
                 }}
                 style={{ width: '100%', padding: '10px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}

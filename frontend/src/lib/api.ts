@@ -2,9 +2,18 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
+export const getStoredToken = (): string => {
+  if (typeof window === 'undefined') return ''
+  try {
+    return localStorage.getItem('crimenet_jwt_token') || sessionStorage.getItem('crimenet_jwt') || ''
+  } catch {
+    return ''
+  }
+}
+
 // Attach JWT Bearer token to all outbound requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('crimenet_jwt_token')
+  const token = getStoredToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -15,7 +24,7 @@ api.interceptors.request.use((config) => {
 
 // Also intercept global axios requests
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('crimenet_jwt_token')
+  const token = getStoredToken()
   if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`
   }
