@@ -13,6 +13,7 @@ import Settings from './pages/Settings'
 import ModelEvaluation from './pages/ModelEvaluation'
 import DarkWebOSINT from './pages/DarkWebOSINT'
 import ResponsibleAIRunner from './pages/ResponsibleAIRunner'
+import DatasetPipeline from './pages/DatasetPipeline'
 import CommandBar from './components/CommandBar'
 import CopilotDrawer from './components/CopilotDrawer'
 import DemoTourModal from './components/DemoTourModal'
@@ -189,7 +190,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'evaluation' | 'alerts' | 'cases' | 'reports' | 'settings' | 'darkweb' | 'testrunner'>('graph')
+  const [activeTab, setActiveTab] = useState<'graph' | 'radar' | 'telecom' | 'crypto' | 'analytics' | 'evaluation' | 'alerts' | 'cases' | 'reports' | 'settings' | 'darkweb' | 'testrunner' | 'pipeline'>('pipeline')
   const [selectedCase, setSelectedCase] = useState<string>('c1')
   const [copilotOpen, setCopilotOpen] = useState<boolean>(false)
   const [demoTourOpen, setDemoTourOpen] = useState<boolean>(false)
@@ -863,6 +864,7 @@ export default function App() {
   })
 
   const navItems = [
+    { id: 'pipeline', label: 'Data Ingestion & Links', icon: '📥' },
     { id: 'graph', label: 'Network Graph', icon: '🕸️' },
     { id: 'radar', label: 'Geospatial Radar', icon: '🌍' },
     { id: 'telecom', label: 'Telecom Interceptor', icon: '📡' },
@@ -1301,6 +1303,7 @@ export default function App() {
         {/* 📜 MODULE CONTENT VIEW */}
         <div style={{ flex: 1, padding: '16px', overflowY: 'auto', paddingBottom: '70px' }}>
           <ErrorBoundary>
+            {activeTab === 'pipeline' && <DatasetPipeline onNavigateToGraph={() => setActiveTab('graph')} />}
             {activeTab === 'graph' && <GraphExplorer />}
             {activeTab === 'radar' && <GeospatialRadar />}
             {activeTab === 'telecom' && <TelecomInterceptor />}
@@ -1642,6 +1645,7 @@ export default function App() {
 
             <div style={{ maxHeight: 380, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {[
+                { type: 'MODULE', title: '📥 Data Ingestion & Link Pipeline', desc: 'Real working multi-source fusion: CDR, Banking, FIR, ANPR & Wallets', tab: 'pipeline' },
                 { type: 'MODULE', title: '🌐 Network Graph Explorer', desc: 'Interactive 48-node Cytoscape graph & A* pathfinder', tab: 'graph' },
                 { type: 'MODULE', title: '🛰️ Geospatial Surveillance Radar', desc: 'Real-time GPS blips, ANPR vehicle tracking & tactical dispatch', tab: 'radar' },
                 { type: 'MODULE', title: '📡 Cellular CDR & Triangulation', desc: '3-Tower radio sector triangulation, nocturnal ratio & Z-score bursts', tab: 'telecom' },

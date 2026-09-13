@@ -48,6 +48,7 @@ from backend.app.routers.copilot import router as copilot_router, copilot_chat_e
 from backend.app.routers.audit import router as audit_router, get_system_audit_trail
 from backend.app.routers.reports import router as reports_router
 from backend.app.routers.security import router as security_router
+from backend.app.routers.pipeline import router as pipeline_router
 
 logger = logging.getLogger("crimenet.main")
 
@@ -94,6 +95,7 @@ app.include_router(copilot_router)
 app.include_router(audit_router)
 app.include_router(reports_router)
 app.include_router(security_router)
+app.include_router(pipeline_router)
 
 # ── TOP-LEVEL HEALTH & SYSTEM TELEMETRY ──
 @app.get("/api/health")
