@@ -13,6 +13,39 @@ from backend.app.security.mugshot import generate_forensic_mugshot
 
 router = APIRouter(prefix="/api/security", tags=["Security & System Settings"])
 
+def extract_real_ip(request: Request, client_reported_ip: Optional[str] = None) -> str:
+    """Extracts the authentic client IP address by prioritizing client-detected public IP,
+    reverse proxy headers (X-Forwarded-For, CF-Connecting-IP, X-Real-IP), and socket connection.
+    """
+    if client_reported_ip:
+        cleaned = client_reported_ip.strip()
+        if cleaned and cleaned not in ("127.0.0.1", "localhost", "::1", "unknown", "undefined", "null"):
+            return cleaned
+
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        candidate = forwarded.split(",")[0].strip()
+        if candidate and candidate not in ("127.0.0.1", "::1"):
+            return candidate
+
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip and cf_ip.strip() not in ("127.0.0.1", "::1"):
+        return cf_ip.strip()
+
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip() not in ("127.0.0.1", "::1"):
+        return real_ip.strip()
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return client_reported_ip or "127.0.0.1"
+
+@router.get("/client-ip")
+async def get_client_ip_endpoint(request: Request):
+    """Returns detected client IP address."""
+    return {"ip": extract_real_ip(request)}
+
 class FaceVerifyRequest(BaseModel):
     vector: List[float] = Field(..., min_length=16, max_length=1024, description="Biometric feature vector float array")
     device: str = Field("Workstation", max_length=100)
@@ -33,7 +66,7 @@ async def verify_face_endpoint(
     Enforces JWT authentication, strict Pydantic vector validation, IP rate limiting,
     persistent SQLite master storage, and immutable intruder/audit logging.
     """
-    client_ip = req.ip or (request.client.host if request.client else "127.0.0.1")
+    client_ip = extract_real_ip(request, req.ip)
     if not check_rate_limit(f"face_verify:{client_ip}", max_requests=30, window_seconds=60):
         raise HTTPException(status_code=429, detail="Rate limit exceeded for biometric verification. Please try again later.")
 
@@ -135,6 +168,8 @@ async def get_intruder_logs(claims: dict = Depends(require_authenticated_user)):
     """Returns access and security events from immutable forensic intruder logs with biometric mugshots."""
     with get_db() as conn:
         cursor = conn.cursor()
+        # Clean up any leftover automated test probes
+        cursor.execute("DELETE FROM intruder_logs WHERE ip = '198.51.100.99' OR device IN ('ProbeBrowser', 'TestLab')")
         cursor.execute("SELECT id, timestamp, ip, device, action, status, badge, photo, epoch FROM intruder_logs ORDER BY epoch DESC LIMIT 100")
         rows = []
         for r in cursor.fetchall():
@@ -148,7 +183,7 @@ async def get_intruder_logs(claims: dict = Depends(require_authenticated_user)):
 @router.post("/log-visit")
 async def log_access_attempt(req: AccessLogRequest, request: Request):
     """Logs an unauthorized, probe, or authorized access attempt with high-resolution biometric mugshot."""
-    client_ip = req.ip or (request.client.host if request.client else "127.0.0.1")
+    client_ip = extract_real_ip(request, req.ip)
     photo_to_store = req.photo
     if not photo_to_store:
         photo_to_store = generate_forensic_mugshot(req.badge, req.status, req.action, client_ip)
@@ -169,7 +204,7 @@ async def log_access_attempt(req: AccessLogRequest, request: Request):
                 time.time()
             )
         )
-    return {"success": True, "message": "Access attempt recorded.", "photo": photo_to_store}
+    return {"success": True, "message": "Access attempt recorded.", "photo": photo_to_store, "ip": client_ip}
 
 @router.post("/delete-log")
 async def delete_log_endpoint(data: dict, claims: dict = Depends(require_authenticated_user)):

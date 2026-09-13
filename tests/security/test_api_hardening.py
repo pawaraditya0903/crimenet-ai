@@ -76,3 +76,9 @@ def test_forensic_intruder_logs_endpoints():
     assert "logs" in intruder_res.json()
     assert intruder_res.json()["total"] >= 1
 
+    # Clean up test database pollution so live incident log is clean
+    from backend.app.models.database import get_db
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM intruder_logs WHERE ip = '198.51.100.99' OR device IN ('ProbeBrowser', 'TestLab')")
+
