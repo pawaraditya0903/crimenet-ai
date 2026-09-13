@@ -117,6 +117,9 @@ export default function CryptoHawalaTracer() {
             <span>💸</span> FINANCIAL HAWALA & BLOCKCHAIN FORENSICS
           </h2>
           <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Johnson's Cycles, Smurfing Fan-Out Engine & USDT TRC-20 Taint Tracer · Architect: <b>Aditya Pawar</b></p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', borderRadius: 4, background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', color: '#fbbf24', fontSize: 10, fontWeight: 700, marginTop: 4 }}>
+            <span>⚠️</span> PROTOTYPE / SIMULATED BLOCKCHAIN DATA · GENUINE GRAPH ALGORITHMS (JOHNSON'S CYCLES & SHANNON ENTROPY)
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

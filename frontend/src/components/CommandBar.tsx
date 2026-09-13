@@ -198,6 +198,23 @@ export default function CommandBar({
 
         {/* Right Side: Clocks, Connection Badge, Notifications, Copilot Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Persistent Truthful Demo Badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '3px 8px',
+            borderRadius: 4,
+            background: 'rgba(245, 158, 11, 0.15)',
+            border: '1px solid #f59e0b',
+            color: '#fbbf24',
+            fontWeight: 800,
+            fontSize: 10,
+            letterSpacing: '0.04em'
+          }}>
+            <span>🔬</span> DEMO MODE (SYNTHETIC BENCHMARK DATA)
+          </div>
+
           {/* Connection Status Badge */}
           <div style={{
             display: 'flex',

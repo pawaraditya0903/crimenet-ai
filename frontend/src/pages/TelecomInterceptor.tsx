@@ -275,6 +275,9 @@ export default function TelecomInterceptor() {
             <span>📡</span> CELLULAR CDR & STATISTICAL TELECOM INTERCEPTOR
           </h2>
           <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Z-Score Burst Anomaly Engine & Multi-SIM Co-Location Analyzer · Operator: <b>Aditya Pawar</b></p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', borderRadius: 4, background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38bdf8', color: '#38bdf8', fontSize: 10, fontWeight: 700, marginTop: 4 }}>
+            <span>🔬</span> SYNTHETIC TELECOM TELEMETRY · REAL WLS TRILATERATION & NOCTURNAL Z-SCORE BURST STATS
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

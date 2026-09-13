@@ -1,10 +1,11 @@
 {
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
+  "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:match*",
-      "destination": "https://crimenet-ai.onrender.com/api/:match*"
+      "source": "/api/:path*",
+      "destination": "https://crimenet-ai.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",

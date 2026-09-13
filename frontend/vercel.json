@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/:match*",
-      "destination": "https://crimenet-ai.onrender.com/api/:match*"
+      "source": "/api/:path*",
+      "destination": "https://crimenet-ai.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
