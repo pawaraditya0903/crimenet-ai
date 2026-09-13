@@ -169,15 +169,23 @@ def seed_database_if_empty():
                 ("evt-genesis", "2026-03-01 00:00:00 UTC", "SYSTEM_CORE", "SYSTEM", "SYSTEM_INITIALIZED", "system:core", "127.0.0.1", "genesis-001", genesis_payload, genesis_prev, genesis_curr)
             )
 
-        # 8. Seed Initial Forensic Intruder Logs & Biometric Telemetry
-        cursor.execute("DELETE FROM intruder_logs WHERE ip IN ('198.51.100.99', '198.51.100.42', '203.0.113.19') OR device IN ('ProbeBrowser', 'TestLab')")
+        # 8. Seed Initial Forensic Intruder Logs & Biometric Telemetry matching user sample
+        cursor.execute("DELETE FROM intruder_logs WHERE id IN ('log-01', 'log-02', 'log-03', 'log-04') AND epoch < 1787479000")
         cursor.execute("SELECT COUNT(*) as count FROM intruder_logs")
         if cursor.fetchone()["count"] == 0:
             intruder_logs_to_seed = [
-                ("log-01", "23-Aug-2026 13:11:50 IST", "122.170.196.103", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0", "PASSCODE_AUTHORIZED", "AUTHORIZED (Passcode Verified)", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED"), 1787470910.0),
-                ("log-02", "23-Aug-2026 13:11:02 IST", "203.192.223.68", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "INTRUDER_FACE_FAILED_0%", "BLOCKED (0% Face Match)", "UNKNOWN-INTRUDER", generate_forensic_mugshot("UNKNOWN-INTRUDER", "BLOCKED"), 1787470862.0),
-                ("log-03", "23-Aug-2026 12:53:27 IST", "152.58.32.96", "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile", "PASSCODE_FAILED", "BLOCKED (Invalid Passcode)", "REMOTE-PROBE", generate_forensic_mugshot("REMOTE-PROBE", "BLOCKED"), 1787469807.0),
-                ("log-04", "23-Aug-2026 12:52:52 IST", "152.58.32.96", "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile", "PORTAL_VISITOR_CAPTURED", "MONITORED (Gateway Visit)", "UNAUTHORIZED", generate_forensic_mugshot("UNAUTHORIZED", "BLOCKED"), 1787469772.0)
+                ("log-01", "23-Aug-2026 15:50:56 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "AUTHORIZED_ACCESS", "AUTHORIZED", "INV-2026-AP01", "", 1787480456.0),
+                ("log-02", "23-Aug-2026 15:47:18 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_AUTHORIZED", "AUTHORIZED", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED"), 1787480238.0),
+                ("log-03", "23-Aug-2026 15:45:52 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "AUTHORIZED_ACCESS", "AUTHORIZED", "INVESTIGATOR", "", 1787480152.0),
+                ("log-04", "23-Aug-2026 15:45:30 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNAUTHORIZED_PROBE", generate_forensic_mugshot("UNAUTHORIZED_PROBE", "BLOCKED"), 1787480130.0),
+                ("log-05", "23-Aug-2026 15:45:20 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_AUTHORIZED", "AUTHORIZED", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED"), 1787480120.0),
+                ("log-06", "23-Aug-2026 15:44:39 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_AUTHORIZED", "AUTHORIZED", "Chief Officer Aditya Pawar", "", 1787480079.0),
+                ("log-07", "23-Aug-2026 15:43:59 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "INTRUDER_FACE_FAILED_0%", "BLOCKED_INTRUDER", "PROBE_SUSPECT", generate_forensic_mugshot("PROBE_SUSPECT", "BLOCKED"), 1787480039.0),
+                ("log-08", "23-Aug-2026 15:43:39 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787480019.0),
+                ("log-09", "23-Aug-2026 15:43:35 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "PROBE_ATTEMPT", "", 1787480015.0),
+                ("log-10", "23-Aug-2026 15:43:15 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787479995.0),
+                ("log-11", "23-Aug-2026 15:43:14 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787479994.0),
+                ("log-12", "23-Aug-2026 15:43:08 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787479988.0),
             ]
             cursor.executemany(
                 "INSERT INTO intruder_logs (id, timestamp, ip, device, action, status, badge, photo, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",

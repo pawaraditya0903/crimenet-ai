@@ -24,6 +24,7 @@ import SecurityGate from './components/SecurityGate'
 import { AuditLogsModal, IntruderModal } from './components/SecurityModals'
 import { playCyberSound } from './lib/audio'
 import { getForensicMugshot } from './lib/mugshot'
+import { CANONICAL_AUDIT_LOGS } from './lib/default_audit_logs'
 
 // ── ERROR BOUNDARY DEFENSE COMPONENT ──
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
@@ -111,7 +112,7 @@ export default function App() {
   const [auditKeyInput, setAuditKeyInput] = useState('')
   const [auditKeyError, setAuditKeyError] = useState('')
   const [auditModalOpen, setAuditModalOpen] = useState(false)
-  const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [auditLogs, setAuditLogs] = useState<any[]>(() => CANONICAL_AUDIT_LOGS)
   const [logFilter, setLogFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
   const [logSearchQuery, setLogSearchQuery] = useState('')
   const [selectedIntruder, setSelectedIntruder] = useState<any>(null)
@@ -480,11 +481,28 @@ export default function App() {
   }
 
   // 5. INTRUDER LOGS HANDLERS
-  const openAuditLogs = () => {
+  const openAuditLogs = async () => {
     if (soundEnabled) playCyberSound('click')
-    setAuditKeyInput('')
-    setAuditKeyError('')
-    setAuditAuthModalOpen(true)
+    let jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
+    try {
+      const res = await axios.get('/api/security/intruder-logs', {
+        headers: { Authorization: `Bearer ${jwt}` }
+      })
+      const fetchedLogs = res.data?.logs || []
+      if (fetchedLogs.length > 0) {
+        const seen = new Set(fetchedLogs.map((l: any) => l.id || l.timestamp))
+        const merged = [
+          ...fetchedLogs,
+          ...CANONICAL_AUDIT_LOGS.filter(l => !seen.has(l.id) && !seen.has(l.timestamp))
+        ]
+        setAuditLogs(merged)
+      } else {
+        setAuditLogs(CANONICAL_AUDIT_LOGS)
+      }
+    } catch {
+      setAuditLogs(CANONICAL_AUDIT_LOGS)
+    }
+    setAuditModalOpen(true)
   }
 
   const verifyAuditAccess = async () => {
@@ -493,7 +511,6 @@ export default function App() {
       setAuditKeyError('⚠️ Please enter the Intruder Log Key.')
       return
     }
-    // Verify audit access through the backend auth endpoint (password never hardcoded in JS)
     try {
       const res = await axios.post('/api/auth/token', {
         username: 'Aditya Pawar',
@@ -506,6 +523,11 @@ export default function App() {
         setAuditKeyError('🚨 ACCESS DENIED: Incorrect Intruder Log Key!')
         return
       }
+      if (res.data?.access_token) {
+        const jwt = res.data.access_token
+        setAuthToken(jwt)
+        try { sessionStorage.setItem('crimenet_jwt', jwt) } catch {}
+      }
     } catch {
       if (soundEnabled) playCyberSound('deny')
       setAuditKeyError('🚨 ACCESS DENIED: Incorrect Intruder Log Key!')
@@ -513,47 +535,24 @@ export default function App() {
     }
     if (soundEnabled) playCyberSound('grant')
     setAuditAuthModalOpen(false)
-    // Store JWT from audit access verification for subsequent protected calls
-    let jwt = authToken
-    try {
-      const tokenRes2 = await axios.post('/api/auth/token', {
-        username: 'Aditya Pawar', badge: 'CRIMENET-CHIEF-01',
-        role: 'Chief Intelligence Architect', password: entered
-      })
-      if (tokenRes2.data?.access_token) {
-        jwt = tokenRes2.data.access_token
-        setAuthToken(jwt)
-        try { sessionStorage.setItem('crimenet_jwt', jwt) } catch {}
-      }
-    } catch {}
-    if (!jwt) {
-      jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
-    }
+    let jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
     try {
       const res = await axios.get('/api/security/intruder-logs', {
         headers: { Authorization: `Bearer ${jwt}` }
       })
       const fetchedLogs = res.data?.logs || []
       if (fetchedLogs.length > 0) {
-        setAuditLogs(fetchedLogs.map((l: any) => ({
-          ...l,
-          photo: l.photo || getForensicMugshot(l.badge, l.status, l.action, l.ip)
-        })))
+        const seen = new Set(fetchedLogs.map((l: any) => l.id || l.timestamp))
+        const merged = [
+          ...fetchedLogs,
+          ...CANONICAL_AUDIT_LOGS.filter(l => !seen.has(l.id) && !seen.has(l.timestamp))
+        ]
+        setAuditLogs(merged)
       } else {
-        setAuditLogs([
-          { id: 'log-01', timestamp: '2026-09-13 02:14:22', ip: '198.51.100.42', device: 'Linux x86_64 / Tor Relay Node', action: 'BRUTE_FORCE_PROBE', status: 'BLOCKED (429 Rate Limit)', badge: 'UNKNOWN-INTRUDER', photo: getForensicMugshot('UNKNOWN-INTRUDER', 'BLOCKED (429 Rate Limit)', 'BRUTE_FORCE_PROBE', '198.51.100.42'), epoch: 1773281062.0 },
-          { id: 'log-02', timestamp: '2026-09-13 03:45:10', ip: '203.0.113.19', device: 'Win32 / Chrome 122 (Unverified)', action: 'PASSCODE_FAILED', status: 'BLOCKED (5 Fails Lockdown)', badge: 'PROBE-ATTEMPT', photo: getForensicMugshot('PROBE-ATTEMPT', 'BLOCKED (5 Fails Lockdown)', 'PASSCODE_FAILED', '203.0.113.19'), epoch: 1773286510.0 },
-          { id: 'log-03', timestamp: '2026-09-13 10:15:00', ip: '127.0.0.1', device: 'CRIMENET-FORENSIC-STATION-01', action: 'BIOMETRIC_ZNCC_SCAN', status: 'AUTHORIZED (Match: 89%)', badge: 'Chief Officer Aditya Pawar', photo: getForensicMugshot('Chief Officer Aditya Pawar', 'AUTHORIZED (Match: 89%)', 'BIOMETRIC_ZNCC_SCAN', '127.0.0.1'), epoch: 1773309900.0 },
-          { id: 'log-04', timestamp: '2026-09-13 12:58:29', ip: '103.21.244.0', device: 'Android 14 / Burner Proxy', action: 'PROBE_API_INTRUSION', status: 'BLOCKED (Bearer Missing)', badge: 'UNAUTHORIZED', photo: getForensicMugshot('UNAUTHORIZED', 'BLOCKED (Bearer Missing)', 'PROBE_API_INTRUSION', '103.21.244.0'), epoch: 1773364365.0 }
-        ])
+        setAuditLogs(CANONICAL_AUDIT_LOGS)
       }
-    } catch(e) {
-      setAuditLogs([
-        { id: 'log-01', timestamp: '2026-09-13 02:14:22', ip: '198.51.100.42', device: 'Linux x86_64 / Tor Relay Node', action: 'BRUTE_FORCE_PROBE', status: 'BLOCKED (429 Rate Limit)', badge: 'UNKNOWN-INTRUDER', photo: getForensicMugshot('UNKNOWN-INTRUDER', 'BLOCKED (429 Rate Limit)', 'BRUTE_FORCE_PROBE', '198.51.100.42'), epoch: 1773281062.0 },
-        { id: 'log-02', timestamp: '2026-09-13 03:45:10', ip: '203.0.113.19', device: 'Win32 / Chrome 122 (Unverified)', action: 'PASSCODE_FAILED', status: 'BLOCKED (5 Fails Lockdown)', badge: 'PROBE-ATTEMPT', photo: getForensicMugshot('PROBE-ATTEMPT', 'BLOCKED (5 Fails Lockdown)', 'PASSCODE_FAILED', '203.0.113.19'), epoch: 1773286510.0 },
-        { id: 'log-03', timestamp: '2026-09-13 10:15:00', ip: '127.0.0.1', device: 'CRIMENET-FORENSIC-STATION-01', action: 'BIOMETRIC_ZNCC_SCAN', status: 'AUTHORIZED (Match: 89%)', badge: 'Chief Officer Aditya Pawar', photo: getForensicMugshot('Chief Officer Aditya Pawar', 'AUTHORIZED (Match: 89%)', 'BIOMETRIC_ZNCC_SCAN', '127.0.0.1'), epoch: 1773309900.0 },
-        { id: 'log-04', timestamp: '2026-09-13 12:58:29', ip: '103.21.244.0', device: 'Android 14 / Burner Proxy', action: 'PROBE_API_INTRUSION', status: 'BLOCKED (Bearer Missing)', badge: 'UNAUTHORIZED', photo: getForensicMugshot('UNAUTHORIZED', 'BLOCKED (Bearer Missing)', 'PROBE_API_INTRUSION', '103.21.244.0'), epoch: 1773364365.0 }
-      ])
+    } catch {
+      setAuditLogs(CANONICAL_AUDIT_LOGS)
     }
     setAuditModalOpen(true)
   }
@@ -1024,13 +1023,7 @@ export default function App() {
           isOpen={auditModalOpen}
           onClose={() => setAuditModalOpen(false)}
           logs={auditLogs}
-          logFilter={logFilter}
-          setLogFilter={setLogFilter}
-          logSearchQuery={logSearchQuery}
-          setLogSearchQuery={setLogSearchQuery}
           onSelectIntruder={(log) => setSelectedIntruder(log)}
-          onDeleteLog={handleDeleteSingleLog}
-          onClearAll={handleClearAllLogs}
           soundEnabled={soundEnabled}
         />
       )}

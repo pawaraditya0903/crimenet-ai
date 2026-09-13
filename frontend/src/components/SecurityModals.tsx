@@ -6,39 +6,19 @@ interface IntruderLogsModalProps {
   isOpen?: boolean
   logs: any[]
   onClose: () => void
-  onDeleteLog: (log: any, e: React.MouseEvent) => void
-  onClearAll: () => void
   onSelectIntruder: (log: any) => void
-  soundEnabled: boolean
+  onDeleteLog?: (log: any, e: React.MouseEvent) => void
+  onClearAll?: () => void
+  soundEnabled?: boolean
 }
 
 export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
   isOpen = false,
   logs,
   onClose,
-  onDeleteLog,
-  onClearAll,
   onSelectIntruder,
-  soundEnabled
 }) => {
   if (!isOpen) return null
-
-  const [logSearchQuery, setLogSearchQuery] = useState('')
-  const [logFilter, setLogFilter] = useState<'ALL' | 'BLOCKED' | 'AUTHORIZED'>('ALL')
-
-  const filteredLogs = logs.filter((l) => {
-    const s = (l.status || '').toUpperCase()
-    if (logFilter === 'BLOCKED' && !s.includes('BLOCK') && !s.includes('FAIL') && !s.includes('PROBE')) return false
-    if (logFilter === 'AUTHORIZED' && !s.includes('AUTH') && !s.includes('VERIFIED')) return false
-    if (!logSearchQuery) return true
-    const q = logSearchQuery.toLowerCase()
-    return (
-      (l.ip && l.ip.toLowerCase().includes(q)) ||
-      (l.device && l.device.toLowerCase().includes(q)) ||
-      (l.action && l.action.toLowerCase().includes(q)) ||
-      (l.badge && l.badge.toLowerCase().includes(q))
-    )
-  })
 
   const formatLogTimestamp = (log: any): string => {
     if (!log) return 'Just now'
@@ -49,7 +29,7 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
       } catch {}
     }
     if (log.timestamp) {
-      if (!log.timestamp.includes('IST')) {
+      if (!log.timestamp.includes('IST') && log.timestamp !== 'Just now') {
         return `${log.timestamp} IST`
       }
       return log.timestamp
@@ -75,162 +55,126 @@ export const IntruderLogsModal: React.FC<IntruderLogsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '95vw',
-          maxWidth: 980,
+          maxWidth: 960,
           maxHeight: '85vh',
-          background: '#090e1a',
-          border: '1px solid rgba(56, 189, 248, 0.4)',
-          borderRadius: 20,
-          padding: 24,
+          background: '#070d1e',
+          border: '1.5px solid #0ea5e9',
+          borderRadius: 16,
+          padding: '24px 28px',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 0 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.15)'
+          boxShadow: '0 0 50px rgba(0, 0, 0, 0.95), 0 0 35px rgba(14, 165, 233, 0.25)'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: 14 }}>
+        {/* Header matching exact user screenshot */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 16 }}>
           <div>
-            <h3 style={{ color: 'white', fontSize: 17, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8, letterSpacing: '0.04em' }}>
-              <span>🛡️</span> LIVE INTRUDER & VISITOR ACCESS LOGS
+            <h3 style={{ color: 'white', fontSize: 18, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, letterSpacing: '0.04em', margin: 0 }}>
+              <span style={{ fontSize: 20 }}>🛡️</span> LIVE INTRUDER & VISITOR ACCESS LOGS
             </h3>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>
-              Immutable forensic audit trail · Real-time biometric capture & IP telemetry
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+              Real-time IP, device fingerprints & camera mugshots snapped by CrimeNet AI
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={onClearAll}
-              style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
-            >
-              Clear Records
-            </button>
-            <button
-              onClick={onClose}
-              style={{ background: '#334155', border: 'none', color: 'white', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 11.5, fontWeight: 700 }}
-            >
-              ✕ Close
-            </button>
-          </div>
-        </div>
-
-        {/* Filter controls */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 14, alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Filter by IP, device, action..."
-            value={logSearchQuery}
-            onChange={(e) => setLogSearchQuery(e.target.value)}
-            style={{ flex: 1, padding: '8px 12px', borderRadius: 8, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 11.5, outline: 'none' }}
-          />
-          {(
-            [
-              { id: 'ALL', label: 'All Records' },
-              { id: 'BLOCKED', label: '🚨 Blocked Intruders' },
-              { id: 'AUTHORIZED', label: '✓ Authorized Access' }
-            ] as const
-          ).map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => {
-                if (soundEnabled) playCyberSound('click')
-                setLogFilter(filter.id)
-              }}
-              style={{
-                padding: '7px 14px',
-                borderRadius: 8,
-                background: logFilter === filter.id ? '#0284c7' : '#1e293b',
-                color: 'white',
-                border: logFilter === filter.id ? '1px solid #38bdf8' : '1px solid transparent',
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: 700
-              }}
-            >
-              {filter.label}
-            </button>
-          ))}
+          <button
+            onClick={onClose}
+            style={{
+              background: '#1e293b',
+              border: '1px solid #334155',
+              color: '#cbd5e1',
+              padding: '6px 16px',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            ✕ Close
+          </button>
         </div>
 
         {/* Table */}
         <div style={{ flex: 1, overflowY: 'auto', marginTop: 14 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ background: '#020617', color: '#38bdf8', textAlign: 'left' }}>
-                <th style={{ padding: '10px 12px' }}>Timestamp</th>
-                <th style={{ padding: '10px 12px' }}>IP Address</th>
-                <th style={{ padding: '10px 12px' }}>Device / Model</th>
-                <th style={{ padding: '10px 12px' }}>Status & Action</th>
-                <th style={{ padding: '10px 12px' }}>Intruder Mugshot</th>
-                <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
+              <tr style={{ background: 'transparent', color: '#38bdf8', textAlign: 'left', borderBottom: '1px solid #1e293b' }}>
+                <th style={{ padding: '12px 10px', fontWeight: 800 }}>Timestamp</th>
+                <th style={{ padding: '12px 10px', fontWeight: 800 }}>IP Address</th>
+                <th style={{ padding: '12px 10px', fontWeight: 800 }}>Device / Model</th>
+                <th style={{ padding: '12px 10px', fontWeight: 800 }}>Action & Status</th>
+                <th style={{ padding: '12px 10px', fontWeight: 800 }}>Intruder Mugshot</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.length === 0 ? (
+              {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: 28, color: '#64748b' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
                     No security events recorded.
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log: any, idx: number) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
-                    <td style={{ padding: '10px 12px', color: '#94a3b8', fontFamily: 'monospace' }}>{formatLogTimestamp(log)}</td>
-                    <td style={{ padding: '10px 12px', color: 'white', fontWeight: 800, fontFamily: 'monospace' }}>{log.ip}</td>
-                    <td style={{ padding: '10px 12px', color: '#cbd5e1', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.device}>{log.device}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          background: log.status?.includes('AUTHORIZED') ? '#065f46' : log.status?.includes('MONITORED') ? '#1e3a8a' : '#7f1d1d',
-                          color: log.status?.includes('AUTHORIZED') ? '#6ee7b7' : log.status?.includes('MONITORED') ? '#93c5fd' : '#fca5a5',
-                          fontWeight: 800,
-                          fontSize: 10
-                        }}
-                      >
-                        {log.status?.includes('AUTHORIZED') ? 'AUTHORIZED_OFFICER' : log.status?.includes('MONITORED') ? 'VISITOR_LOGGED' : 'BLOCKED_INTRUDER'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      {(() => {
-                        const mugshotSrc = log.photo || getForensicMugshot(log.badge, log.status, log.action, log.ip)
-                        const isAuth = (log.status || '').includes('AUTHORIZED')
-                        return (
+                logs.map((log: any, idx: number) => {
+                  const isAuth = (log.status || '').toUpperCase().includes('AUTHORIZED') || (log.action || '').toUpperCase().includes('AUTHORIZED')
+                  const hasPhoto = !!log.photo
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      <td style={{ padding: '12px 10px', color: '#94a3b8', fontFamily: 'monospace', fontSize: 11.5 }}>
+                        {formatLogTimestamp(log)}
+                      </td>
+                      <td style={{ padding: '12px 10px', color: 'white', fontWeight: 800, fontFamily: 'monospace', fontSize: 12 }}>
+                        {log.ip || '127.0.0.1'}
+                      </td>
+                      <td style={{ padding: '12px 10px', color: '#94a3b8', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11.5 }} title={log.device}>
+                        {log.device || 'Mozilla/5.0'}
+                      </td>
+                      <td style={{ padding: '12px 10px' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '3px 10px',
+                            borderRadius: 4,
+                            fontSize: 10.5,
+                            fontWeight: 900,
+                            letterSpacing: '0.04em',
+                            background: isAuth ? '#15803d' : '#991b1b',
+                            color: '#ffffff'
+                          }}
+                        >
+                          {isAuth ? 'AUTHORIZED' : 'BLOCKED_INTRUDER'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 10px' }}>
+                        {hasPhoto ? (
                           <div
-                            onClick={() => onSelectIntruder({ ...log, photo: mugshotSrc })}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '3px 6px', borderRadius: 8, background: 'rgba(255,255,255,0.03)' }}
+                            onClick={() => onSelectIntruder(log)}
+                            style={{ cursor: 'pointer', display: 'inline-block' }}
                             title="Click to inspect full forensic biometric dossier"
                           >
                             <img
-                              src={mugshotSrc}
-                              alt="Subject Mugshot"
+                              src={log.photo}
+                              alt="Mugshot"
                               style={{
                                 width: 44,
                                 height: 44,
-                                borderRadius: 6,
+                                borderRadius: 8,
                                 objectFit: 'cover',
-                                border: isAuth ? '2px solid #10b981' : '2px solid #ef4444',
-                                boxShadow: isAuth ? '0 0 10px rgba(16,185,129,0.35)' : '0 0 10px rgba(239,68,68,0.45)',
+                                border: '2px solid #ef4444',
+                                boxShadow: '0 0 10px rgba(239, 68, 68, 0.7)',
                                 display: 'block'
                               }}
                             />
-                            <span style={{ fontSize: 9.5, color: isAuth ? '#34d399' : '#f87171', fontWeight: 800 }}>
-                              {isAuth ? 'VERIFIED' : 'CAPTURED'}
-                            </span>
                           </div>
-                        )
-                      })()}
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <button
-                        onClick={(e) => onDeleteLog(log, e)}
-                        title="Delete record"
-                        style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        ) : (
+                          <span style={{ color: '#64748b', fontSize: 11.5 }}>No Photo</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
