@@ -1,183 +1,490 @@
-# CrimeNet AI: Production-Grade Forensic Intelligence Platform
+# 🔍 CrimeNet AI — Forensic Intelligence & Cross-Domain Investigative Analytics Platform
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.3-61DAFB.svg)](https://react.dev/)
-[![Tests](https://img.shields.io/badge/Tests-51%20Passing-brightgreen.svg)](tests/)
-[![Security](https://img.shields.io/badge/Security-Fail--Closed%20%7C%20RBAC%20%7C%20AES--256--GCM-red.svg)](docs/SECURITY_AUTHENTICATION.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React: 19](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![GitHub Stars](https://img.shields.io/github/stars/pawaraditya0903/crimenet-ai?style=flat-square)](https://github.com/pawaraditya0903/crimenet-ai/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/pawaraditya0903/crimenet-ai?style=flat-square)](https://github.com/pawaraditya0903/crimenet-ai/commits/main)
+[![Tests: 58 Passing](https://img.shields.io/badge/Tests-58%20Passing%20(100%25)-brightgreen?style=flat-square)](tests/)
 
-**CrimeNet AI** is an analytical decision-support and graph intelligence system designed for law enforcement, financial integrity audits, and digital forensics. It ingests multi-source investigative data (cellular CDRs, banking ledgers, entity networks) and provides genuine graph analytics, statistical anomaly detection, and tamper-evident cryptographic auditing.
+**CrimeNet AI** is an open-source, AI-powered forensic intelligence and investigative decision-support platform. Designed for authorized analytical environments, it systematically ingests, normalizes, and connects fragmented investigative datasets—bridging telecom communications, financial transaction ledgers, police records, highway vehicle scans, and digital wallet activities into a unified, explainable intelligence knowledge graph.
+
+---
 
 > [!IMPORTANT]
-> **Defensible Engineering Standard**: This repository strictly rejects fabricated metrics, ungrounded benchmark claims, and exaggerated certifications. All analytics are powered by verifiable algorithms (NetworkX, Scikit-Learn, ReportLab, cryptography) backed by **51 automated unit, integration, and security tests**.
+> **Ethical & Decision-Support Mandate**: CrimeNet AI is strictly an **investigative decision-support system**. It **does not** determine guilt, issue legal verdicts, or replace human judgment. All generated links, anomaly flags, and forensic certificates require mandatory human-in-the-loop (HITL) review and independent legal corroboration. The system is designed to be operated exclusively by authorized personnel using legally obtained, anonymized, or synthetic benchmark datasets.
 
 ---
 
-## 1. System Architecture
+## 📑 Table of Contents
+1. [Problem Statement](#-problem-statement)
+2. [Solution Overview](#-solution-overview)
+3. [Key Capabilities](#-key-capabilities)
+4. [System Architecture](#-system-architecture)
+5. [Technology Stack](#-technology-stack)
+6. [Repository Structure](#-repository-structure)
+7. [How It Works](#-how-it-works)
+8. [Sample Investigation Scenario: Operation BlackLink](#-sample-investigation-scenario-operation-blacklink)
+9. [Installation & Setup](#-installation--setup)
+10. [Environment Variables](#-environment-variables)
+11. [Usage & Demonstration Flow](#-usage--demonstration-flow)
+12. [API Reference Overview](#-api-reference-overview)
+13. [Screenshots & Visual Workspace](#-screenshots--visual-workspace)
+14. [Privacy, Ethics & Responsible Use](#-privacy-ethics--responsible-use)
+15. [Limitations](#-limitations)
+16. [Future Roadmap](#-future-roadmap)
+17. [Contributing](#-contributing)
+18. [License & Disclaimers](#-license--disclaimers)
+
+---
+
+## 🚨 Problem Statement
+
+Modern criminal investigations encounter severe **data fragmentation**:
+- **Siloed Evidence Streams**: Crucial information is trapped in isolated formats—Call Detail Records (CDRs) stored in telecom CSVs, banking wires stored in RTGS/NEFT ledgers, police First Information Reports (FIRs) locked in unstructured PDF documents, vehicle sightings logged in highway toll ANPR camera feeds, and crypto transactions scattered across blockchain ledgers.
+- **Manual Entity Disambiguation**: Connecting a phone number from an intercepted call to a KYC bank account, an accused suspect named in an FIR, and a vehicle captured passing a midnight toll plaza requires tedious manual cross-referencing across separate databases.
+- **Invisible Layering Patterns**: Structured micro-transactions (smurfing), circular hawala routing loops, and rapid fiat-to-crypto off-ramps are mathematically obscured across disparate financial accounts.
+- **Black-Box AI Risks**: Unexplained risk scores and fabricated metrics erode trust and fail legal scrutiny in courtroom proceedings.
+
+---
+
+## 💡 Solution Overview
+
+**CrimeNet AI** addresses this challenge through automated multi-source ingestion, deterministic entity resolution, and graph analytics:
+- **Unified Knowledge Graph Topology**: Unifies disparate records into typed nodes (`Person`, `Phone`, `FinancialAccount`, `Vehicle`, `CellTower`, `DigitalWallet`, `FIRCase`) and directed edges.
+- **Automated Cross-Domain Link Synthesis**: Discovers non-obvious correlations using normalized E.164 phone handles, vehicle registration cross-referencing, and geographic spatiotemporal co-location algorithms ($\Delta t \le 15\text{ mins}, d \le 1.5\text{ km}$).
+- **Verifiable Graph Analytics**: Identifies high-influence syndicates via NetworkX PageRank, isolates illicit syndicates via Louvain modularity communities, and flags circular laundering loops using Johnson's elementary cycle detection.
+- **Explainable Anomaly Scoring**: Pairs Scikit-Learn Isolation Forest outlier detection with $z$-score feature attribution, explaining *why* an alert was raised in plain English.
+- **Tamper-Evident Evidence Vault**: Anchors evidence files with SHA-256 fingerprints, Merkle tree cryptographic inclusion proofs, and an immutable hash-linked audit chain ($H_i = \text{SHA256}(H_{i-1} + C_i)$).
+
+---
+
+## 🌟 Key Capabilities
+
+### 1. Multi-Source Ingestion & Normalization
+- Ingests structured and semi-structured records across 5 primary domains:
+  - **Telecom CDR**: Caller/receiver pairs, durations, cell tower coordinates, handset IMEIs, and IMSIs.
+  - **Banking & RTGS**: Originating and destination accounts, wire amounts, bank codes, transaction types (IMPS/RTGS/NEFT), and linked KYC phones.
+  - **Police FIR Records**: First Information Reports, accused suspects, IPC legal sections, suspect vehicles, accounts, and complainants.
+  - **Highway ANPR**: Toll plaza license plate captures, camera GPS coordinates, vehicle speeds, and RTO registered owners.
+  - **Digital Wallets & Crypto**: UPI, Paytm, and TRC-20 USDT transactions, wallet addresses, amounts, and registered mobile numbers.
+
+### 2. Automated Cross-Domain Link Synthesis
+- **Identity Correlation**: Connects persons, bank accounts, and digital wallets sharing verified phone identifiers across disparate datasets (`CROSS_DOMAIN_IDENTITY`).
+- **Vehicle-to-FIR Correlation**: Matches highway toll ANPR plate captures to active suspect vehicles cited in police FIRs (`SUSPECT_VEHICLE_CITED`).
+- **Spatiotemporal Co-Location**: Detects when a handset ping at a cellular tower and a vehicle capture at a toll camera coincide within 1.5 km and 15 minutes (`SPATIOTEMPORAL_CO_LOCATION`).
+- **Fiat-to-Crypto Hawala Bridge**: Identifies rapid on-ramp banking wires followed immediately by digital wallet or USDT crypto transfers (`HAWALA_ON_OFF_RAMP`).
+
+### 3. Graph Analytics & Network Forensics
+- **Centrality & Influence Ranking**: Computes PageRank and betweenness centrality to isolate coordinators within decentralized networks.
+- **Community Detection**: Partitions complex graphs into modular operational cells using the Louvain algorithm.
+- **Cycle & Smurfing Detection**: Finds circular financial paths (Johnson's cycles) and structured micro-deposits beneath statutory reporting thresholds.
+- **Benford's Law Analysis**: Evaluates transaction first-digit frequency distributions to flag non-conforming financial ledgers.
+
+### 4. Explainable AI (XAI) Alerts & Human-in-the-Loop
+- Transparent anomaly scores paired with plain-English rationales.
+- Investigators can explicitly **Confirm**, **Suppress**, or **Escalate** alerts.
+- Every investigator action is immutably logged into the cryptographic audit chain.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    subgraph S1["1. Data Sources"]
+        D1["Telecom CDR (Calls, Towers, IMEI)"]
+        D2["Banking Ledgers (Wires, RTGS, IMPS)"]
+        D3["Police FIR Records (IPC, Accused)"]
+        D4["Highway ANPR (Plates, Toll Cameras)"]
+        D5["Digital Wallets & USDT (UPI, TRC-20)"]
+    end
+
+    subgraph S2["2. Ingestion & Preprocessing"]
+        ING["Multi-Source Ingestion Pipeline"]
+        NORM["Data Cleaning & Normalization (E.164, Timestamps, Strip PII)"]
+        NLP["NLP & Entity Extraction Engine"]
+    end
+
+    subgraph S3["3. Entity Resolution & Topology"]
+        ER["Cross-Domain Entity Resolution Engine"]
+        LNK["Link Synthesis (Identity, Spatiotemporal, Hawala)"]
+        GDB[("Knowledge Graph & Database (SQLite WAL / NetworkX)")]
+    end
+
+    subgraph S4["4. Risk & Analytics Core"]
+        ML["ML Anomaly Engine (Isolation Forest)"]
+        GRAPH_ALG["Graph Algorithms (PageRank, Louvain, Cycles)"]
+        XAI["XAI Attribution & Benford Analysis"]
+    end
+
+    subgraph S5["5. Investigation Workspace"]
+        UI["Investigator Tactical Dashboard (React 19)"]
+        VAULT["Cryptographic Evidence Vault & Merkle Tree"]
+        AUDIT["Immutable Hash-Linked Audit Chain"]
+        HITL["Human-in-the-Loop Review & BSA Report Export"]
+    end
+
+    D1 --> ING
+    D2 --> ING
+    D3 --> ING
+    D4 --> ING
+    D5 --> ING
+
+    ING --> NORM
+    NORM --> NLP
+    NLP --> ER
+    ER --> LNK
+    LNK --> GDB
+
+    GDB --> ML
+    GDB --> GRAPH_ALG
+    GDB --> XAI
+
+    ML --> UI
+    GRAPH_ALG --> UI
+    XAI --> UI
+    GDB --> VAULT
+    UI --> AUDIT
+    UI --> HITL
+```
+
+---
+
+## 💻 Technology Stack
+
+| Layer | Component | Technologies Verified from Codebase |
+| :--- | :--- | :--- |
+| **Frontend Framework** | Web Client / SPA | React 19, TypeScript 5.8, Vite 8, Tailwind CSS |
+| **Graph Visualization** | Canvas Rendering | Cytoscape.js, cytoscape-fcose, React Router DOM |
+| **Geospatial & Charts** | Maps & Metrics | Mapbox GL, Recharts, Lucide React |
+| **Real-time Client** | Push Communication | Socket.IO Client, Axios, Zustand |
+| **Backend Framework** | REST API & WS | Python 3.11+, FastAPI, Uvicorn (ASGI Server) |
+| **Real-time Server** | Event Distribution | Python-SocketIO (Authenticated Case Rooms) |
+| **Graph Analytics** | Algorithms & Topologies | NetworkX 3.6 (PageRank, Louvain, Johnson's Cycles, Dijkstra) |
+| **Machine Learning** | Anomaly Detection & XAI | Scikit-Learn 1.3+, NumPy, Mahalanobis Distance |
+| **Relational & Graph Store** | Data Persistence | SQLite 3 (WAL Mode, Foreign Key Enforcement) |
+| **Forensics & Cryptography** | Integrity & Reporting | Cryptography (AES-256-GCM, PBKDF2), ReportLab (PDF), Pillow |
+| **Testing & CI** | Test Automation | Pytest, AnyIO, Starlette TestClient (58 Automated Tests) |
+
+---
+
+## 📂 Repository Structure
+
+The repository structure reflects a clear separation of concerns across backend domains, frontend components, test suites, and documentation:
 
 ```
-                       +-----------------------------------+
-                       |    React + Vite Desktop Web UI    |
-                       +-----------------------------------+
-                                         |
-                                         | HTTPS (REST) & WSS (Socket.IO)
-                                         v
-                       +-----------------------------------+
-                       |    Gateway & Security Hardening   |
-                       |  - CSP / HSTS Security Headers    |
-                       |  - Sliding-Window Rate Limiting   |
-                       |  - PBKDF2 / HS256 JWT Rotation    |
-                       |  - RBAC & Horizontal IDOR Guard   |
-                       +-----------------------------------+
-                                         |
-               +-------------------------+-------------------------+
-               |                                                   |
-               v                                                   v
-+-------------------------------+               +-------------------------------+
-|     REST API Controllers      |               |     Realtime Event Router     |
-|  - Cases, Suspects, Evidence  |               |  - Authenticated Socket.IO    |
-|  - Anomaly Alerts & HITL      |               |  - Authorized Case Rooms      |
-|  - Graph, Telecom, Analytics  |               |  - Telemetry Broadcasts       |
-+-------------------------------+               +-------------------------------+
-               |                                                   |
-               +-------------------------+-------------------------+
-                                         |
-                                         v
-+-------------------------------------------------------------------------------+
-|                           Core Analytical Engines                             |
-|  - Graph Engine: NetworkX PageRank (d=0.85), Louvain Modularity, Dijkstra     |
-|  - Machine Learning: Scikit-Learn IsolationForest + Mahalanobis Ensemble      |
-|  - Explainable AI: Z-Score Feature Attribution & Plain-English Indicators     |
-|  - Forensics: SHA-256 Vault, Binary Merkle Tree, Hash-Linked Audit Chain     |
-|  - Telecom: Multi-Tower WLS Trilateration, GDOP, Nocturnal Burst Z-Score      |
-+-------------------------------------------------------------------------------+
-                                         |
-                                         v
-+-------------------------------------------------------------------------------+
-|                      Relational SQLite Persistence Layer                      |
-|  - WAL Journaling Mode (`PRAGMA journal_mode = WAL`)                          |
-|  - Strict Foreign Key Enforcement (`PRAGMA foreign_keys = ON`)                |
-|  - AES-256-GCM Envelope Encryption for PII Data at Rest                       |
-|  - Tamper-Evident Append-Only Hash-Linked Audit Ledger                        |
-+-------------------------------------------------------------------------------+
+crimenet-ai/
+├── backend/
+│   ├── app/
+│   │   ├── analytics/          # Benford's Law, telecom telemetry, financial velocity
+│   │   ├── audit/              # Cryptographic hash-linked audit chain engine
+│   │   ├── copilot/            # Investigative assistant drafting & action confirmation
+│   │   ├── forensics/          # Evidence vault, SHA-256 digests, Merkle tree engine
+│   │   ├── graph/              # NetworkX graph engine, PageRank, Louvain, cycles, paths
+│   │   ├── ml/                 # Isolation Forest anomaly engine, feature vectors, XAI
+│   │   ├── models/             # SQLite connection manager, WAL mode, relational tables
+│   │   ├── pipeline/           # Multi-source ingestion & cross-domain link generation
+│   │   ├── realtime/           # Authenticated Socket.IO event router & room dispatch
+│   │   ├── routers/            # 12 Modular FastAPI routers (auth, cases, graph, pipeline...)
+│   │   ├── schemas/            # Pydantic validation models
+│   │   ├── security/           # RBAC, JWT rotation, AES-256-GCM, rate limiting middleware
+│   │   ├── config.py           # Centralized configuration & environment loader
+│   │   └── main.py             # FastAPI entrypoint, middleware, lifespan hooks
+│   ├── requirements.txt        # Verified backend Python dependencies
+│   └── crimenet.db             # Local relational and graph database (SQLite)
+├── frontend/
+│   ├── src/
+│   │   ├── components/         # CommandBar, CopilotDrawer, Toast, ErrorBoundary
+│   │   ├── pages/              # 13 Tactical modules (DatasetPipeline, GraphExplorer...)
+│   │   ├── lib/                # API client configuration & Socket.IO initialization
+│   │   ├── App.tsx             # Master application shell, state router, desktop layout
+│   │   └── main.tsx            # React DOM root entrypoint
+│   ├── package.json            # Verified frontend npm dependencies & scripts
+│   ├── vite.config.ts          # Vite configuration with manual vendor chunking
+│   └── vercel.json             # Vercel deployment & API rewrite configuration
+├── tests/
+│   ├── forensic/               # Evidence vault, Merkle tree, audit chain tamper tests
+│   ├── graph/                  # PageRank, Louvain modularity, cycle detection tests
+│   ├── integration/            # API lifecycle, auth flow, pipeline ingestion tests
+│   ├── ml/                     # Isolation Forest, XAI explainability, synthetic evaluation
+│   ├── security/               # Brute-force, JWT attacks, RBAC & IDOR prevention tests
+│   └── unit/                   # Benford's law, encryption, hashing, password tests
+├── scripts/                    # Offline benchmark runners and operational scripts
+├── docs/                       # Architecture documentation and legal notes
+├── presentations/              # Pitch decks and demonstration slides
+├── render.yaml                 # Render cloud deployment specification
+└── README.md                   # Primary project documentation
 ```
 
 ---
 
-## 2. Technology Reality Matrix
+## ⚙️ How It Works
 
-We maintain full transparency regarding the maturity and execution model of every subsystem:
+The CrimeNet AI investigative pipeline follows an eight-stage lifecycle:
 
-| Subsystem | Underlying Technology | Engineering Status | Defensible Verification |
-| :--- | :--- | :---: | :--- |
-| **Graph Topology & Routing** | NetworkX 3.6 (`pagerank`, `louvain_communities`, `shortest_path`, `simple_cycles`) | **REAL CODE** | Automated tests in `tests/graph/` and `tests/unit/test_graph_algorithms.py` |
-| **Statistical Anomaly ML** | Scikit-Learn `IsolationForest` ($n=200$) + Mahalanobis Inverted Covariance | **REAL CODE** | Deterministic pipeline tests in `tests/ml/test_isolation_forest.py` |
-| **Explainable AI (XAI)** | Baseline Population Deviations ($z$-scores) & Plain-English Signals | **REAL CODE** | Evaluated via `tests/ml/test_explainability.py` |
-| **Statistical Forensics** | Benford's Law Chi-Square Goodness-of-Fit ($df=8$) | **REAL CODE** | Validated in `tests/unit/test_benford.py` ($N \ge 50$ validation) |
-| **Evidence Vault & Proofs** | SHA-256 Digest Ingestion + Binary Merkle Tree with $O(\log N)$ Proofs | **REAL CODE** | Validated in `tests/forensic/test_merkle_tree.py` |
-| **Audit Trail Non-Repudiation** | Hash-Linked Blockchain-Style Ledger ($H_i = \text{SHA256}(H_{i-1} + C_i)$) | **REAL CODE** | Tamper detection verified in `tests/forensic/test_audit_chain_tamper.py` |
-| **Security & Auth Gateway** | PBKDF2 (100k iters), HS256 JWT, Refresh Rotation, RBAC, IDOR Defense | **REAL CODE** | 100% verified across `tests/security/` and `tests/integration/test_auth_flow.py` |
-| **Realtime Telemetry** | Python-SocketIO with JWT Handshake Auth & Room Authorization | **REAL CODE** | Validated in `tests/integration/test_realtime_auth.py` |
-| **Cellular Tower Trilateration** | Multi-Tower Weighted Least Squares (WLS) + Log-Distance Path Loss | **REAL CODE** | Verified in `tests/unit/test_trilateration.py` |
-| **Digital Forensic PDF** | ReportLab Structured Flowables with Running Hashes & Legal Disclaimers | **REAL CODE** | Verified in `tests/forensic/test_pdf_report_integrity.py` |
-| **Blockchain Hawala Ledger** | Synthetic Transaction Datasets modeling Hawala Layers | **SIMULATED DATA** | Labeled with UI notices; analyzed via genuine graph algorithms |
-| **Cellular Carrier Ingest** | Synthetic CDR CSV Exports & Telemetry Streams | **SIMULATED DATA** | Labeled with UI notices; analyzed via real WLS & burst algorithms |
-| **Webcam Face Verification** | Edge Canvas 7-Frame Averaged Zero-Normalized Cross-Correlation (ZNCC) | **PROTOTYPE** | Labeled as edge prototype; not claimed as neural biometric cryptosystem |
+```
+[1. Ingest Data] ➔ [2. Normalize Data] ➔ [3. Extract Entities] ➔ [4. Connect Relationships]
+       │
+       ▼
+[5. Generate Graph] ➔ [6. Detect Patterns] ➔ [7. Explain Alerts] ➔ [8. Human Review]
+```
 
----
-
-## 3. Empirical Performance Benchmarks
-
-Measured directly on the CrimeNet AI pipeline using Python `time.perf_counter()` over repeated statistical trials (`backend/scripts/run_benchmarks.py`):
-
-| Benchmark Target | Trial Count | Median Latency | P95 Latency | Measured Throughput |
-| :--- | :---: | :---: | :---: | :---: |
-| **SHA-256 Cryptographic Hashing (1MB blocks)** | 50 | `0.454 ms` | `0.621 ms` | **2,059.72 MB/s** |
-| **AES-256-GCM Envelope Encryption (PII)** | 100 | `0.013 ms` | `0.014 ms` | — |
-| **NetworkX PageRank ($N=100, d=0.85$)** | 50 | `0.715 ms` | `1.447 ms` | — |
-| **NetworkX Dijkstra Shortest Path (Weighted)** | 50 | `0.077 ms` | `0.116 ms` | — |
-| **NetworkX Louvain Modularity Clustering** | 50 | `5.712 ms` | `6.224 ms` | — |
-| **Isolation Forest Pipeline Fit ($1,000$ records)** | 10 | `118.27 ms` | `120.33 ms` | — |
-| **Isolation Forest + Mahalanobis Inference** | 100 | `8.798 ms` | `10.04 ms` | — |
-| **Binary Merkle Tree Root & Proof ($64$ leaves)** | 50 | `0.199 ms` | `0.234 ms` | — |
-| **ReportLab Case Dossier Compilation** | 10 | `3.797 ms` | `4.145 ms` | — |
-
-*Full methodology detailed in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).*
+1. **Upload & Ingest**: Raw datasets (CDR, Banking, FIR, ANPR, Wallet) are uploaded as CSV or JSON batches via the pipeline API.
+2. **Normalize & Sanitize**: Identifiers are standardized (phone numbers to E.164, timestamps to UTC/ISO, names trimmed, accounts stripped of whitespace).
+3. **Extract Entities**: Discrete real-world entities (`Person`, `FinancialAccount`, `CellTower`, `Vehicle`, `FIRCase`, `DigitalWallet`) are instantiated with risk baselines.
+4. **Connect Relationships**: Direct intra-domain connections (`CALLED`, `FUNDS_TRANSFERRED`, `NAMED_IN_FIR`, `CAPTURED_AT_TOLL`) are formed.
+5. **Generate Graph & Synthesize Links**: The cross-domain resolution engine evaluates correlation rules, generating high-confidence identity links, spatiotemporal co-location edges, and hawala off-ramp bridges.
+6. **Detect Suspicious Patterns**: The graph is loaded into NetworkX; central nodes are calculated, circular transaction loops are detected, and feature vectors are evaluated by Isolation Forest.
+7. **Explain Alerts**: Anomaly scores are mapped to $z$-score feature attributions, explaining specific deviations (e.g., "+4.12σ nocturnal call burst", "4-hop circular fund transfer").
+8. **Support Human Investigation**: Authorized analysts inspect the graph, review explainability cards, confirm or dismiss findings, and export tamper-evident forensic certificates.
 
 ---
 
-## 4. Responsible AI Governance & Human-in-the-Loop
+## 🔬 Sample Investigation Scenario: Operation BlackLink
 
-CrimeNet AI adheres to the statutory requirements of law enforcement decision-support systems:
-1. **Decision Support Only**: Statistical anomalies are categorized as leads for human investigation, never definitive proof of guilt.
-2. **Zero Automated Enforcements**: The system cannot issue arrest warrants, freeze assets, or advance case stages autonomously.
-3. **Two-Phase Action Confirmation**: AI Copilot recommendations output inert `action_proposal` structures requiring explicit human officer review and cryptographically audited confirmation.
-4. **Legal Disclaimers**: All generated PDF reports incorporate statutory notices explicitly clarifying that documents are analytical drafts subject to forensic verification.
+*(Note: All data in this scenario is strictly synthetic and generated for demonstration purposes.)*
 
-*Full policy detailed in [docs/RESPONSIBLE_AI.md](docs/RESPONSIBLE_AI.md).*
+```mermaid
+graph LR
+    P["👤 Suspect: Arjun Mehta<br/>(+91-9876543210)"]
+    ACC1["🏦 Mehta Enterprises Ltd<br/>(ACC-891024)"]
+    ACC2["🏦 Mule Hub A<br/>(ACC-441209)"]
+    WLT["📱 Quick Cash Settlement<br/>(WAL-PAYTM-HAWALA01)"]
+    CRYPTO["🪙 TRC20 Mixer Pool<br/>(Crypto Tumbler Gateway)"]
+    VEH["🚗 Toyota Fortuner<br/>(MH-02-DN-4912)"]
+    TOLL["📹 Bandra Toll Plaza<br/>(CAM-BANDRA-TOLL-01)"]
+    FIR["⚖️ FIR-2026-MUM-892<br/>(Sec 420, 120B IPC)"]
+
+    P -- "HOLDS_ACCOUNT" --> ACC1
+    P -- "OPERATES_VEHICLE" --> VEH
+    P -- "NAMED_IN_FIR" --> FIR
+    ACC1 -- "IMPS 48.5k (Smurfing)" --> ACC2
+    ACC2 -- "UPI Wire" --> WLT
+    WLT -- "USDT Swap ($3,500)" --> CRYPTO
+    VEH -- "01:40 AM (74 km/h)" --> TOLL
+    P -. "Co-location Ping (d=170m, Δt=6m)" .- TOLL
+```
+
+1. **Initial Seed**: An official First Information Report (`FIR-2026-MUM-892`) flags suspect **Arjun Mehta** for organized financial diversion under IPC Sections 420 and 120B, citing phone `+91-9876543210` and vehicle `MH-02-DN-4912`.
+2. **Banking Dispersal**: Banking logs reveal corporate account `ACC-891024` (Mehta Enterprises Ltd) executing sub-50k micro-burst IMPS transfers to `ACC-441209` (Mule Account Hub A).
+3. **Crypto Off-Ramp**: The mule account transfers funds via UPI to `WAL-PAYTM-HAWALA01`, which executes an instant $3,500 USDT swap to an offshore tumbler pool (`Crypto Tumbler Gateway`).
+4. **Spatiotemporal Sighting**: ANPR camera `CAM-BANDRA-TOLL-01` detects vehicle `MH-02-DN-4912` crossing at 01:40 AM. Cellular CDR records place the suspect handset at the Bandra-Worli Sea Link Tower within **170 meters** and **6 minutes** of the toll capture.
+5. **System Flag**: CrimeNet AI flags the network with a **Critical Anomaly Alert (Score: 0.945)**, citing:
+   - Extreme nocturnal burst volume ($z = +4.12\sigma$).
+   - Closed circular fund routing between shell accounts.
+   - Spatiotemporal co-location between vehicle toll passage and cellular tower.
 
 ---
 
-## 5. Quickstart & Installation
+## 🚀 Installation & Setup
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+ and npm
+- **Python**: Version 3.11 or higher
+- **Node.js**: Version 18 or higher (with npm)
+- **Git**: For repository version control
 
-### 1. Backend Setup
+### 1. Clone the Repository
 ```bash
-# Clone the repository
 git clone https://github.com/pawaraditya0903/crimenet-ai.git
 cd crimenet-ai
+```
 
-# Create virtual environment & install dependencies
+### 2. Backend Installation
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate  # On Linux/macOS: source venv/bin/activate
-pip install -r backend/requirements.txt
 
-# Run backend development server (FastAPI + Socket.IO)
-uvicorn backend.app.main:socket_app --host 127.0.0.1 --port 8000 --reload
+# On Windows (PowerShell):
+.\venv\Scripts\activate
+# On Linux / macOS:
+source venv/bin/activate
+
+# Install verified dependencies
+pip install -r requirements.txt
+
+# Launch FastAPI development server
+uvicorn app.main:socket_app --host 0.0.0.0 --port 8000 --reload
 ```
+*The backend API will be operational at `http://localhost:8000` with Swagger documentation at `http://localhost:8000/docs`.*
 
-### 2. Frontend Setup
+### 3. Frontend Installation
 ```bash
+# Open a new terminal and navigate to frontend directory
 cd frontend
+
+# Install node dependencies
 npm install
+
+# Start Vite development server
 npm run dev
-# Accessible at http://localhost:5173
 ```
+*The web client will be available at `http://localhost:5173`.*
 
-### 3. Running the Automated Test Suite
+### 4. Running the Automated Test Suite
+To run the full suite of **58 automated tests** covering security, graph analytics, ML, forensics, and pipeline ingestion:
 ```bash
-# Execute all 51 automated tests
-python -m pytest tests/ -v
-```
-
-### 4. Running Empirical Benchmarks
-```bash
-# Run real-time performance profiler
-python backend/scripts/run_benchmarks.py
+# From the repository root:
+python -m pytest tests/
 ```
 
 ---
 
-## 6. Comprehensive Technical Documentation Index
+## 🔐 Environment Variables
 
-For in-depth architectural and mathematical audits, consult the official documentation suite:
+Create a `.env` file in the `backend/` directory using safe configuration parameters:
 
-- 📊 **[docs/TECHNOLOGY_REALITY_MATRIX.md](docs/TECHNOLOGY_REALITY_MATRIX.md)**: Exhaustive audit of claimed vs real vs prototype capabilities.
-- 🏗️ **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Subsystem decomposition, SQLite schemas, and data flow diagrams.
-- 🔒 **[docs/SECURITY_AUTHENTICATION.md](docs/SECURITY_AUTHENTICATION.md)**: PBKDF2 hashing, JWT rotation, RBAC, IDOR defense, and fail-closed prod.
-- 🛡️ **[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)**: Formal STRIDE threat analysis covering 13 attack vectors with automated test links.
-- 🧠 **[docs/AI_ML.md](docs/AI_ML.md)**: Isolation Forest ensemble, Mahalanobis metric, and XAI feature attribution.
-- ⚖️ **[docs/RESPONSIBLE_AI.md](docs/RESPONSIBLE_AI.md)**: Human-in-the-loop policies, bias mitigation, and statutory legal disclaimers.
-- ⚡ **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**: Reproducible latency, throughput, and percentile metrics.
-- 🎯 **[docs/HOSTILE_INTERVIEW_AUDIT.md](docs/HOSTILE_INTERVIEW_AUDIT.md)**: Rigorous technical Q&A defending the codebase under hostile examination.
-- 🏆 **[docs/10_10_ENGINEERING_SCORECARD.md](docs/10_10_ENGINEERING_SCORECARD.md)**: 20-dimension technical scoring matrix.
+```ini
+# Application Environment
+ENVIRONMENT=development
+PORT=8000
+
+# Security & Cryptography
+SECRET_KEY=[REPLACE_WITH_SECURE_64_CHAR_HEX_KEY]
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Database Storage
+DATABASE_PATH=crimenet.db
+
+# CORS Allowed Origins
+ALLOWED_ORIGINS=http://localhost:5173,https://crimenet-ai-two.vercel.app
+
+# Optional External Geospatial Service
+MAPBOX_ACCESS_TOKEN=[OPTIONAL_PUBLIC_MAPBOX_TOKEN]
+```
+
+*(Never commit actual production secrets or private keys to source control.)*
 
 ---
 
-## License & Attribution
-Developed for forensic intelligence demonstration and research.
-Architect & Engineer: **Aditya Pawar**
-All demonstration datasets are synthetic and for benchmarking purposes only.
+## 🎯 Usage & Demonstration Flow
+
+1. **Access the Application**: Open your browser at `http://localhost:5173` (or your deployed Vercel URL).
+2. **Authenticate**: Log in using your assigned credentials or use the designated demonstration security pass.
+3. **Open Ingestion Pipeline**: Select **Data Ingestion & Links** from the left navigation sidebar.
+4. **Load Benchmark Intelligence**:
+   - Click **"✨ Load All 5 Datasets & Auto-Generate Links"** to process the unified syndicate dataset.
+   - Or click **"Load Sample"** on individual cards for CDR, Banking, FIR, ANPR, or Wallets.
+5. **Inspect Discovered Links**:
+   - Filter links by `CROSS_DOMAIN`, `COMMUNICATION`, `FINANCIAL`, `SURVEILLANCE`, or `LEGAL`.
+   - Review the confidence scores and investigative rationales.
+6. **Explore Knowledge Graph**: Click **"Explore in Graph"** to inspect the interactive Cytoscape network graph, run PageRank, or test shortest-path routing.
+7. **Review Anomalies**: Navigate to **Alert Centre** to review Isolation Forest flags and view explainable $z$-score feature attributions.
+8. **Export Court Dossier**: Navigate to **Reports** to generate a verifiable, Section 65B-compliant forensic PDF report.
+
+---
+
+## 📡 API Reference Overview
+
+*(Verified endpoints implemented in `backend/app/routers/`)*
+
+| HTTP Method | Endpoint Path | Description | Access Level |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | Service health, version (v2.1.0), and active subsystem status | Public |
+| `POST` | `/api/auth/token` | Authenticates investigator credentials and returns JWT token | Public |
+| `POST` | `/api/pipeline/load-all-samples` | Loads 5 synthetic datasets and runs cross-domain link generation | Authenticated |
+| `POST` | `/api/pipeline/ingest` | Ingests custom record batches or CSV content across any domain | Authenticated |
+| `GET` | `/api/pipeline/summary` | Returns entity, edge, and cross-domain correlation counts | Authenticated |
+| `GET` | `/api/graph/network` | Returns full graph topology (nodes, edges, risk scores) | Authenticated |
+| `POST` | `/api/analytics/run` | Executes NetworkX PageRank ($d=0.85$) and Louvain modularity | Authenticated |
+| `POST` | `/api/analytics/shortest-path` | Calculates shortest directed path between two entities | Authenticated |
+| `GET` | `/api/analytics/cycles` | Discovers closed circular financial loops (Johnson's algorithm) | Authenticated |
+| `GET` | `/api/alerts` | Lists all detected anomaly alerts and risk vectors | Authenticated |
+| `PATCH` | `/api/alerts/{id}/review` | Human-in-the-loop alert review (Confirm / Suppress / Escalate) | Investigator |
+| `GET` | `/api/evidence/merkle-root` | Computes binary Merkle root hash for all ingested evidence | Auditor |
+| `GET` | `/api/audit/trail` | Verifies cryptographic integrity of the hash-linked audit chain | Auditor |
+| `POST` | `/api/reports/generate` | Generates forensic PDF report with cryptographic digests | Investigator |
+
+---
+
+## 🖼️ Screenshots & Visual Workspace
+
+> *To replace placeholders with real screenshots, save your images to `docs/images/` and update the paths below.*
+
+| Module | Preview | Description |
+| :--- | :---: | :--- |
+| **Tactical Command Dashboard** | `![Dashboard Overview](docs/images/dashboard.png)` | Central operational HUD with system status, active cases, and alerts. |
+| **Interactive Network Graph** | `![Network Graph Canvas](docs/images/graph_explorer.png)` | Full Cytoscape topology showing entity clusters and PageRank influencers. |
+| **Multi-Source Ingestion Pipeline** | `![Ingestion Hub](docs/images/pipeline.png)` | Ingestion cards for CDR, Banking, FIR, ANPR, and Wallets with link tables. |
+| **Financial Hawala & Cycle Tracer** | `![Cycle Detection](docs/images/crypto_tracer.png)` | Circular money-laundering loops and smurfing transaction timelines. |
+| **Explainable Anomaly Alerts** | `![XAI Explainability](docs/images/alert_centre.png)` | Statistical feature deviations and plain-English investigative evidence. |
+
+---
+
+## ⚖️ Privacy, Ethics & Responsible Use
+
+CrimeNet AI is engineered in strict alignment with legal safeguards and digital privacy standards:
+1. **Mandatory Human-in-the-Loop (HITL)**: Algorithmic flags are purely evidentiary indicators. They **never** trigger automated arrests, asset freezes, or definitive accusations. A qualified investigator must manually verify every lead.
+2. **Statutory Evidentiary Compliance**: Electronic evidence handling is structured in accordance with **Section 65B of the Indian Evidence Act, 1872** and **Section 63 of the Bharatiya Sakshya Adhiniyam (BSA), 2023**. Every exported dossier includes immutable SHA-256 digests and binary Merkle inclusion proofs.
+3. **Data Protection & Privacy Compliance**: In accordance with the principles of the **Digital Personal Data Protection (DPDP) Act, 2023**, the platform enforces strict data minimization, role-based access control, and temporary retention policies for biometric and intrusion-auditing telemetry.
+4. **Synthetic Data Standard**: Development, CI/CD testing, and demonstration instances are pre-seeded solely with synthetic or anonymized benchmark records to protect citizen privacy.
+
+---
+
+## ⚠️ Limitations
+
+- **Data Quality Sensitivity**: Like any entity resolution system, link discovery depends heavily on the accuracy and completeness of ingested records. Incorrect phone numbers or misspelled names can lead to missed connections.
+- **Statistical False Positives**: Statistical anomaly models (e.g., Isolation Forest, Benford's Law) flag deviations from historical baselines. Legitimate commercial activities (such as high-volume midnight international business transactions) may be flagged and require human suppression.
+- **Algorithmic Bias**: Graph centrality algorithms naturally emphasize high-degree nodes. Analysts must ensure investigations are guided by objective evidentiary grounds rather than purely network density.
+- **Jurisdictional Boundaries**: Cross-border transactions (e.g., offshore fiat exchanges) often lack complete counterparty metadata due to differing international regulatory frameworks.
+
+---
+
+## 🔮 Future Roadmap
+
+- [ ] **Streaming Ingestion**: Integration with Apache Kafka / RabbitMQ for real-time live event streaming.
+- [ ] **Graph Neural Networks (GNNs)**: Exploration of inductive Link Prediction using PyTorch Geometric for unresolved syndicate edges.
+- [ ] **Indic Language NLP**: Fine-tuned entity extraction models for regional Indian languages (Hindi, Marathi, Gujarati) across handwritten police FIRs.
+- [ ] **Hardware Security Module (HSM)**: Cryptographic signing of forensic PDF dossiers using cloud HSM keys.
+- [ ] **Temporal Playback Engine**: Time-slider visualization allowing investigators to animate the growth of a criminal network over months or years.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome from open-source developers, cybersecurity researchers, and forensic engineers!
+
+1. Fork the repository (`https://github.com/pawaraditya0903/crimenet-ai/fork`).
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature/enhanced-entity-resolution
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "feat(pipeline): add fuzzy matching for corporate entity names"
+   ```
+4. Run the automated test suite to ensure zero regressions:
+   ```bash
+   python -m pytest tests/
+   ```
+5. Push to your branch:
+   ```bash
+   git push origin feature/enhanced-entity-resolution
+   ```
+6. Open a detailed Pull Request explaining your changes and evidentiary rationale.
+
+---
+
+## 📄 License & Disclaimers
+
+### License
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for full terms and conditions.
+
+### Legal Disclaimer
+CrimeNet AI is an educational, research, and technical decision-support prototype. It is **not** currently affiliated with, endorsed by, or operated by any police department, intelligence bureau, central bank, or law enforcement agency. The authors and maintainers assume no liability for misuse or unauthorized deployment of this software. All investigative conclusions drawn from outputs of this software must be corroborated by legally authorized, qualified forensic examiners before any official action is taken.
+
+---
+
+## 📬 Contact & Author
+
+- **Lead Architect & Maintainer**: Aditya Pawar
+- **GitHub**: [@pawaraditya0903](https://github.com/pawaraditya0903)
+- **Project Repository**: [pawaraditya0903/crimenet-ai](https://github.com/pawaraditya0903/crimenet-ai)
+- **LinkedIn**: [Aditya Pawar](https://www.linkedin.com/in/aditya-pawar-0903)
