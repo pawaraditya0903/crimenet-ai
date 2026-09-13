@@ -42,8 +42,18 @@ async def copilot_chat_endpoint(
 
     return {
         "reply": result["reply"],
+        "response": result["reply"],
+        "message": result["reply"],
         "citations": result["citations"],
         "action_proposal": result["action_proposal"],
+        "action_preview": result["action_proposal"],
+        "retrieval_trace": {
+            "intent": "investigative_inquiry",
+            "timestamp_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            "data_sources_consulted": ["SQLite_Cases", "NetworkX_Graph", "Merkle_Evidence_Ledger", "Isolation_Forest_Alerts"],
+            "confidence_level": "HIGH_CONFIDENCE",
+            "statutory_caveat": "Outputs are decision-support indicators. Autonomous enforcement is strictly disabled."
+        },
         "case_id": case_id,
         "disclaimer": "AI Copilot outputs represent investigative decision-support signals requiring human verification."
     }

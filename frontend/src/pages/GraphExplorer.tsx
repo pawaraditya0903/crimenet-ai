@@ -236,20 +236,23 @@ export default function GraphExplorer() {
 
     cy.batch(() => {
       cy.nodes().forEach((n) => {
-        const id = n.data('id')
+        const id = String(n.data('id') || '')
         const num = parseInt(id.replace(/\D/g, '')) || 1
-        const type = n.data('type')
+        const type = n.data('type') || ''
+        const tier = n.data('tier') || ''
+        const category = String(n.data('category') || '')
+        const risk = Number(n.data('risk') || n.data('risk_score') || 50)
 
         let visible = true
         if (mode === 'core') {
-          visible = num <= 12
+          visible = num <= 12 || tier === 'core' || tier === 'leadership'
         } else if (mode === 'financial') {
-          visible = ['Person', 'Organization'].includes(type) && (num <= 12 || (num >= 13 && num <= 22) || (num >= 33 && num <= 38))
+          visible = ['Person', 'Organization', 'FinancialAccount', 'CryptoWallet'].includes(type) || category.includes('hawala') || category.includes('finance') || num <= 12
         } else if (mode === 'logistics') {
-          visible = ['Vehicle', 'Location', 'Person'].includes(type) && (num <= 12 || (num >= 23 && num <= 32) || (num >= 39 && num <= 46))
+          visible = ['Vehicle', 'Location', 'Person', 'CellTower'].includes(type) || category.includes('logistics') || category.includes('telecom') || num <= 12
         } else if (mode === 'kingpin') {
           // Stealth Kingpin Lens: Highlight nodes with high betweenness & low degree, unmasking masterminds shielding behind cutouts
-          visible = [1, 2, 5, 9, 10].includes(num) || (n.data('label') || '').includes('Kingpin')
+          visible = risk >= 80 || id === 'n1' || String(n.data('label') || '').includes('Arjun') || num === 1 || [1, 2, 5, 9, 10].includes(num) || (n.data('label') || '').includes('Kingpin')
         } else {
           visible = true
         }
@@ -441,7 +444,7 @@ export default function GraphExplorer() {
 
     try {
       const res = await axios.post('/api/copilot/chat', { message: userMsg, case_id: 'c1' })
-      const aiReply = res.data.response || res.data.message || 'Information processed by CrimeNet Engine.'
+      const aiReply = res.data.reply || res.data.response || res.data.message || 'Information processed by CrimeNet Engine.'
       setChatMessages((prev) => [...prev, { sender: 'ai', text: aiReply }])
       speakText(aiReply)
     } catch {

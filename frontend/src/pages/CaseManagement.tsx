@@ -16,16 +16,24 @@ export default function CaseManagement() {
 
   const STAGES = [
     { id: 'evidence', label: '🔍 Evidence Gathering', color: '#38bdf8' },
-    { id: 'active', label: '📡 Active Surveillance', color: '#f59e0b' },
+    { id: 'surveillance', label: '📡 Active Surveillance', color: '#f59e0b' },
     { id: 'warrant', label: '⚡ Warrant / Raid Ready', color: '#ef4444' },
-    { id: 'court', label: '⚖️ Court Prosecution', color: '#10b981' }
+    { id: 'trial', label: '⚖️ Court Prosecution', color: '#10b981' }
   ]
+
+  const normalizeStage = (stage: string) => {
+    const s = (stage || '').toLowerCase()
+    if (s === 'active') return 'surveillance'
+    if (s === 'court') return 'trial'
+    if (s === 'analysis') return 'evidence'
+    return s || 'evidence'
+  }
 
   useEffect(() => {
     axios.get('/api/cases')
       .then((res) => {
         if (res.data && Array.isArray(res.data.cases) && res.data.cases.length > 0) {
-          setCases(res.data.cases)
+          setCases(res.data.cases.map((c: any) => ({ ...c, stage: normalizeStage(c.stage) })))
         }
       })
       .catch(() => {})
@@ -40,9 +48,11 @@ export default function CaseManagement() {
 
   const handleCreateCase = async () => {
     if (!newTitle.trim()) return
+    const caseDesc = newDesc.trim() || 'Active case file initiated by Lead Investigator Aditya Pawar'
     const casePayload = {
       title: newTitle.trim(),
-      desc: newDesc || 'Active case file initiated by Aditya Pawar',
+      description: caseDesc,
+      desc: caseDesc,
       stage: 'evidence',
       priority: newPriority,
       suspects: ['Target Under Identification'],
@@ -51,8 +61,10 @@ export default function CaseManagement() {
 
     try {
       const res = await axios.post('/api/cases', casePayload)
-      if (res.data && res.data.case) {
-        setCases(prev => [...prev, res.data.case])
+      if (res.data && res.data.case_id) {
+        setCases(prev => [...prev, { ...casePayload, id: res.data.case_id }])
+      } else if (res.data && res.data.case) {
+        setCases(prev => [...prev, { ...res.data.case, stage: normalizeStage(res.data.case.stage) }])
       } else {
         setCases(prev => [...prev, { ...casePayload, id: `c${prev.length + 1}` }])
       }

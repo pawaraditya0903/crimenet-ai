@@ -66,9 +66,9 @@ def seed_database_if_empty():
         cursor.execute("SELECT COUNT(*) as count FROM cases")
         if cursor.fetchone()["count"] == 0:
             cases_to_seed = [
-                ("c1", "Operation Blue Thunder", "Cross-border hawala syndicate layering offshore assets via shell entities.", "evidence", "high", "usr-01", "Cyber & Financial Crimes Cell", "2026-03-01 10:00:00", "2026-03-12 18:30:00"),
-                ("c2", "Operation Red Horizon", "Coordinated maritime logistics and narcotics trafficking corridor.", "surveillance", "critical", "usr-02", "Organized Crime Strike Force", "2026-03-05 14:00:00", "2026-03-11 12:00:00"),
-                ("c3", "Operation Hawala Matrix", "Decentralized crypto tumbler money laundering and mule structured smurfing.", "analysis", "medium", "usr-01", "Financial Intelligence Unit", "2026-03-08 09:30:00", "2026-03-10 16:45:00"),
+                ("c1", "Operation Blue Thunder", "Cross-border hawala syndicate layering offshore assets via shell entities.", "evidence", "high", "usr-aditya", "Cyber & Financial Crimes Cell", "2026-03-01 10:00:00", "2026-03-12 18:30:00"),
+                ("c2", "Operation Red Horizon", "Coordinated maritime logistics and narcotics trafficking corridor.", "surveillance", "critical", "usr-aditya", "Organized Crime Strike Force", "2026-03-05 14:00:00", "2026-03-11 12:00:00"),
+                ("c3", "Operation Hawala Matrix", "Decentralized crypto tumbler money laundering and mule structured smurfing.", "evidence", "medium", "usr-aditya", "Financial Intelligence Unit", "2026-03-08 09:30:00", "2026-03-10 16:45:00"),
             ]
             cursor.executemany(
                 "INSERT INTO cases (id, title, description, stage, priority, lead_investigator_id, squad, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -78,10 +78,13 @@ def seed_database_if_empty():
             # Seed Case Assignments
             assignments_to_seed = [
                 ("c1", "usr-01", "2026-03-01 10:00:00"),
+                ("c1", "usr-aditya", "2026-03-01 10:00:00"),
                 ("c1", "usr-02", "2026-03-01 10:00:00"),
                 ("c1", "usr-03", "2026-03-01 10:00:00"),
                 ("c2", "usr-02", "2026-03-05 14:00:00"),
+                ("c2", "usr-aditya", "2026-03-05 14:00:00"),
                 ("c3", "usr-01", "2026-03-08 09:30:00"),
+                ("c3", "usr-aditya", "2026-03-08 09:30:00"),
             ]
             cursor.executemany(
                 "INSERT OR REPLACE INTO case_assignments (case_id, user_id, assigned_at) VALUES (?, ?, ?)",

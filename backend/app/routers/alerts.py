@@ -36,6 +36,7 @@ async def list_alerts(case_id: Optional[str] = None, claims: dict = Depends(requ
     }
 
 @router.get("/{alert_id}/explain")
+@router.get("/{alert_id}/explainability")
 async def get_alert_explainability(alert_id: str, claims: dict = Depends(require_authenticated_user)):
     """Returns feature attribution breakdown and plain-English reasons for an alert."""
     with get_db() as conn:

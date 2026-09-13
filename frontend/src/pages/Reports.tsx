@@ -637,7 +637,8 @@ export default function Reports() {
           entity_type: entityType,
           entity_id: entityId,
           report_type: template,
-          case_id: 'c1'
+          case_id: 'c1',
+          details: ENTITY_DATABASE[entityId] || {}
         },
         { 
           responseType: 'blob',

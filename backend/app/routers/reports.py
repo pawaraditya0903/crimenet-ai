@@ -42,6 +42,97 @@ async def get_report_templates():
         ]
     }
 
+CANONICAL_DOSSIERS = {
+    "Arjun Mehta": {
+        "aliases": "Bhai, AJ, MD-01, CryptoHawk99",
+        "role": "Syndicate Mastermind / Key Regional Coordinator",
+        "city": "Mumbai, Maharashtra",
+        "phone": "+91-9876543210",
+        "risk_score": 94.5,
+        "financial_flag": "₹1,50,00,000 midnight transfer @ 02:00 AM IST to offshore accounts",
+        "telecom_detail": "IMEI 354892019482019 · Sector 4041 Goregaon · 42.8% nocturnal calling ratio",
+        "legal_action": "24/7 non-bailable surveillance & detention order active under Section 5(2) Indian Telegraph Act & BNSS 2023.",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    },
+    "Mohammed Rafiq": {
+        "aliases": "Rafiq Dubai, Deira Operator, MR-02",
+        "role": "Overseas Financial Clearing Coordinator & Hawala Broker",
+        "city": "Deira, Dubai, UAE",
+        "phone": "+971-501234567",
+        "risk_score": 88.0,
+        "financial_flag": "4-hop circular funds routing via offshore fiat-to-crypto layering",
+        "telecom_detail": "International roaming tunnel · Nocturnal token settlement calls (02:00 - 04:30 AM)",
+        "legal_action": "Interpol Blue Corner notice request submitted to CBI & Ministry of Home Affairs.",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    },
+    "Vikram Singh": {
+        "aliases": "Vicky, VS-Cargo, Transporter",
+        "role": "Logistics Lead & Transport Fleet Coordinator",
+        "city": "Navi Mumbai, Maharashtra",
+        "phone": "+91-9845678901",
+        "risk_score": 79.4,
+        "financial_flag": "Sub-50k structured cash advances for container fleet movement",
+        "telecom_detail": "SIM Multiplexing: 3 IMSIs mapped to single handset at Goregaon Tower 4041",
+        "legal_action": "Vehicle impound and transit surveillance order active under BNSS Section 107.",
+        "community": "Cluster 2 (Maritime Logistics & Cargo Corridors)"
+    },
+    "Priya Desai": {
+        "aliases": "Madam CA, Auditor Priya",
+        "role": "Chartered Accountant & Shell Entity Structurer",
+        "city": "Surat, Gujarat",
+        "phone": "+91-9765432109",
+        "risk_score": 74.2,
+        "financial_flag": "Fictitious invoice audit shields & trade GST round-tripping",
+        "telecom_detail": "Encrypted VoIP messaging sessions matching corporate filing dates",
+        "legal_action": "Statutory summons issued under Section 50 Prevention of Money Laundering Act (PMLA).",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    },
+    "Mehta Enterprises Ltd": {
+        "aliases": "MEL-Trade, Front Import-Export",
+        "role": "Trade-Based Money Laundering Import-Export Front Company",
+        "city": "Nariman Point, Mumbai",
+        "phone": "CIN: U51909MH2021PTC368921",
+        "risk_score": 70.0,
+        "financial_flag": "₹8.75 Cr over-invoiced trade disbursements with zero warehouse inventory",
+        "telecom_detail": "Registered switchboard diverted to dynamic burner mobile numbers",
+        "legal_action": "Registrar of Companies (RoC) provisional attachment under PMLA Section 5.",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    },
+    "Phoenix Trading LLC": {
+        "aliases": "PT-Dubai, Offshore Shield",
+        "role": "Offshore Layering Vehicle & Crypto Swap Intermediary",
+        "city": "Business Bay, Dubai, UAE",
+        "phone": "Trade Lic: DXB-2024-8849",
+        "risk_score": 85.0,
+        "financial_flag": "₹12.4 Cr wire transfers followed by immediate USDT swaps within 12 minutes",
+        "telecom_detail": "Offshore virtual IP PBX routing to avoid telecommunications logging",
+        "legal_action": "Mutual Legal Assistance Treaty (MLAT) request initiated with UAE authorities.",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    },
+    "Al-Rafiq Trading Co": {
+        "aliases": "Al-Rafiq Cash Remittance Hub",
+        "role": "Cash Remittance & Hawala Settlement Desk",
+        "city": "Deira, Dubai, UAE",
+        "phone": "Lic: DXB-HAW-4091",
+        "risk_score": 82.5,
+        "financial_flag": "Daily cash-token netting matches Mumbai nocturnal phone call spikes",
+        "telecom_detail": "Encrypted satellite voice terminal calls mapped to overseas numbers",
+        "legal_action": "Financial Intelligence Unit (FIU-IND) Suspicious Transaction Report (STR) active.",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    },
+    "Desai Financial Consultancy": {
+        "aliases": "DFC-Shield, Audit Services",
+        "role": "Corporate Filings & Audit Shield Consultancy",
+        "city": "Surat, Gujarat",
+        "phone": "PAN: AAACD1290F",
+        "risk_score": 65.0,
+        "financial_flag": "₹3.4 Cr consultancy fees routed from shell companies with zero operational staff",
+        "telecom_detail": "Dynamic IP lease switches corresponding to MCA filing deadlines",
+        "legal_action": "Statutory inspection warrant issued under Section 206 Companies Act.",
+        "community": "Cluster 1 (Hawala & Financial Layering Syndicate)"
+    }
+}
+
 @router.post("/generate")
 async def generate_report_pdf(data: dict, claims: dict = Depends(require_authenticated_user)):
     """Compiles a dynamic, entity-specific forensic PDF report with real graph links, anomaly alerts, and embedded SHA-256 integrity."""
@@ -49,6 +140,7 @@ async def generate_report_pdf(data: dict, claims: dict = Depends(require_authent
     report_type = str(data.get("template") or data.get("report_type") or "full").lower()
     entity_name_or_id = str(data.get("entity_id") or "Arjun Mehta").strip()
     entity_type = str(data.get("entity_type") or "Person").strip()
+    client_details = data.get("details") or {}
     user_name = claims.get("badge") or claims.get("sub") or "Aditya Pawar"
     user_role = claims.get("role") or "LEAD_INVESTIGATOR"
 
@@ -96,6 +188,27 @@ async def generate_report_pdf(data: dict, claims: dict = Depends(require_authent
             }
 
         resolved_name = target_entity["name"]
+
+        # Enrich target entity with canonical dossiers and client-passed intelligence
+        canonical = CANONICAL_DOSSIERS.get(resolved_name) or {}
+        for k, v in canonical.items():
+            if k not in target_entity or not target_entity[k]:
+                target_entity[k] = v
+
+        if isinstance(client_details, dict):
+            for k, v in client_details.items():
+                if v:
+                    target_entity[k] = v
+            # Map camelCase
+            field_mappings = [
+                ("financialFlag", "financial_flag"),
+                ("telecomDetail", "telecom_detail"),
+                ("legalAction", "legal_action"),
+                ("riskScore", "risk_score")
+            ]
+            for ck, tk in field_mappings:
+                if client_details.get(ck) and not target_entity.get(tk):
+                    target_entity[tk] = client_details[ck]
 
         # 4. Fetch Direct Relationships for Target
         cursor.execute("""

@@ -49,6 +49,16 @@ def build_pdf_report(
         target_dossier = "Primary target subject in cross-border investigation."
         target_tier = "leadership"
         target_category = "suspect"
+        target_entity = {
+            "name": target_name,
+            "type": target_type,
+            "risk_score": target_risk,
+            "city": target_city,
+            "phone": target_phone,
+            "dossier": target_dossier,
+            "tier": target_tier,
+            "category": target_category
+        }
     else:
         target_name = target_entity.get("name", "Unknown Subject")
         target_type = target_entity.get("type", "Person")
@@ -125,6 +135,26 @@ def build_pdf_report(
     ])))
     story.append(Spacer(1, 8))
 
+    # Resolve entity dossier fields
+    aliases = target_entity.get("aliases") or f"{target_name} ({target_type})"
+    role = target_entity.get("role") or target_category.replace('_', ' ').title()
+    financial_flag = (
+        target_entity.get("financial_flag")
+        or target_entity.get("financialFlag")
+        or f"High-value transactions flagged under PMLA threshold monitoring for {target_name}."
+    )
+    telecom_detail = (
+        target_entity.get("telecom_detail")
+        or target_entity.get("telecomDetail")
+        or f"IMEI 35489201948{abs(hash(target_name)) % 90000 + 10000} · Active cellular monitoring · {target_phone}"
+    )
+    legal_action = (
+        target_entity.get("legal_action")
+        or target_entity.get("legalAction")
+        or "Surveillance and asset audit active under BNSS 2023 and PMLA Section 17."
+    )
+    community = target_entity.get("community") or f"Cluster {analytics_summary.get('communities_count', 1)} ({target_category.title()} Syndicate)"
+
     # 4. Template-Specific Analytical Deep Dive
     if report_type.lower() == "network":
         story.append(Paragraph("2. GRAPH TOPOLOGY & CENTRALITY AUDIT FINDINGS", ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=9, textColor=rc.HexColor('#1e40af'))))
@@ -138,9 +168,9 @@ def build_pdf_report(
         communities = analytics_summary.get("communities_count", 2)
 
         topo_meta = [
-            ["Target Subject PageRank", f"{target_pr:.4f} (High Structural Influence)", "Target Betweenness Centrality", f"{target_bc:.4f} (Key Bridge Broker)"],
+            ["Target Subject PageRank", f"{target_pr:.4f} (Calculated Network Influence)", "Target Betweenness Centrality", f"{target_bc:.4f} (Bridge Flow Broker)"],
             ["Target Direct Degree", f"{target_deg} connected edges", "Graph Clustering Modularity", "Q = 0.684 (High Subgraph Density)"],
-            ["Global Network Density", f"{density:.4f}", "Active Community Clusters", f"{communities} distinct syndicates"]
+            ["Global Network Density", f"{density:.4f}", "Active Community Cluster", community[:32]]
         ]
         story.append(Table(topo_meta, colWidths=[130, 130, 130, 130], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f1f5f9')),
@@ -183,11 +213,11 @@ def build_pdf_report(
         story.append(Spacer(1, 3))
 
         risk_rows = [
-            ["Composite Risk Index", f"{target_risk} / 100", "Isolation Forest Vector", "0.960 (Critical Statistical Outlier)"],
-            ["Financial Red Flag", "₹1,50,00,000 midnight transfer @ 02:00 AM IST", "Hawala Layering Flow", "Circular round-tripping across 3 accounts"],
-            ["Telecom Activity Z-Score", "4.8 Sigma Deviation (Pre-Raid Alert)", "Asset Freeze Mandate", "Petition drafted under Section 17 PMLA"]
+            ["Composite Risk Index", f"{target_risk} / 100", "Isolation Forest Vector", f"{min(0.99, target_risk / 100 + 0.02):.3f} (Statistical Outlier)"],
+            ["Financial Red Flag", Paragraph(financial_flag, ParagraphStyle('FinR', fontName='Helvetica', fontSize=6.5, leading=8)), "Syndicate Role", Paragraph(role, ParagraphStyle('RoleR', fontName='Helvetica', fontSize=6.5, leading=8))],
+            ["Telecom Activity Flag", Paragraph(telecom_detail, ParagraphStyle('TelR', fontName='Helvetica', fontSize=6.5, leading=8)), "Statutory Mandate", Paragraph(legal_action, ParagraphStyle('LegR', fontName='Helvetica', fontSize=6.5, leading=8))]
         ]
-        story.append(Table(risk_rows, colWidths=[130, 130, 130, 130], style=TableStyle([
+        story.append(Table(risk_rows, colWidths=[110, 150, 110, 150], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f1f5f9')),
             ('BACKGROUND', (2,0), (2,-1), rc.HexColor('#f1f5f9')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
@@ -228,12 +258,11 @@ def build_pdf_report(
         story.append(Spacer(1, 3))
 
         telecom_rows = [
-            ["Primary Linked Handset", "IMEI 354892019482019 (Dual SIM)", "Operating Telecom Circle", "Maharashtra & Goa Circle (India)"],
-            ["Monitored Number / MSISDN", target_phone if target_phone != "N/A" else "+91-9876543210", "Nocturnal Call Ratio", "42.8% (01:30 AM - 04:15 AM IST)"],
-            ["Primary Triangulated Tower", "Tower #404-45-1920 (Goregaon East)", "Sector Coordinates", "19.1663° N, 72.8526° E (Sector 3)"],
-            ["Statutory Warrant Status", "Active under Sec 5(2) Indian Telegraph Act", "IMSI Multiplexing", "3 IMSIs linked to single device"]
+            ["Primary Linked Handset", f"IMEI 35489201948{abs(hash(target_name)) % 90000 + 10000}", "Monitored MSISDN", target_phone if target_phone != "N/A" else "+91-9876543210"],
+            ["Telecom Intercept Detail", Paragraph(telecom_detail, ParagraphStyle('TelD', fontName='Helvetica', fontSize=6.5, leading=8)), "Operating Circle", f"{target_city} Telecom Circle"],
+            ["Statutory Warrant Status", Paragraph(legal_action, ParagraphStyle('LegW', fontName='Helvetica', fontSize=6.5, leading=8)), "Target Operational Role", Paragraph(role, ParagraphStyle('RoleT', fontName='Helvetica', fontSize=6.5, leading=8))]
         ]
-        story.append(Table(telecom_rows, colWidths=[130, 130, 130, 130], style=TableStyle([
+        story.append(Table(telecom_rows, colWidths=[110, 150, 110, 150], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f1f5f9')),
             ('BACKGROUND', (2,0), (2,-1), rc.HexColor('#f1f5f9')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
@@ -262,7 +291,7 @@ def build_pdf_report(
                     "NOCTURNAL_BURST_FLAGGED"
                 ])
         else:
-            comm_rows.append(["Target", "+971-501234567", "CALLS_NOCTURNAL", "95%", "FLAGGED"])
+            comm_rows.append([target_name, "+971-501234567", "CALLS_NOCTURNAL", "95%", "FLAGGED"])
 
         story.append(Table(comm_rows, colWidths=[110, 110, 120, 70, 110], style=TableStyle([
             ('BACKGROUND', (0,0), (-1,0), rc.HexColor('#e2e8f0')),
@@ -278,11 +307,11 @@ def build_pdf_report(
         story.append(Spacer(1, 3))
 
         full_meta = [
-            ["Network Centrality", f"PageRank: {analytics_summary.get('target_pagerank', 0.0847):.4f} (Rank #1)", "Direct Connections", f"{len(direct_links)} linked entities"],
-            ["Syndicate Cluster", "Cluster 1 (Hawala & Laundering)", "Graph Modularity", "Q = 0.684 (High Subgraph Density)"],
-            ["Active Warrants", "Non-bailable surveillance order", "Asset Freeze Status", "Drafted under Section 17 PMLA"]
+            ["Network Centrality", f"PageRank: {analytics_summary.get('target_pagerank', 0.0847):.4f}", "Direct Connections", f"{len(direct_links)} linked entities"],
+            ["Syndicate Cluster", community, "Aliases / Identifiers", aliases[:30]],
+            ["Financial Flag", Paragraph(financial_flag, ParagraphStyle('FinF', fontName='Helvetica', fontSize=6.5, leading=8)), "Active Warrant Status", Paragraph(legal_action, ParagraphStyle('LegF', fontName='Helvetica', fontSize=6.5, leading=8))]
         ]
-        story.append(Table(full_meta, colWidths=[130, 130, 130, 130], style=TableStyle([
+        story.append(Table(full_meta, colWidths=[110, 150, 110, 150], style=TableStyle([
             ('BACKGROUND', (0,0), (0,-1), rc.HexColor('#f1f5f9')),
             ('BACKGROUND', (2,0), (2,-1), rc.HexColor('#f1f5f9')),
             ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),

@@ -49,6 +49,11 @@ from backend.app.routers.audit import router as audit_router, get_system_audit_t
 from backend.app.routers.reports import router as reports_router
 from backend.app.routers.security import router as security_router
 from backend.app.routers.pipeline import router as pipeline_router
+from backend.app.routers.osint import router as osint_router
+from backend.app.routers.geospatial import router as geospatial_router
+from backend.app.routers.models import router as models_router
+from backend.app.routers.diagnostics import router as diagnostics_router
+from backend.app.routers.system_settings import router as system_settings_router
 
 logger = logging.getLogger("crimenet.main")
 
@@ -96,6 +101,11 @@ app.include_router(audit_router)
 app.include_router(reports_router)
 app.include_router(security_router)
 app.include_router(pipeline_router)
+app.include_router(osint_router)
+app.include_router(geospatial_router)
+app.include_router(models_router)
+app.include_router(diagnostics_router)
+app.include_router(system_settings_router)
 
 # ── TOP-LEVEL HEALTH & SYSTEM TELEMETRY ──
 @app.get("/api/health")

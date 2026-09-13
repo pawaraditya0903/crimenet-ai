@@ -366,7 +366,7 @@ export default function CopilotDrawer({
         user_id: 'INV-2026-AP01'
       }, { timeout: 3500 })
 
-      const botReply = res.data.response || 'Inquiry processed.'
+      const botReply = res.data.reply || res.data.response || res.data.message || 'Inquiry processed.'
       const botMsgObj: Message = {
         id: `m-resp-${Date.now()}`,
         role: 'assistant',
