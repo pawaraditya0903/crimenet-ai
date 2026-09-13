@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from backend.app.models.database import get_db, init_db
 from backend.app.security.passwords import hash_password
 from backend.app.security.crypto import compute_sha256
-from backend.app.security.mugshot import generate_forensic_mugshot
 
 logger = logging.getLogger("crimenet.tables")
 
@@ -169,27 +168,35 @@ def seed_database_if_empty():
                 ("evt-genesis", "2026-03-01 00:00:00 UTC", "SYSTEM_CORE", "SYSTEM", "SYSTEM_INITIALIZED", "system:core", "127.0.0.1", "genesis-001", genesis_payload, genesis_prev, genesis_curr)
             )
 
-        # 8. Seed Initial Forensic Intruder Logs & Biometric Telemetry matching user sample
-        cursor.execute("DELETE FROM intruder_logs WHERE id IN ('log-01', 'log-02', 'log-03', 'log-04') AND epoch < 1787479000")
+        # 8. Seed Initial Forensic Intruder Logs from persistent intruder_logs.json
         cursor.execute("SELECT COUNT(*) as count FROM intruder_logs")
         if cursor.fetchone()["count"] == 0:
-            intruder_logs_to_seed = [
-                ("log-01", "23-Aug-2026 15:50:56 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "AUTHORIZED_ACCESS", "AUTHORIZED", "INV-2026-AP01", "", 1787480456.0),
-                ("log-02", "23-Aug-2026 15:47:18 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_AUTHORIZED", "AUTHORIZED", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED"), 1787480238.0),
-                ("log-03", "23-Aug-2026 15:45:52 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "AUTHORIZED_ACCESS", "AUTHORIZED", "INVESTIGATOR", "", 1787480152.0),
-                ("log-04", "23-Aug-2026 15:45:30 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNAUTHORIZED_PROBE", generate_forensic_mugshot("UNAUTHORIZED_PROBE", "BLOCKED"), 1787480130.0),
-                ("log-05", "23-Aug-2026 15:45:20 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_AUTHORIZED", "AUTHORIZED", "Chief Officer Aditya Pawar", generate_forensic_mugshot("Chief Officer Aditya Pawar", "AUTHORIZED"), 1787480120.0),
-                ("log-06", "23-Aug-2026 15:44:39 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_AUTHORIZED", "AUTHORIZED", "Chief Officer Aditya Pawar", "", 1787480079.0),
-                ("log-07", "23-Aug-2026 15:43:59 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "INTRUDER_FACE_FAILED_0%", "BLOCKED_INTRUDER", "PROBE_SUSPECT", generate_forensic_mugshot("PROBE_SUSPECT", "BLOCKED"), 1787480039.0),
-                ("log-08", "23-Aug-2026 15:43:39 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787480019.0),
-                ("log-09", "23-Aug-2026 15:43:35 IST", "122.170.196.117", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) App", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "PROBE_ATTEMPT", "", 1787480015.0),
-                ("log-10", "23-Aug-2026 15:43:15 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787479995.0),
-                ("log-11", "23-Aug-2026 15:43:14 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787479994.0),
-                ("log-12", "23-Aug-2026 15:43:08 IST", "49.15.92.19", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKi", "PASSCODE_FAILED", "BLOCKED_INTRUDER", "UNKNOWN_PROBE", "", 1787479988.0),
-            ]
-            cursor.executemany(
-                "INSERT INTO intruder_logs (id, timestamp, ip, device, action, status, badge, photo, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                intruder_logs_to_seed
-            )
+            import os
+            json_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "intruder_logs.json")
+            if os.path.exists(json_file):
+                try:
+                    with open(json_file, "r", encoding="utf-8") as f:
+                        raw_logs = json.load(f)
+                    seeded = [
+                        (
+                            str(l.get("id", "")),
+                            str(l.get("timestamp", "")),
+                            str(l.get("ip", "")),
+                            str(l.get("device", "")),
+                            str(l.get("action", "")),
+                            str(l.get("status", "")),
+                            str(l.get("badge", "")),
+                            str(l.get("photo", "") or ""),
+                            float(l.get("epoch", 0.0) or 0.0)
+                        )
+                        for l in raw_logs
+                    ]
+                    cursor.executemany(
+                        "INSERT INTO intruder_logs (id, timestamp, ip, device, action, status, badge, photo, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        seeded
+                    )
+                except Exception as e:
+                    logger.warning("Failed to seed from intruder_logs.json: %s", e)
+
 
     logger.info("Database seeding check complete.")

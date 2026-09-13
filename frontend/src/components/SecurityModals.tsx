@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { getForensicMugshot } from '../lib/mugshot'
 import { playCyberSound } from '../lib/audio'
 
 interface IntruderLogsModalProps {
@@ -347,7 +346,7 @@ interface IntruderModalProps {
 
 export const IntruderModal: React.FC<IntruderModalProps> = ({ log, onClose }) => {
   if (!log) return null
-  const photoSrc = log.photo || getForensicMugshot(log.badge, log.status, log.action, log.ip)
+  const photoSrc = log.photo || ''
   const isAuth = (log.status || '').includes('AUTHORIZED')
   const titleText = isAuth ? '🛡️ AUTHORIZED INVESTIGATOR DOSSIER' : '🚨 INTRUDER MUGSHOT CAPTURED'
   const accentColor = isAuth ? '#10b981' : '#ff4d4d'
@@ -398,12 +397,18 @@ export const IntruderModal: React.FC<IntruderModalProps> = ({ log, onClose }) =>
         </h3>
 
         {/* Rounded Mugshot Photo Container with outer glow */}
-        <div style={{ position: 'relative', width: 250, height: 250, margin: '0 auto 16px', borderRadius: 16, overflow: 'hidden', border: `2px solid ${accentColor}`, boxShadow: `0 0 25px ${isAuth ? 'rgba(16,185,129,0.45)' : 'rgba(255, 77, 77, 0.5)'}` }}>
-          <img
-            src={photoSrc}
-            alt="Subject Mugshot"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+        <div style={{ position: 'relative', width: 250, height: 250, margin: '0 auto 16px', borderRadius: 16, overflow: 'hidden', border: `2px solid ${accentColor}`, boxShadow: `0 0 25px ${isAuth ? 'rgba(16,185,129,0.45)' : 'rgba(255, 77, 77, 0.5)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020617' }}>
+          {photoSrc ? (
+            <img
+              src={photoSrc}
+              alt="Subject Mugshot"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div style={{ color: '#64748b', fontSize: 13, fontWeight: 700, padding: 20 }}>
+              📷 No Photo Captured
+            </div>
+          )}
         </div>
 
         {/* Structured Telemetry Details Box matching Sample Screenshot */}

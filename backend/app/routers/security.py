@@ -9,7 +9,6 @@ from backend.app.security.face_prototype import evaluate_face_prototype, FACE_PR
 from backend.app.security.rbac import require_authenticated_user
 from backend.app.security.rate_limit import check_rate_limit
 from backend.app.models.database import get_db
-from backend.app.security.mugshot import generate_forensic_mugshot
 
 router = APIRouter(prefix="/api/security", tags=["Security & System Settings"])
 
@@ -165,28 +164,19 @@ class AccessLogRequest(BaseModel):
 
 @router.get("/intruder-logs")
 async def get_intruder_logs(claims: dict = Depends(require_authenticated_user)):
-    """Returns access and security events from immutable forensic intruder logs with biometric mugshots."""
+    """Returns access and security events from immutable forensic intruder logs with real biometric mugshots."""
     with get_db() as conn:
         cursor = conn.cursor()
-        # Clean up any leftover automated test probes
-        cursor.execute("DELETE FROM intruder_logs WHERE ip = '198.51.100.99' OR device IN ('ProbeBrowser', 'TestLab')")
         cursor.execute("SELECT id, timestamp, ip, device, action, status, badge, photo, epoch FROM intruder_logs ORDER BY epoch DESC LIMIT 100")
-        rows = []
-        for r in cursor.fetchall():
-            d = dict(r)
-            if not d.get("photo"):
-                d["photo"] = generate_forensic_mugshot(d.get("badge"), d.get("status"), d.get("action"), d.get("ip"))
-            rows.append(d)
+        rows = [dict(r) for r in cursor.fetchall()]
     return {"logs": rows, "total": len(rows)}
 
 @router.post("/log-access-attempt")
 @router.post("/log-visit")
 async def log_access_attempt(req: AccessLogRequest, request: Request):
-    """Logs an unauthorized, probe, or authorized access attempt with high-resolution biometric mugshot."""
+    """Logs an unauthorized, probe, or authorized access attempt with real biometric mugshot."""
     client_ip = extract_real_ip(request, req.ip)
-    photo_to_store = req.photo
-    if not photo_to_store:
-        photo_to_store = generate_forensic_mugshot(req.badge, req.status, req.action, client_ip)
+    photo_to_store = req.photo or ""
 
     with get_db() as conn:
         cursor = conn.cursor()

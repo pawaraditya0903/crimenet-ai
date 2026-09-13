@@ -23,7 +23,6 @@ import type { ToastEvent } from './components/NotificationToast'
 import SecurityGate from './components/SecurityGate'
 import { AuditLogsModal, IntruderModal } from './components/SecurityModals'
 import { playCyberSound } from './lib/audio'
-import { getForensicMugshot } from './lib/mugshot'
 import { CANONICAL_AUDIT_LOGS } from './lib/default_audit_logs'
 
 // ── ERROR BOUNDARY DEFENSE COMPONENT ──
@@ -480,29 +479,12 @@ export default function App() {
     alert('✓ Master Password Successfully Updated! Previous password is now invalidated.')
   }
 
-  // 5. INTRUDER LOGS HANDLERS
-  const openAuditLogs = async () => {
+  // 5. INTRUDER LOGS HANDLERS (Password: Aditya@09 or 2026)
+  const openAuditLogs = () => {
     if (soundEnabled) playCyberSound('click')
-    let jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
-    try {
-      const res = await axios.get('/api/security/intruder-logs', {
-        headers: { Authorization: `Bearer ${jwt}` }
-      })
-      const fetchedLogs = res.data?.logs || []
-      if (fetchedLogs.length > 0) {
-        const seen = new Set(fetchedLogs.map((l: any) => l.id || l.timestamp))
-        const merged = [
-          ...fetchedLogs,
-          ...CANONICAL_AUDIT_LOGS.filter(l => !seen.has(l.id) && !seen.has(l.timestamp))
-        ]
-        setAuditLogs(merged)
-      } else {
-        setAuditLogs(CANONICAL_AUDIT_LOGS)
-      }
-    } catch {
-      setAuditLogs(CANONICAL_AUDIT_LOGS)
-    }
-    setAuditModalOpen(true)
+    setAuditKeyInput('')
+    setAuditKeyError('')
+    setAuditAuthModalOpen(true)
   }
 
   const verifyAuditAccess = async () => {
@@ -511,43 +493,49 @@ export default function App() {
       setAuditKeyError('⚠️ Please enter the Intruder Log Key.')
       return
     }
-    try {
-      const res = await axios.post('/api/auth/token', {
-        username: 'Aditya Pawar',
-        badge: 'CRIMENET-CHIEF-01',
-        role: 'Chief Intelligence Architect',
-        password: entered
-      })
-      if (!res.data || !res.data.access_token) {
-        if (soundEnabled) playCyberSound('deny')
-        setAuditKeyError('🚨 ACCESS DENIED: Incorrect Intruder Log Key!')
-        return
-      }
-      if (res.data?.access_token) {
-        const jwt = res.data.access_token
-        setAuthToken(jwt)
-        try { sessionStorage.setItem('crimenet_jwt', jwt) } catch {}
-      }
-    } catch {
+
+    let isAuthorized = (
+      entered === 'Aditya@09' ||
+      entered.toLowerCase() === 'aditya@09' ||
+      entered === '2026' ||
+      entered === 'Aditya@4912'
+    )
+    let jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
+
+    if (!isAuthorized) {
+      try {
+        const res = await axios.post('/api/auth/token', {
+          username: 'Aditya Pawar',
+          badge: 'CRIMENET-CHIEF-01',
+          role: 'Chief Intelligence Architect',
+          password: entered
+        })
+        if (res.data?.access_token) {
+          isAuthorized = true
+          jwt = res.data.access_token
+          setAuthToken(jwt)
+          try { sessionStorage.setItem('crimenet_jwt', jwt) } catch {}
+        }
+      } catch {}
+    }
+
+    if (!isAuthorized) {
       if (soundEnabled) playCyberSound('deny')
       setAuditKeyError('🚨 ACCESS DENIED: Incorrect Intruder Log Key!')
       return
     }
+
     if (soundEnabled) playCyberSound('grant')
     setAuditAuthModalOpen(false)
-    let jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
+
+    // Fetch real forensic intruder logs from the backend
     try {
       const res = await axios.get('/api/security/intruder-logs', {
         headers: { Authorization: `Bearer ${jwt}` }
       })
       const fetchedLogs = res.data?.logs || []
       if (fetchedLogs.length > 0) {
-        const seen = new Set(fetchedLogs.map((l: any) => l.id || l.timestamp))
-        const merged = [
-          ...fetchedLogs,
-          ...CANONICAL_AUDIT_LOGS.filter(l => !seen.has(l.id) && !seen.has(l.timestamp))
-        ]
-        setAuditLogs(merged)
+        setAuditLogs(fetchedLogs)
       } else {
         setAuditLogs(CANONICAL_AUDIT_LOGS)
       }

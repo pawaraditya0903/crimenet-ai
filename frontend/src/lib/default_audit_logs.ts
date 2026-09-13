@@ -1,4 +1,4 @@
-import { SAMPLE_MUGSHOT_USER, SAMPLE_MUGSHOT_ADITYA, SAMPLE_MUGSHOT_GIRL, SAMPLE_MUGSHOT_GUY } from './sample_photo'
+import { SAMPLE_MUGSHOT_USER } from './sample_photo'
 
 export interface AuditLogEntry {
   id: string
@@ -120,7 +120,7 @@ export const CANONICAL_AUDIT_LOGS: AuditLogEntry[] = [
     action: 'AUTHORIZED',
     status: 'AUTHORIZED',
     badge: 'Chief Officer Aditya Pawar',
-    photo: SAMPLE_MUGSHOT_ADITYA,
+    photo: '',
     epoch: 1787480238
   },
   {
@@ -131,7 +131,7 @@ export const CANONICAL_AUDIT_LOGS: AuditLogEntry[] = [
     action: 'PAGE_VIEW',
     status: 'PAGE_VIEW',
     badge: 'UNAUTHORIZED_PROBE',
-    photo: SAMPLE_MUGSHOT_GIRL,
+    photo: '',
     epoch: 1787480130
   },
   {
@@ -142,7 +142,7 @@ export const CANONICAL_AUDIT_LOGS: AuditLogEntry[] = [
     action: 'PAGE_VIEW',
     status: 'PAGE_VIEW',
     badge: 'PROBE_SUSPECT',
-    photo: SAMPLE_MUGSHOT_GUY,
+    photo: '',
     epoch: 1787480039
   }
 ]

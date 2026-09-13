@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import { playCyberSound } from '../lib/audio'
-import { getForensicMugshot } from '../lib/mugshot'
 
 interface SecurityGateProps {
   onAuthenticated: (token: string, user: any) => void
@@ -211,7 +210,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
       const savedPhoto = localStorage.getItem('aditya_master_face_photo')
       if (savedPhoto) return savedPhoto
     } catch {}
-    return getForensicMugshot('Chief Officer Aditya Pawar', 'AUTHORIZED')
+    return ''
   }
 
   const computeZNCC = (vecA: number[], vecB: number[]): number => {
