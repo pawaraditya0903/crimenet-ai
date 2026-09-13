@@ -165,5 +165,24 @@ LIVE_IFOREST = GLOBAL_ML_PIPELINE
 _DEFAULT_PASS_HASH = "pbkdf2:sha256:100000$default_salt$default_hash"
 _LEGACY_PASS_HASH = "legacy_sha256_hash"
 
+# ── SERVE FRONTEND SPA IN PRODUCTION IF BUILT ──
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+frontend_dist = os.path.join(REPO_ROOT, "frontend", "dist")
+if os.path.exists(frontend_dist):
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api") or full_path.startswith("socket.io"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        target_file = os.path.join(frontend_dist, full_path)
+        if os.path.exists(target_file) and os.path.isfile(target_file):
+            return FileResponse(target_file)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
 # Wrap FastAPI app with Socket.IO ASGI application
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
