@@ -19,65 +19,9 @@ import CopilotDrawer from './components/CopilotDrawer'
 import DemoTourModal from './components/DemoTourModal'
 import NotificationToast from './components/NotificationToast'
 import type { ToastEvent } from './components/NotificationToast'
-
-// ── TACTICAL CYBER AUDIO SYNTHESIZER (WEB AUDIO API) ──
-const playCyberSound = (type: 'beep' | 'grant' | 'deny' | 'click' | 'scan') => {
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioContext) return
-    const ctx = new AudioContext()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-
-    const now = ctx.currentTime
-    if (type === 'click') {
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(800, now)
-      osc.frequency.exponentialRampToValueAtTime(400, now + 0.05)
-      gain.gain.setValueAtTime(0.15, now)
-      gain.gain.linearRampToValueAtTime(0.01, now + 0.05)
-      osc.start(now)
-      osc.stop(now + 0.05)
-    } else if (type === 'beep') {
-      // Short high-pitched alert beep for incoming live events
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(1100, now)
-      osc.frequency.exponentialRampToValueAtTime(900, now + 0.08)
-      gain.gain.setValueAtTime(0.12, now)
-      gain.gain.linearRampToValueAtTime(0.01, now + 0.1)
-      osc.start(now)
-      osc.stop(now + 0.1)
-    } else if (type === 'grant') {
-      osc.type = 'triangle'
-      osc.frequency.setValueAtTime(523.25, now) // C5
-      osc.frequency.setValueAtTime(659.25, now + 0.08) // E5
-      osc.frequency.setValueAtTime(783.99, now + 0.16) // G5
-      osc.frequency.setValueAtTime(1046.50, now + 0.24) // C6
-      gain.gain.setValueAtTime(0.2, now)
-      gain.gain.linearRampToValueAtTime(0.01, now + 0.45)
-      osc.start(now)
-      osc.stop(now + 0.45)
-    } else if (type === 'deny') {
-      osc.type = 'sawtooth'
-      osc.frequency.setValueAtTime(220, now)
-      osc.frequency.setValueAtTime(140, now + 0.12)
-      gain.gain.setValueAtTime(0.3, now)
-      gain.gain.linearRampToValueAtTime(0.01, now + 0.35)
-      osc.start(now)
-      osc.stop(now + 0.35)
-    } else if (type === 'scan') {
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(600, now)
-      osc.frequency.linearRampToValueAtTime(1200, now + 0.15)
-      gain.gain.setValueAtTime(0.1, now)
-      gain.gain.linearRampToValueAtTime(0.01, now + 0.15)
-      osc.start(now)
-      osc.stop(now + 0.15)
-    }
-  } catch(e) {}
-}
+import SecurityGate from './components/SecurityGate'
+import { AuditLogsModal, IntruderModal } from './components/SecurityModals'
+import { playCyberSound } from './lib/audio'
 
 // ── ERROR BOUNDARY DEFENSE COMPONENT ──
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
@@ -121,18 +65,12 @@ export default function App() {
       return false
     }
   })
-  const [pinCode, setPinCode] = useState('')
-  const [badgeId, setBadgeId] = useState('INV-2026-AP01')
-  const [authError, setAuthError] = useState('')
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const soundEnabledRef = useRef(soundEnabled)
 
-  const handleInstantDemoLogin = () => {
-    if (soundEnabled) playCyberSound('grant')
-    try { sessionStorage.setItem('crimenet_authenticated', 'true') } catch {}
-    setIsAuthenticated(true)
-    setFailedAttempts(0)
-    setAuthError('')
-  }
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
 
   // TIME CLOCK
   const [currentTime, setCurrentTime] = useState('')
@@ -172,7 +110,7 @@ export default function App() {
   const [confirmPassInput, setConfirmPassInput] = useState('')
   const [passError, setPassError] = useState('')
 
-  // INTRUDER LOGS MODAL & DEDICATED PASSWORD LOCK (Aditya@4912)
+  // INTRUDER LOGS MODAL & DEDICATED AUTHENTICATED ACCESS
   const [auditAuthModalOpen, setAuditAuthModalOpen] = useState(false)
   const [auditKeyInput, setAuditKeyInput] = useState('')
   const [auditKeyError, setAuditKeyError] = useState('')
@@ -233,7 +171,7 @@ export default function App() {
       })
 
       socket.on('investigation_event', (event: any) => {
-        if (soundEnabled) playCyberSound('beep')
+        if (soundEnabledRef.current) playCyberSound('beep')
         setActiveToast({
           id: event?.event_id || `toast-${Date.now()}`,
           title: event?.payload?.title || `Event: ${event?.event_type?.replace(/_/g, ' ') || 'Telemetry'}`,
@@ -247,7 +185,7 @@ export default function App() {
     return () => {
       if (socket) socket.disconnect()
     }
-  }, [selectedCase, soundEnabled])
+  }, [selectedCase])
 
   // INDIAN STANDARD TIME (IST) HELPERS
   const getIndianTimestamp = () => {
@@ -414,259 +352,7 @@ export default function App() {
     return canvas.toDataURL('image/jpeg', 0.8)
   }
 
-  // CAPTURE QUICK WEBCAM SNAPSHOT (FOR PASSCODE ATTEMPTS / INTRUDER MUGSHOTS)
-  const captureQuickSnapshot = async (): Promise<string> => {
-    // 1. If active video is already running
-    if (videoRef.current && canvasRef.current && videoRef.current.readyState >= 2) {
-      const canvas = canvasRef.current
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        canvas.width = 360
-        canvas.height = 360
-        ctx.drawImage(videoRef.current, 0, 0, 360, 360)
-        return canvas.toDataURL('image/jpeg', 0.8)
-      }
-    }
-    // 2. Otherwise request a silent capture stream
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
-        })
-        const vid = document.createElement('video')
-        vid.srcObject = stream
-        vid.muted = true
-        vid.playsInline = true
-        await vid.play()
-        await new Promise(r => setTimeout(r, 700))
-        const c = document.createElement('canvas')
-        c.width = 360
-        c.height = 360
-        const ctx = c.getContext('2d')
-        let dataUrl = ''
-        if (ctx) {
-          ctx.drawImage(vid, 0, 0, 360, 360)
-          dataUrl = c.toDataURL('image/jpeg', 0.8)
-        }
-        stream.getTracks().forEach(t => t.stop())
-        return dataUrl
-      } catch (e) {
-        return ''
-      }
-    }
-    return ''
-  }
 
-  // ZERO-MEAN NORMALIZED CROSS CORRELATION (ZNCC) — same formula, now on normalized descriptors
-  const computeZNCC = (vecA: number[], vecB: number[]): number => {
-    if (!vecA || !vecB || vecA.length !== vecB.length || vecA.length === 0) return 0
-    const meanA = vecA.reduce((sum, v) => sum + v, 0) / vecA.length
-    const meanB = vecB.reduce((sum, v) => sum + v, 0) / vecB.length
-
-    let dot = 0, varA = 0, varB = 0
-    for (let i = 0; i < vecA.length; i++) {
-      const a = vecA[i] - meanA
-      const b = vecB[i] - meanB
-      dot += a * b
-      varA += a * a
-      varB += b * b
-    }
-
-    if (varA === 0 || varB === 0) return 0
-    const r = dot / (Math.sqrt(varA) * Math.sqrt(varB))
-    if (r < 0) return 0
-    return Math.round(r * 100)
-  }
-
-  // 1. BIOMETRIC FACE VERIFICATION — multi-frame, adaptive, threshold 62%
-  const startBiometricScan = async () => {
-    if (lockoutTimer > 0) return
-    try {
-      if (soundEnabled) playCyberSound('scan')
-      setFaceScanActive(true)
-      setScanStatus('scanning')
-      setAuthError('')
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: 'user' }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
-      // Allow camera to warm up and auto-adjust exposure (1.5s)
-      await new Promise(r => setTimeout(r, 1500))
-
-      // Capture 7-frame averaged descriptor
-      const liveVec = await extractBiometricDescriptor()
-      const photo = snapHighResPhoto()
-      const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Remote' } }))
-
-      const saved = masterFaceDescriptor
-      const znccScore = saved ? computeZNCC(liveVec, saved) : 0
-      setSimilarityScore(znccScore)
-
-      // Also verify via backend (backend uses 75% raw ZNCC — frontend multi-frame is more lenient)
-      // Threshold 62%: multi-frame averaging removes noise, so 62% ≈ 75% on single-frame
-      if (saved && znccScore >= 62) {
-        if (soundEnabled) playCyberSound('grant')
-        setScanStatus('verified')
-        setFailedAttempts(0)
-
-        try {
-          await axios.post('/api/security/log-visit', {
-            timestamp: getIndianTimestamp(),
-            ip: ipRes.data.ip,
-            device: navigator.userAgent.substring(0, 45),
-            action: `FACEID_MATCH_${znccScore}%_7FRAME_AVG`,
-            status: 'AUTHORIZED',
-            badge: 'Aditya Pawar (Chief Architect)',
-            photo: photo
-          })
-        } catch(e) {}
-
-        setTimeout(() => {
-          if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-          setIsAuthenticated(true)
-          setFaceScanActive(false)
-        }, 800)
-
-      } else if (!saved) {
-        // No face enrolled yet — guide user
-        setScanStatus('idle')
-        setAuthError('⚠️ No face enrolled. Click "Register Face ID" above to enroll first, then try again.')
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-        setFaceScanActive(false)
-
-      } else {
-        if (soundEnabled) playCyberSound('deny')
-        setScanStatus('rejected')
-        setAuthError(`🚨 Face match: ${znccScore}% (need ≥62%). Ensure good lighting & face is centered.`)
-
-        try {
-          await axios.post('/api/security/log-visit', {
-            timestamp: getIndianTimestamp(),
-            ip: ipRes.data.ip,
-            device: navigator.userAgent.substring(0, 45),
-            action: `FACE_FAILED_${znccScore}%`,
-            status: 'BLOCKED_INTRUDER',
-            badge: 'Unauthorized Visitor',
-            photo: photo
-          })
-        } catch(e) {}
-
-        // Auto-reset after 3s so user can try again without page refresh
-        setTimeout(() => {
-          if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-          setFaceScanActive(false)
-          setScanStatus('idle')
-          setAuthError(`💡 Tip: Ensure face is well-lit and centered. Last score: ${znccScore}%. Try again ↓`)
-        }, 3000)
-      }
-
-    } catch (err) {
-      setAuthError('⚠️ Camera permission required. Please allow camera access and try again.')
-      setFaceScanActive(false)
-      setScanStatus('idle')
-    }
-  }
-
-  // 2. PASSCODE LOGIN (Strict Active Password + Instant Mugshot Capture)
-  const handlePasscodeLogin = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    if (lockoutTimer > 0) return
-
-    const entered = pinCode.trim()
-    if (!entered) return
-
-    // Immediately snap photo of person attempting passcode
-    const attemptPhoto = await captureQuickSnapshot()
-
-    // Server-side credential check with master key resilience
-    const isMasterPass = entered === 'Aditya@4912'
-
-    try {
-      const tokenRes = await axios.post('/api/auth/token', {
-        username: 'Aditya Pawar',
-        badge: badgeId || 'CRIMENET-CHIEF-01',
-        role: 'Chief Intelligence Architect',
-        password: entered
-      }).catch((err) => {
-        if (isMasterPass) {
-          return { data: { access_token: 'crimenet-master-session-token' } }
-        }
-        throw err
-      })
-
-      if (tokenRes.data && tokenRes.data.access_token) {
-        if (soundEnabled) playCyberSound('grant')
-        const jwt = tokenRes.data.access_token
-        try {
-          sessionStorage.setItem('crimenet_authenticated', 'true')
-          sessionStorage.setItem('crimenet_jwt', jwt)
-        } catch {}
-        setAuthToken(jwt)
-        setIsAuthenticated(true)
-        setFailedAttempts(0)
-        setLockoutTimer(0)
-        setAuthError('')
-
-        axios.get('https://api.ipify.org?format=json')
-          .catch(() => ({ data: { ip: 'Remote' } }))
-          .then(ipRes => {
-            axios.post('/api/security/log-visit', {
-              timestamp: getIndianTimestamp(),
-              ip: ipRes?.data?.ip || 'Remote',
-              device: navigator.userAgent.substring(0, 45),
-              action: 'PASSCODE_SUCCESS',
-              status: 'AUTHORIZED',
-              badge: 'Aditya Pawar',
-              photo: attemptPhoto
-            }).catch(() => {})
-          })
-        return
-      }
-    } catch (err: any) {
-      if (isMasterPass) {
-        if (soundEnabled) playCyberSound('grant')
-        try {
-          sessionStorage.setItem('crimenet_authenticated', 'true')
-        } catch {}
-        setIsAuthenticated(true)
-        setFailedAttempts(0)
-        setLockoutTimer(0)
-        setAuthError('')
-        return
-      }
-
-      if (soundEnabled) playCyberSound('deny')
-      const newFails = failedAttempts + 1
-      setFailedAttempts(newFails)
-
-      axios.get('https://api.ipify.org?format=json')
-        .catch(() => ({ data: { ip: 'Remote' } }))
-        .then(ipRes => {
-          axios.post('/api/security/log-visit', {
-            timestamp: getIndianTimestamp(),
-            ip: ipRes?.data?.ip || 'Remote',
-            device: navigator.userAgent.substring(0, 45),
-            action: `WRONG_PASSCODE_ATTEMPT_#${newFails}`,
-            status: 'BLOCKED_INTRUDER',
-            badge: 'Failed Passcode Attempt',
-            photo: attemptPhoto
-          }).catch(() => {})
-        })
-
-      if (newFails >= 3) {
-        setLockoutTimer(30)
-        setAuthError('🚨 HARDWARE LOCKDOWN: 3 Failed Attempts! Locked for 30 seconds.')
-      } else {
-        setAuthError(`🚨 ACCESS DENIED: Invalid Passcode. (${3 - newFails} attempts remaining)`)
-      }
-    }
-  }
 
   // 3. REGISTER MASTER FACE (Strict Active Password — Server Verified)
   const verifyFaceAuthorityAndStartCamera = async () => {
@@ -791,7 +477,7 @@ export default function App() {
     alert('✓ Master Password Successfully Updated! Previous password is now invalidated.')
   }
 
-  // 5. INTRUDER LOGS HANDLERS (Password: Aditya@09)
+  // 5. INTRUDER LOGS HANDLERS
   const openAuditLogs = () => {
     if (soundEnabled) playCyberSound('click')
     setAuditKeyInput('')
@@ -898,169 +584,16 @@ export default function App() {
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ]
 
-  // ── LOCK SCREEN ──
+  // ── LOCK SCREEN SENTRY ──
   if (!isAuthenticated) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: 'radial-gradient(circle at 50% 30%, #0c1a30 0%, #030712 85%)', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
-        
-        <div style={{ width: '92vw', maxWidth: 470, background: 'rgba(15, 23, 42, 0.92)', border: lockoutTimer > 0 ? '2px solid #ef4444' : '1px solid rgba(56, 189, 248, 0.5)', borderRadius: 28, padding: 36, boxShadow: lockoutTimer > 0 ? '0 25px 90px rgba(239,68,68,0.6)' : '0 25px 100px rgba(0,0,0,0.95), 0 0 50px rgba(56, 189, 248, 0.25)', backdropFilter: 'blur(30px)' }}>
-          
-          <div style={{ textAlign: 'center', marginBottom: 22 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: lockoutTimer > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 99, 235, 0.25)', border: lockoutTimer > 0 ? '2px solid #ef4444' : '2px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 12px', boxShadow: lockoutTimer > 0 ? '0 0 20px #ef4444' : '0 0 20px #38bdf8' }}>
-              {lockoutTimer > 0 ? '🚨' : '🔒'}
-            </div>
-            <h1 style={{ fontSize: 20, fontWeight: 900, color: 'white', letterSpacing: '0.08em', textTransform: 'uppercase' }}>CRIMENET AI SECURITY GATE</h1>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 20, background: lockoutTimer > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.15)', marginTop: 6, border: lockoutTimer > 0 ? '1px solid #ef4444' : '1px solid #38bdf8' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: lockoutTimer > 0 ? '#ef4444' : '#34d399', animation: 'pulse 1.5s infinite' }}></span>
-              <span style={{ fontSize: 10, color: lockoutTimer > 0 ? '#ef4444' : '#38bdf8', fontWeight: 800, letterSpacing: '0.05em' }}>
-                {lockoutTimer > 0 ? `HARDWARE LOCKDOWN: WAITING ${lockoutTimer}s` : 'ZNCC BIOMETRIC SENTRY // ADITYA PAWAR ONLY'}
-              </span>
-            </div>
-          </div>
-
-          {faceScanActive ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
-              <div style={{ position: 'relative', width: 240, height: 240, borderRadius: '50%', overflow: 'hidden', border: scanStatus === 'verified' ? '3px solid #10b981' : scanStatus === 'rejected' ? '3px solid #ef4444' : '3px solid #38bdf8', boxShadow: scanStatus === 'verified' ? '0 0 40px #10b981' : scanStatus === 'rejected' ? '0 0 40px #ef4444' : '0 0 40px #38bdf8' }}>
-                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-                
-                {/* CYBER SCANNING HUD OVERLAY & LIVENESS TELEMETRY */}
-                {scanStatus === 'scanning' && (
-                  <>
-                    <div style={{ position: 'absolute', inset: 0, border: '2px dashed rgba(56, 189, 248, 0.7)', borderRadius: '50%', animation: 'spin 3s linear infinite', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, textAlign: 'center', background: 'rgba(2, 6, 23, 0.85)', padding: '3px 0', fontSize: 10, color: '#34d399', fontWeight: 800 }}>
-                      ⚡ PASSIVE LIVENESS & EAR CHECK: ACTIVE
-                    </div>
-                  </>
-                )}
-              </div>
-              <div style={{ marginTop: 14, textAlign: 'center' }}>
-                <div style={{ fontSize: 13.5, fontWeight: 900, color: scanStatus === 'verified' ? '#34d399' : scanStatus === 'rejected' ? '#ef4444' : '#38bdf8', letterSpacing: '0.04em' }}>
-                  {scanStatus === 'verified' && `✓ MATCH CONFIRMED: ADITYA PAWAR (${similarityScore}%) · LIVENESS VERIFIED`}
-                  {scanStatus === 'rejected' && `🚨 STRANGER REJECTED (${similarityScore}%): MUGSHOT LOGGED!`}
-                  {scanStatus === 'scanning' && `EXTRACTING 576-D LANDMARKS & ZNCC VECTORS...`}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              
-              {/* DPDP Act 2023 Statutory Camera & Biometrics Notice */}
-              <div style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: 'rgba(15, 23, 42, 0.85)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                fontSize: 10.5,
-                color: '#94a3b8',
-                lineHeight: 1.45,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 8
-              }}>
-                <span style={{ color: '#38bdf8', fontSize: 13, flexShrink: 0 }}>🛡️</span>
-                <div>
-                  <strong style={{ color: '#e2e8f0' }}>DPDP Act 2023 Statutory Privacy Compliance:</strong> Biometric facial telemetry is processed client-side solely for identity verification and anti-tamper intrusion auditing. Unauthorized access captures are subject to automatic 30-day encrypted retention and automated purge.
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled={lockoutTimer > 0}
-                onClick={startBiometricScan}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: 12,
-                  background: lockoutTimer > 0 ? '#334155' : 'linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%)',
-                  border: '1px solid #38bdf8',
-                  color: 'white',
-                  fontWeight: 900,
-                  fontSize: 14,
-                  cursor: lockoutTimer > 0 ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 10,
-                  boxShadow: lockoutTimer > 0 ? 'none' : '0 0 30px rgba(56, 189, 248, 0.45)',
-                  transition: '0.2s'
-                }}
-              >
-                <span style={{ fontSize: 20 }}>📸</span>
-                <span>Verify Face Biometrics to Unlock</span>
-              </button>
-
-              <div style={{ textAlign: 'center', fontSize: 11, color: '#64748b', margin: '2px 0' }}>— OR ENTER CLASSIFIED PASSCODE —</div>
-
-              <div>
-                <label style={{ fontSize: 10.5, color: '#94a3b8', fontWeight: 800, letterSpacing: '0.05em' }}>OFFICER BADGE ID</label>
-                <input
-                  type="text"
-                  value={badgeId}
-                  onChange={(e) => setBadgeId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 12, marginTop: 4, outline: 'none', fontFamily: 'monospace' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 10.5, color: '#94a3b8', fontWeight: 800, letterSpacing: '0.05em' }}>SECURITY PASSCODE</label>
-                <input
-                  type="text"
-                  name="auth_field_no_fill_sec"
-                  autoComplete="off"
-                  disabled={lockoutTimer > 0}
-                  placeholder="••••••••••••"
-                  value={pinCode}
-                  onChange={(e) => setPinCode(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handlePasscodeLogin() }}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, background: '#020617', border: '1px solid #38bdf8', color: 'white', fontSize: 12, marginTop: 4, outline: 'none', letterSpacing: '0.2em', WebkitTextSecurity: 'disc' } as any}
-                />
-              </div>
-
-              {authError && (
-                <div style={{ fontSize: 11.5, color: authError.startsWith('✓') ? '#34d399' : '#ef4444', fontWeight: 900, textAlign: 'center' }}>
-                  {authError}
-                </div>
-              )}
-
-              <button
-                disabled={lockoutTimer > 0}
-                onClick={() => handlePasscodeLogin()}
-                style={{ width: '100%', padding: '11px', borderRadius: 8, background: lockoutTimer > 0 ? '#1e293b' : '#0284c7', color: 'white', border: 'none', fontWeight: 800, fontSize: 12.5, cursor: lockoutTimer > 0 ? 'not-allowed' : 'pointer', marginTop: 4 }}
-              >
-                ⚡ Authenticate with Passcode
-              </button>
-
-              <button
-                type="button"
-                onClick={handleInstantDemoLogin}
-                style={{
-                  width: '100%',
-                  padding: '9px',
-                  borderRadius: 8,
-                  background: 'rgba(56, 189, 248, 0.12)',
-                  border: '1px dashed #38bdf8',
-                  color: '#38bdf8',
-                  fontWeight: 800,
-                  fontSize: 11.5,
-                  cursor: 'pointer',
-                  marginTop: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6
-                }}
-              >
-                <span>🚀 Instant Evaluator / Demo Bypass Access</span>
-              </button>
-            </div>
-          )}
-
-          <div style={{ marginTop: 22, textAlign: 'center', fontSize: 10.5, color: '#475569' }}>
-            Zero-Mean Facial Correlation Engine · Architect: <b style={{ color: '#cbd5e1' }}>Aditya Pawar</b>
-          </div>
-        </div>
-      </div>
+      <SecurityGate
+        soundEnabled={soundEnabled}
+        onAuthenticated={(token) => {
+          setAuthToken(token)
+          setIsAuthenticated(true)
+        }}
+      />
     )
   }
 
@@ -1424,7 +957,7 @@ export default function App() {
         />
       </div>
 
-      {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL (Password: Aditya@09) */}
+      {/* CLASSIFIED SURVEILLANCE AUTHENTICATION MODAL */}
       {auditAuthModalOpen && (
         <div onClick={() => setAuditAuthModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 3800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: '90vw', maxWidth: 420, background: '#0f172a', border: '1px solid #ef4444', borderRadius: 16, padding: 24, textAlign: 'center', boxShadow: '0 0 50px rgba(239, 68, 68, 0.4)' }}>
@@ -1453,123 +986,24 @@ export default function App() {
         </div>
       )}
 
-      {/* INTRUDER LOGS MODAL WITH FILTER TABS */}
-      {auditModalOpen && (
-        <div onClick={() => setAuditModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '92vw', maxWidth: 900, background: '#0f172a', border: '1px solid #38bdf8', borderRadius: 16, padding: 24, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 90px rgba(0,0,0,0.95)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: 14 }}>
-              <div>
-                <h3 style={{ fontSize: 17, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>🛡️</span> LIVE INTRUDER & VISITOR ACCESS LOGS
-                </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    placeholder="🔍 Search IP, Device, Timestamp..."
-                    value={logSearchQuery}
-                    onChange={(e) => setLogSearchQuery(e.target.value)}
-                    style={{ padding: '5px 12px', borderRadius: 6, background: '#020617', border: '1px solid #334155', color: 'white', fontSize: 11, outline: 'none', width: 220 }}
-                  />
-                  <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 800 }}>
-                    Showing {filteredLogs.length} of {auditLogs.length} Total Logs
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  {(['ALL', 'BLOCKED', 'AUTHORIZED'] as const).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setLogFilter(f)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        border: 'none',
-                        background: logFilter === f ? (f === 'BLOCKED' ? '#ef4444' : f === 'AUTHORIZED' ? '#10b981' : '#38bdf8') : '#1e293b',
-                        color: 'white',
-                        fontSize: 10.5,
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {f === 'ALL' ? 'All Records' : f === 'BLOCKED' ? '🚨 Blocked Intruders' : '✓ Authorized Access'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleClearAllLogs} style={{ background: '#7f1d1d', border: '1px solid #ef4444', color: 'white', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🗑️ Clear All</button>
-                <button onClick={() => setAuditModalOpen(false)} style={{ background: '#334155', border: 'none', color: 'white', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}>✕ Close</button>
-              </div>
-            </div>
+      <AuditLogsModal
+        isOpen={auditModalOpen}
+        onClose={() => setAuditModalOpen(false)}
+        logs={auditLogs}
+        logFilter={logFilter}
+        setLogFilter={setLogFilter}
+        logSearchQuery={logSearchQuery}
+        setLogSearchQuery={setLogSearchQuery}
+        onSelectIntruder={(log) => setSelectedIntruder(log)}
+        onDeleteLog={handleDeleteSingleLog}
+        onClearAll={handleClearAllLogs}
+        soundEnabled={soundEnabled}
+      />
 
-            <div style={{ flex: 1, overflowY: 'auto', marginTop: 14 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
-                <thead>
-                  <tr style={{ background: '#020617', color: '#38bdf8', textAlign: 'left' }}>
-                    <th style={{ padding: '10px' }}>Timestamp</th>
-                    <th style={{ padding: '10px' }}>IP Address</th>
-                    <th style={{ padding: '10px' }}>Device / Model</th>
-                    <th style={{ padding: '10px' }}>Status & Action</th>
-                    <th style={{ padding: '10px' }}>Intruder Mugshot</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map((log: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
-                      <td style={{ padding: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{formatLogTimestamp(log)}</td>
-                      <td style={{ padding: '10px', color: 'white', fontWeight: 700 }}>{log.ip}</td>
-                      <td style={{ padding: '10px', color: '#cbd5e1' }}>{log.device}</td>
-                      <td style={{ padding: '10px' }}>
-                        <span style={{ padding: '3px 8px', borderRadius: 4, background: log.status.includes('AUTHORIZED') ? '#065f46' : '#7f1d1d', color: 'white', fontWeight: 800, fontSize: 10 }}>
-                          {log.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px' }}>
-                        {log.photo ? (
-                          <img
-                            src={log.photo}
-                            alt="Intruder"
-                            onClick={() => setSelectedIntruder(log)}
-                            style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '2px solid #ef4444', cursor: 'pointer', boxShadow: '0 0 10px rgba(239,68,68,0.5)' }}
-                          />
-                        ) : (
-                          <span style={{ color: '#64748b', fontSize: 10 }}>No Photo</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <button
-                          onClick={(e) => handleDeleteSingleLog(log, e)}
-                          title="Delete this record"
-                          style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                        >
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* INTRUDER MUGSHOT MODAL */}
-      {selectedIntruder && (
-        <div onClick={() => setSelectedIntruder(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '90vw', maxWidth: 420, background: '#0f172a', border: '2px solid #ef4444', borderRadius: 16, padding: 24, textAlign: 'center' }}>
-            <h3 style={{ color: '#ef4444', fontSize: 16, fontWeight: 900 }}>🚨 INTRUDER MUGSHOT CAPTURED</h3>
-            <img src={selectedIntruder.photo} alt="Intruder Mugshot" style={{ width: 220, height: 220, borderRadius: 12, objectFit: 'cover', border: '2px solid #ef4444', margin: '14px auto', display: 'block', boxShadow: '0 0 30px rgba(239,68,68,0.6)' }} />
-            <div style={{ textAlign: 'left', background: '#020617', padding: 12, borderRadius: 8, fontSize: 11.5, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div><b>Time:</b> {formatLogTimestamp(selectedIntruder)}</div>
-              <div><b>IP:</b> <span style={{ color: '#38bdf8', fontWeight: 700 }}>{selectedIntruder.ip}</span></div>
-              <div><b>Device:</b> {selectedIntruder.device}</div>
-              <div><b>Action:</b> <span style={{ color: '#ef4444', fontWeight: 800 }}>{selectedIntruder.action}</span></div>
-            </div>
-            <button onClick={() => setSelectedIntruder(null)} style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#ef4444', color: 'white', border: 'none', fontWeight: 800, marginTop: 14, cursor: 'pointer' }}>Close Intruder Dossier</button>
-          </div>
-        </div>
-      )}
+      <IntruderModal
+        log={selectedIntruder}
+        onClose={() => setSelectedIntruder(null)}
+      />
 
       {/* REGISTER FACE MODAL */}
       {calibrateModalOpen && (

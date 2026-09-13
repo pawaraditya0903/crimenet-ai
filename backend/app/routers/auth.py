@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.app.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest, UserResponse, ChangePasswordRequest
 from backend.app.security.passwords import verify_password, hash_password, validate_password_strength
 from backend.app.security.jwt import issue_token_pair, rotate_refresh_token, revoke_token
-from backend.app.security.rbac import require_authenticated_user
+from backend.app.security.rbac import require_authenticated_user, require_roles, ForensicRole
 from backend.app.security.rate_limit import is_account_locked, record_failed_login, reset_failed_logins
 from backend.app.models.database import get_db
 from backend.app.audit.chain import append_audit_event
@@ -19,12 +19,7 @@ async def login_for_access_token(req: LoginRequest, request: Request):
 
     # 1. Check Brute-Force Lockout
     locked, remaining_seconds = is_account_locked(identifier)
-    if locked:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Account locked due to multiple failed login attempts. Retry in {remaining_seconds} seconds."
-        )
-
+    
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -33,6 +28,16 @@ async def login_for_access_token(req: LoginRequest, request: Request):
             (req.username, req.username, f"%{req.username}%")
         )
         user = cursor.fetchone()
+
+    # If account was locked, but user provided the correct master password, forgive and unlock
+    if locked:
+        if user and verify_password(req.password, user["password_hash"]):
+            reset_failed_logins(identifier)
+        else:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Account locked due to multiple failed login attempts. Retry in {remaining_seconds} seconds."
+            )
 
     # 2. Verify Credentials
     if not user or not verify_password(req.password, user["password_hash"]):
@@ -107,10 +112,10 @@ async def logout(req: RefreshTokenRequest, claims: dict = Depends(require_authen
     return {"success": revoked, "message": "Logged out successfully."}
 
 @router.get("/users")
-async def list_users(claims: dict = Depends(require_authenticated_user)):
-    """Returns directory of registered investigative users."""
+async def list_users(claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Returns directory of registered investigative users. Restricted to Supervisory Officers."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, email, role, badge, created_at FROM users")
+        cursor.execute("SELECT id, username, role, badge FROM users")
         rows = [dict(r) for r in cursor.fetchall()]
     return {"users": rows, "total": len(rows)}

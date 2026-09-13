@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List, Dict, Any
 from backend.app.schemas.cases import CaseCreateRequest, CaseStageUpdateRequest, CaseResponse
@@ -63,9 +64,7 @@ async def create_case(
 
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) as count FROM cases")
-        count = cursor.fetchone()["count"]
-        new_case_id = f"c{count + 1}"
+        new_case_id = f"case-{uuid.uuid4().hex[:8]}"
 
         cursor.execute(
             """INSERT INTO cases (id, title, description, stage, priority, lead_investigator_id, squad, created_at, updated_at)

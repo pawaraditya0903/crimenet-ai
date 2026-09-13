@@ -1,27 +1,56 @@
+import json
 import time
 from fastapi import APIRouter, HTTPException, Depends, Request
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from pydantic import BaseModel, Field
 from backend.app.schemas.auth import ChangePasswordRequest
 from backend.app.security.passwords import hash_password, verify_password, validate_password_strength
-from backend.app.security.face_prototype import evaluate_face_prototype
+from backend.app.security.face_prototype import evaluate_face_prototype, FACE_PROTOTYPE_DISCLAIMER
 from backend.app.security.rbac import require_authenticated_user
+from backend.app.security.rate_limit import check_rate_limit
 from backend.app.models.database import get_db
 
 router = APIRouter(prefix="/api/security", tags=["Security & System Settings"])
 
-_MASTER_FACE_DESCRIPTOR: List[float] = []
+class FaceVerifyRequest(BaseModel):
+    vector: List[float] = Field(..., min_length=16, max_length=1024, description="Biometric feature vector float array")
+    device: str = Field("Workstation", max_length=100)
+    ip: Optional[str] = Field("127.0.0.1", max_length=64)
+    photo: Optional[str] = Field(None, max_length=1000000)
+
+class FaceEnrollRequest(BaseModel):
+    vector: List[float] = Field(..., min_length=16, max_length=1024, description="Master biometric feature vector float array")
+    photo: Optional[str] = Field(None, max_length=1000000)
 
 @router.post("/verify-face")
-async def verify_face_endpoint(data: dict):
-    """Evaluates probe vector using prototype ZNCC facial similarity calculation."""
-    probe_vec = data.get("vector", [])
-    device = data.get("device", "Workstation")
-    ip = data.get("ip", "127.0.0.1")
+async def verify_face_endpoint(
+    req: FaceVerifyRequest,
+    request: Request,
+    claims: dict = Depends(require_authenticated_user)
+):
+    """Evaluates probe vector using prototype ZNCC facial similarity calculation.
+    Enforces JWT authentication, strict Pydantic vector validation, IP rate limiting,
+    persistent SQLite master storage, and immutable intruder/audit logging.
+    """
+    client_ip = req.ip or (request.client.host if request.client else "127.0.0.1")
+    if not check_rate_limit(f"face_verify:{client_ip}", max_requests=30, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for biometric verification. Please try again later.")
 
-    # If no master vector enrolled yet, simulate with enrollment guidance
-    res = evaluate_face_prototype(probe_vec, _MASTER_FACE_DESCRIPTOR, threshold=62.0)
+    # Fetch persistent master descriptor vector from SQLite system_settings
+    master_vec: List[float] = []
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM system_settings WHERE key = 'master_face_descriptor'")
+        row = cursor.fetchone()
+        if row and row["value"]:
+            try:
+                master_vec = json.loads(row["value"])
+            except Exception:
+                master_vec = []
 
-    # Log attempt to SQLite
+    res = evaluate_face_prototype(req.vector, master_vec, threshold=62.0)
+
+    # Log attempt to SQLite intruder_logs
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -29,12 +58,12 @@ async def verify_face_endpoint(data: dict):
                VALUES (?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)""",
             (
                 str(int(time.time() * 1000)),
-                ip,
-                device,
+                client_ip,
+                req.device,
                 "PROTOTYPE_FACE_VERIFICATION",
                 res["status"],
-                "Investigator Scan",
-                data.get("photo", ""),
+                claims.get("badge") or claims.get("sub", "Investigator Scan"),
+                req.photo or "",
                 time.time()
             )
         )
@@ -42,14 +71,33 @@ async def verify_face_endpoint(data: dict):
     return res
 
 @router.post("/register-master-face")
-async def register_master_face_endpoint(data: dict, claims: dict = Depends(require_authenticated_user)):
-    """Enrolls master facial descriptor vector for prototype verification."""
-    global _MASTER_FACE_DESCRIPTOR
-    vector = data.get("vector", [])
-    if not vector:
+async def register_master_face_endpoint(
+    req: FaceEnrollRequest,
+    claims: dict = Depends(require_authenticated_user)
+):
+    """Enrolls master facial descriptor vector and persists it to SQLite system_settings table."""
+    if not req.vector:
         raise HTTPException(status_code=400, detail="Vector cannot be empty.")
-    _MASTER_FACE_DESCRIPTOR = vector
-    return {"success": True, "message": "Master face vector successfully enrolled on server."}
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO system_settings (key, value) VALUES ('master_face_descriptor', ?)
+               ON CONFLICT(key) DO UPDATE SET value = excluded.value""",
+            (json.dumps(req.vector),)
+        )
+        if req.photo:
+            cursor.execute(
+                """INSERT INTO system_settings (key, value) VALUES ('master_face_photo', ?)
+                   ON CONFLICT(key) DO UPDATE SET value = excluded.value""",
+                (req.photo,)
+            )
+
+    return {
+        "success": True,
+        "message": "Master face vector successfully enrolled and persisted to database.",
+        "disclaimer": FACE_PROTOTYPE_DISCLAIMER
+    }
 
 @router.post("/change-password")
 async def change_password_endpoint(req: ChangePasswordRequest, claims: dict = Depends(require_authenticated_user)):
