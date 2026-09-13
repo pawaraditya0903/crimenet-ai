@@ -7,7 +7,7 @@
 [![React: 19](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![GitHub Stars](https://img.shields.io/github/stars/pawaraditya0903/crimenet-ai?style=flat-square)](https://github.com/pawaraditya0903/crimenet-ai/stargazers)
 [![Last Commit](https://img.shields.io/github/last-commit/pawaraditya0903/crimenet-ai?style=flat-square)](https://github.com/pawaraditya0903/crimenet-ai/commits/main)
-[![Tests: 58 Passing](https://img.shields.io/badge/Tests-58%20Passing%20(100%25)-brightgreen?style=flat-square)](tests/)
+[![Tests: 82 Passing](https://img.shields.io/badge/Tests-82%20Passing%20(100%25)-brightgreen?style=flat-square)](tests/)
 
 **CrimeNet AI** is an open-source, AI-powered forensic intelligence and investigative decision-support platform. Designed for authorized analytical environments, it systematically ingests, normalizes, and connects fragmented investigative datasets—bridging telecom communications, financial transaction ledgers, police records, highway vehicle scans, and digital wallet activities into a unified, explainable intelligence knowledge graph.
 
@@ -64,7 +64,9 @@ Modern criminal investigations encounter severe **data fragmentation**:
 ## 🌟 Key Capabilities
 
 ### 1. Multi-Source Ingestion & Normalization
-- Ingests structured and semi-structured records across 5 primary domains:
+- Users can load curated synthetic benchmark datasets or upload custom CSV files for CDR, banking, FIR, ANPR, and digital wallet records.
+- Uploaded records pass through the same normalization, entity-resolution, and relationship-generation pipeline as baseline samples.
+- Ingestion covers 5 primary investigative domains:
   - **Telecom CDR**: Caller/receiver pairs, durations, cell tower coordinates, handset IMEIs, and IMSIs.
   - **Banking & RTGS**: Originating and destination accounts, wire amounts, bank codes, transaction types (IMPS/RTGS/NEFT), and linked KYC phones.
   - **Police FIR Records**: First Information Reports, accused suspects, IPC legal sections, suspect vehicles, accounts, and complainants.

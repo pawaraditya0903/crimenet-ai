@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import {
   Radio,
@@ -15,11 +15,49 @@ import {
   Search,
   UploadCloud,
   Network,
-  Eye
+  Eye,
+  FileSpreadsheet,
+  X,
+  Check,
+  FileUp,
+  FileCode
 } from 'lucide-react'
 
 interface DatasetPipelineProps {
   onNavigateToGraph?: () => void
+}
+
+const DOMAIN_INFO: Record<string, { label: string; icon: any; required: string[]; optional: string[] }> = {
+  cdr: {
+    label: 'Telecom CDR',
+    icon: Radio,
+    required: ['caller', 'receiver', 'timestamp'],
+    optional: ['duration_sec', 'tower_name', 'tower_id', 'imei', 'imsi', 'lat', 'lng']
+  },
+  banking: {
+    label: 'Banking Ledger',
+    icon: Landmark,
+    required: ['from_account', 'to_account', 'amount', 'timestamp'],
+    optional: ['from_name', 'to_name', 'bank_name', 'txn_type', 'linked_phone', 'narration']
+  },
+  fir: {
+    label: 'FIR Police Records',
+    icon: FileText,
+    required: ['fir_no', 'police_station', 'accused_name'],
+    optional: ['complainant', 'ipc_sections', 'suspect_phone', 'suspect_vehicle', 'suspect_account']
+  },
+  anpr: {
+    label: 'Highway ANPR',
+    icon: Car,
+    required: ['plate_number', 'camera_id', 'timestamp'],
+    optional: ['location_name', 'vehicle_model', 'speed_kmh', 'registered_owner', 'owner_phone', 'lat', 'lng']
+  },
+  wallet: {
+    label: 'Digital Wallet / USDT',
+    icon: Wallet,
+    required: ['sender_wallet', 'receiver_wallet', 'amount', 'timestamp'],
+    optional: ['sender_name', 'receiver_name', 'platform', 'sender_phone', 'receiver_phone', 'narration']
+  }
 }
 
 export default function DatasetPipeline({ onNavigateToGraph }: DatasetPipelineProps) {
@@ -30,8 +68,21 @@ export default function DatasetPipeline({ onNavigateToGraph }: DatasetPipelinePr
   const [selectedLinkFilter, setSelectedLinkFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [csvUploadType, setCsvUploadType] = useState<string>('cdr')
-  const [csvRawText, setCsvRawText] = useState<string>('')
   const [uploadMessage, setUploadMessage] = useState<string>('')
+
+  // ── REAL CSV FILE UPLOAD LAYER STATE ──
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [processingStage, setProcessingStage] = useState<string>('')
+  const [uploadError, setUploadError] = useState<{ message: string; missing_columns?: string[]; details?: string } | null>(null)
+  const [uploadSuccessMetrics, setUploadSuccessMetrics] = useState<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  }
 
   // Fetch current summary on mount
   const fetchSummary = async () => {
@@ -51,6 +102,8 @@ export default function DatasetPipeline({ onNavigateToGraph }: DatasetPipelinePr
   const handleLoadAllSamples = async () => {
     setIsLoading(true)
     setUploadMessage('')
+    setUploadError(null)
+    setUploadSuccessMetrics(null)
     try {
       const res = await axios.post('/api/pipeline/load-all-samples')
       setPipelineResult(res.data)
@@ -66,9 +119,12 @@ export default function DatasetPipeline({ onNavigateToGraph }: DatasetPipelinePr
   const handleResetGraph = async () => {
     if (!confirm('Reset graph topology back to initial baseline seeds?')) return
     setIsLoading(true)
+    setUploadError(null)
+    setUploadSuccessMetrics(null)
     try {
       await axios.post('/api/pipeline/reset')
       setPipelineResult(null)
+      setSelectedFile(null)
       await fetchSummary()
       alert('✓ Graph successfully restored to verified baseline seed.')
     } catch (err: any) {
@@ -78,26 +134,86 @@ export default function DatasetPipeline({ onNavigateToGraph }: DatasetPipelinePr
     }
   }
 
-  // Ingest Custom CSV
-  const handleIngestCsv = async () => {
-    if (!csvRawText.trim()) {
-      alert('Please paste or upload CSV content.')
+  // File selection handlers
+  const handleFileSelect = (file: File | null) => {
+    setUploadError(null)
+    setUploadSuccessMetrics(null)
+    if (!file) {
+      setSelectedFile(null)
       return
     }
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setUploadError({ message: `File "${file.name}" is not a valid CSV. Please select a .csv file.` })
+      setSelectedFile(null)
+      return
+    }
+    setSelectedFile(file)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files[0])
+    }
+  }
+
+  // Real CSV File Upload & Processing
+  const handleProcessCsvFile = async () => {
+    if (!selectedFile) return
     setIsLoading(true)
+    setUploadError(null)
+    setUploadSuccessMetrics(null)
+    setProcessingStage('Uploading & Validating CSV Schema...')
+
     try {
-      const res = await axios.post('/api/pipeline/ingest', {
-        csv_content: csvRawText,
-        csv_dataset_type: csvUploadType
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('dataset_type', csvUploadType)
+
+      setProcessingStage('Ingesting Records & Resolving Entities...')
+
+      const res = await axios.post('/api/pipeline/upload-csv', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       })
+
+      setProcessingStage('Synthesizing Cross-Domain Links...')
       setPipelineResult(res.data)
-      setUploadMessage(`✓ Ingested CSV records for ${csvUploadType.toUpperCase()} successfully!`)
-      setCsvRawText('')
+      setUploadSuccessMetrics(res.data)
+      setUploadMessage(`✓ Successfully processed ${res.data.records_processed} records from ${selectedFile.name}`)
       await fetchSummary()
     } catch (err: any) {
-      alert('CSV ingestion error: ' + (err.response?.data?.detail || err.message))
+      console.error('CSV upload error:', err)
+      const errorData = err.response?.data?.detail
+      if (typeof errorData === 'object' && errorData !== null) {
+        setUploadError({
+          message: errorData.message || 'Dataset validation failed.',
+          missing_columns: errorData.missing_columns,
+          details: errorData.required_columns ? `Required columns: ${errorData.required_columns.join(', ')}` : undefined
+        })
+      } else {
+        setUploadError({
+          message: errorData || err.message || 'Failed to upload and process CSV dataset.'
+        })
+      }
     } finally {
       setIsLoading(false)
+      setProcessingStage('')
     }
   }
 
@@ -393,55 +509,301 @@ export default function DatasetPipeline({ onNavigateToGraph }: DatasetPipelinePr
 
       </div>
 
-      {/* ── CUSTOM CSV UPLOADER SECTION ── */}
-      <div style={{ padding: 16, borderRadius: 12, background: '#0a1020', border: '1px solid #1e293b', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <UploadCloud className="w-4 h-4 text-sky-400" />
-            <span style={{ fontWeight: 800, fontSize: 13, color: '#e2e8f0' }}>Custom Dataset CSV Ingestion</span>
+      {/* ── REAL CUSTOM CSV UPLOADER SECTION ── */}
+      <div style={{ padding: 18, borderRadius: 14, background: '#0a1020', border: '1px solid #1e293b', marginBottom: 20 }}>
+        
+        {/* Section Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileSpreadsheet className="w-5 h-5 text-sky-400" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: 'white', letterSpacing: '0.02em' }}>
+                Upload Custom Dataset (CSV Engine)
+              </div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
+                Select dataset type, choose or drop a local CSV file, and execute multi-domain entity resolution.
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>Target Domain:</span>
-            <select
-              value={csvUploadType}
-              onChange={(e) => setCsvUploadType(e.target.value)}
-              style={{ padding: '4px 8px', borderRadius: 6, background: '#020617', border: '1px solid #334155', color: '#38bdf8', fontSize: 11.5, fontWeight: 700 }}
-            >
-              <option value="cdr">Telecom CDR</option>
-              <option value="banking">Banking Ledger</option>
-              <option value="fir">FIR Police Record</option>
-              <option value="anpr">Highway ANPR</option>
-              <option value="wallet">Digital Wallet / USDT</option>
-            </select>
+
+          <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
+            MAX SIZE: 10MB · UTF-8 COMMA SEPARATED
           </div>
         </div>
 
-        <textarea
-          rows={3}
-          value={csvRawText}
-          onChange={(e) => setCsvRawText(e.target.value)}
-          placeholder={`Paste ${csvUploadType.toUpperCase()} CSV records here (e.g. caller,receiver,duration_sec,timestamp,tower_name,lat,lng...)`}
-          style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#020617', border: '1px solid #334155', color: '#cbd5e1', fontSize: 11, fontFamily: 'monospace', resize: 'vertical' }}
-        />
+        {/* 1. Dataset Type Selector */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Step 1: Select Dataset Type
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {Object.entries(DOMAIN_INFO).map(([key, info]) => {
+              const IconComponent = info.icon
+              const isSelected = csvUploadType === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => { setCsvUploadType(key); setUploadError(null); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    border: isSelected ? '1px solid #38bdf8' : '1px solid #1e293b',
+                    background: isSelected ? '#1d4ed8' : '#020617',
+                    color: isSelected ? 'white' : '#94a3b8',
+                    fontSize: 12,
+                    fontWeight: isSelected ? 800 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <IconComponent className="w-4 h-4" />
+                  <span>{info.label}</span>
+                </button>
+              )
+            })}
+          </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+          {/* Schema Required Columns Guidance */}
+          <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: '#020617', border: '1px solid #1e293b', fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ color: '#38bdf8', fontWeight: 800 }}>Schema Requirements for {DOMAIN_INFO[csvUploadType]?.label}:</span>
+            <span style={{ color: '#fbbf24' }}>
+              Required: <b>{DOMAIN_INFO[csvUploadType]?.required.join(', ')}</b>
+            </span>
+            <span style={{ color: '#64748b' }}>|</span>
+            <span style={{ color: '#94a3b8' }}>
+              Optional: {DOMAIN_INFO[csvUploadType]?.optional.join(', ')}
+            </span>
+          </div>
+        </div>
+
+        {/* 2. Drag-and-Drop & File Picker Zone */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Step 2: Choose CSV File
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+          />
+
+          {!selectedFile ? (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${isDragging ? '#38bdf8' : '#334155'}`,
+                background: isDragging ? 'rgba(56, 189, 248, 0.08)' : '#020617',
+                borderRadius: 10,
+                padding: '28px 20px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <FileUp className={`w-8 h-8 mx-auto mb-2 ${isDragging ? 'text-sky-400' : 'text-slate-500'}`} />
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>
+                Drag and drop your <span style={{ color: '#38bdf8' }}>{DOMAIN_INFO[csvUploadType]?.label} CSV</span> here, or click to browse
+              </div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                Supports UTF-8 comma-separated files (.csv) up to 10MB
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 18px',
+                borderRadius: 10,
+                background: '#020617',
+                border: '1px solid #10b981'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>
+                    {selectedFile.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', display: 'flex', gap: 8, marginTop: 2 }}>
+                    <span>Size: <b>{formatFileSize(selectedFile.size)}</b></span>
+                    <span>•</span>
+                    <span style={{ color: '#34d399', fontWeight: 700 }}>✓ CSV Verified</span>
+                    <span>•</span>
+                    <span>Target: <b>{DOMAIN_INFO[csvUploadType]?.label}</b></span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    background: '#1e293b',
+                    border: '1px solid #475569',
+                    color: '#cbd5e1',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: isLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Change File
+                </button>
+                <button
+                  onClick={() => setSelectedFile(null)}
+                  disabled={isLoading}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid #ef4444',
+                    color: '#f87171',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: isLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  ✕ Remove
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. Action Button & Processing Lifecycle */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>
+            {processingStage ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#38bdf8', fontWeight: 800 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#38bdf8', boxShadow: '0 0 10px #38bdf8' }} />
+                <span>{processingStage}</span>
+              </div>
+            ) : selectedFile ? (
+              <span style={{ color: '#34d399' }}>Ready to parse {selectedFile.name}</span>
+            ) : (
+              <span>Select a CSV file to process</span>
+            )}
+          </div>
+
           <button
-            onClick={handleIngestCsv}
-            disabled={isLoading || !csvRawText.trim()}
+            onClick={handleProcessCsvFile}
+            disabled={isLoading || !selectedFile}
             style={{
-              padding: '8px 16px',
+              padding: '10px 22px',
               borderRadius: 8,
-              background: csvRawText.trim() ? '#0284c7' : '#1e293b',
-              border: 'none',
+              background: isLoading ? '#334155' : selectedFile ? 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' : '#1e293b',
+              border: selectedFile ? '1px solid #38bdf8' : 'none',
               color: 'white',
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: 800,
-              cursor: csvRawText.trim() ? 'pointer' : 'not-allowed'
+              cursor: isLoading || !selectedFile ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: selectedFile && !isLoading ? '0 0 20px rgba(56, 189, 248, 0.3)' : 'none'
             }}
           >
-            Parse & Ingest CSV Records
+            <UploadCloud className="w-4 h-4" />
+            <span>{isLoading ? (processingStage || 'Processing Dataset...') : 'Process Dataset'}</span>
           </button>
         </div>
+
+        {/* 4. Error Alert View */}
+        {uploadError && (
+          <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', fontWeight: 800, fontSize: 13 }}>
+              <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+              <span>❌ Upload Failed: {uploadError.message}</span>
+            </div>
+            {uploadError.missing_columns && (
+              <div style={{ marginTop: 6, fontSize: 11.5, color: '#fca5a5' }}>
+                Missing Required Columns: <code style={{ background: '#020617', padding: '2px 6px', borderRadius: 4, color: '#fbbf24', fontFamily: 'monospace' }}>{uploadError.missing_columns.join(', ')}</code>
+              </div>
+            )}
+            {uploadError.details && (
+              <div style={{ marginTop: 4, fontSize: 11, color: '#cbd5e1' }}>
+                {uploadError.details}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 5. Real Metrics Success Dashboard */}
+        {uploadSuccessMetrics && (
+          <div style={{ marginTop: 14, padding: '16px', borderRadius: 10, background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 78, 59, 0.18) 100%)', border: '1px solid #10b981' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span style={{ fontSize: 13.5, fontWeight: 900, color: '#34d399' }}>
+                  ✓ DATASET PROCESSED SUCCESSFULLY
+                </span>
+                <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 4, background: '#064e3b', color: '#6ee7b7', fontWeight: 800 }}>
+                  DOMAIN: {uploadSuccessMetrics.dataset_type}
+                </span>
+              </div>
+
+              {onNavigateToGraph && (
+                <button
+                  onClick={onNavigateToGraph}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    background: '#10b981',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Network className="w-3.5 h-3.5" />
+                  <span>Explore in Graph</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+              <div style={{ padding: '10px 12px', background: 'rgba(2, 6, 23, 0.6)', borderRadius: 8, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>Records Processed</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: 'white', marginTop: 2 }}>{uploadSuccessMetrics.records_processed}</div>
+              </div>
+              <div style={{ padding: '10px 12px', background: 'rgba(2, 6, 23, 0.6)', borderRadius: 8, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>Entities Discovered</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#38bdf8', marginTop: 2 }}>{uploadSuccessMetrics.entities_created}</div>
+              </div>
+              <div style={{ padding: '10px 12px', background: 'rgba(2, 6, 23, 0.6)', borderRadius: 8, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>Relationships Generated</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#a78bfa', marginTop: 2 }}>{uploadSuccessMetrics.relationships_generated}</div>
+              </div>
+              <div style={{ padding: '10px 12px', background: 'rgba(2, 6, 23, 0.6)', borderRadius: 8, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>Cross-Domain Links</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#34d399', marginTop: 2 }}>{uploadSuccessMetrics.cross_domain_links}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ── GENERATED INTELLIGENCE LINKS TABLE ── */}

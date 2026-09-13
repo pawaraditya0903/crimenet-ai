@@ -245,6 +245,36 @@ class MultiSourcePipeline:
         entities: Dict[str, Dict[str, Any]] = {}
         relationships: List[Dict[str, Any]] = []
 
+        # Preload existing entities from SQLite to enable cross-domain correlation across sequential batch uploads
+        if persist_to_db:
+            try:
+                with get_db() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id, name, type, tier, category, risk_score, city, phone, dossier, metadata_json FROM graph_entities")
+                    for row in cursor.fetchall():
+                        r_name = str(row["name"]).strip()
+                        if r_name:
+                            m_json = {}
+                            if "metadata_json" in row.keys() and row["metadata_json"]:
+                                try:
+                                    m_json = json.loads(row["metadata_json"])
+                                except Exception:
+                                    pass
+                            entities[r_name] = {
+                                "id": row["id"],
+                                "name": r_name,
+                                "type": row["type"],
+                                "tier": row["tier"],
+                                "category": row["category"],
+                                "risk_score": float(row["risk_score"] or 50.0),
+                                "city": row["city"] or "Mumbai",
+                                "phone": row["phone"] or "",
+                                "dossier": row["dossier"] or "",
+                                "metadata": m_json
+                            }
+            except Exception as e:
+                logger.warning(f"Could not preload existing entities for cross-domain link synthesis: {e}")
+
         def add_entity(name: str, ent_type: str, category: str = "general", risk_score: float = 50.0, city: str = "Mumbai", phone: str = "", dossier: str = "", metadata: Optional[Dict] = None):
             name_clean = str(name).strip()
             if not name_clean:

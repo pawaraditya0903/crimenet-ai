@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, Body
+import csv
+import io
+from fastapi import APIRouter, HTTPException, Query, Body, UploadFile, File, Form
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from backend.app.pipeline.ingestion import (
@@ -13,6 +15,15 @@ from backend.app.models.database import get_db
 from backend.app.models.tables import DEFAULT_ENTITIES, DEFAULT_RELATIONSHIPS
 
 router = APIRouter(prefix="/api/pipeline", tags=["Data Ingestion & Entity Resolution Pipeline"])
+
+REQUIRED_COLUMNS_BY_DOMAIN: Dict[str, List[str]] = {
+    "cdr": ["caller", "receiver", "timestamp"],
+    "banking": ["from_account", "to_account", "amount", "timestamp"],
+    "fir": ["fir_no", "police_station", "accused_name"],
+    "anpr": ["plate_number", "camera_id", "timestamp"],
+    "wallet": ["sender_wallet", "receiver_wallet", "amount", "timestamp"]
+}
+
 
 class IngestBatchRequest(BaseModel):
     dataset_type: Optional[str] = "custom"
@@ -130,6 +141,149 @@ async def ingest_dataset_batch(req: IngestBatchRequest):
         persist_to_db=True
     )
     return result
+
+@router.post("/upload-csv")
+async def upload_csv_dataset(
+    file: UploadFile = File(...),
+    dataset_type: str = Form(...)
+):
+    """Uploads an investigator's CSV file for a specific intelligence domain,
+    validates headers against domain schema, normalizes identifiers,
+    and executes cross-domain entity resolution and graph linking.
+    """
+    dtype = dataset_type.lower().strip()
+    if dtype not in REQUIRED_COLUMNS_BY_DOMAIN:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"Unsupported dataset type '{dataset_type}'.",
+                "supported_types": list(REQUIRED_COLUMNS_BY_DOMAIN.keys()),
+                "dataset_type": dataset_type
+            }
+        )
+
+    # 1. File extension validation
+    filename = file.filename or ""
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"Invalid file format: '{filename}'. Only CSV files (.csv) are accepted.",
+                "dataset_type": dtype
+            }
+        )
+
+    # 2. Safe in-memory reading with size limit (10MB)
+    MAX_FILE_SIZE = 10 * 1024 * 1024
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Uploaded CSV file is completely empty. Please select a valid dataset file.",
+                "dataset_type": dtype
+            }
+        )
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"File exceeds maximum permissible upload size limit of 10MB.",
+                "dataset_type": dtype
+            }
+        )
+
+    # 3. UTF-8 decoding
+    text_content = ""
+    for encoding in ["utf-8-sig", "utf-8", "latin-1"]:
+        try:
+            text_content = content.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    if not text_content:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Unable to decode CSV file. Please ensure it is saved as UTF-8 encoded text.",
+                "dataset_type": dtype
+            }
+        )
+
+    # 4. Parse CSV headers & records
+    try:
+        reader = csv.DictReader(io.StringIO(text_content.strip()))
+        if not reader.fieldnames:
+            raise ValueError("CSV header row missing")
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"Malformed CSV file structure: {str(e)}",
+                "dataset_type": dtype
+            }
+        )
+
+    # 5. Validate required columns
+    normalized_headers = {col.strip().lower(): col for col in reader.fieldnames if col}
+    required_cols = REQUIRED_COLUMNS_BY_DOMAIN[dtype]
+    missing_cols = [req for req in required_cols if req not in normalized_headers]
+
+    if missing_cols:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"Invalid {dtype.upper()} dataset: missing required columns.",
+                "missing_columns": missing_cols,
+                "required_columns": required_cols,
+                "found_columns": list(normalized_headers.keys()),
+                "dataset_type": dtype
+            }
+        )
+
+    # 6. Normalize rows into standardized dictionary records
+    records: List[Dict[str, Any]] = []
+    for row in reader:
+        norm_row = {
+            k.strip().lower(): v.strip() if isinstance(v, str) else v
+            for k, v in row.items()
+            if k
+        }
+        # Ignore completely empty rows
+        if any(v for v in norm_row.values() if v is not None and str(v).strip() != ""):
+            records.append(norm_row)
+
+    if not records:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"The uploaded CSV file contains headers but has no data rows.",
+                "dataset_type": dtype
+            }
+        )
+
+    # 7. Execute MultiSourcePipeline entity resolution and link generation
+    result = MultiSourcePipeline.process_and_link(
+        cdr_records=records if dtype == "cdr" else None,
+        banking_records=records if dtype == "banking" else None,
+        fir_records=records if dtype == "fir" else None,
+        anpr_records=records if dtype == "anpr" else None,
+        wallet_records=records if dtype == "wallet" else None,
+        persist_to_db=True
+    )
+
+    return {
+        "status": "DATASET_UPLOAD_SUCCESS",
+        "message": f"Dataset '{dtype.upper()}' ({len(records)} records) processed and correlated successfully.",
+        "dataset_type": dtype.upper(),
+        "records_processed": len(records),
+        "entities_created": len(result.get("entities", [])),
+        "relationships_generated": len(result.get("relationships", [])),
+        "cross_domain_links": len(result.get("cross_domain_links", [])),
+        "warnings": result.get("warnings", []),
+        "links": result.get("links", [])
+    }
+
 
 @router.post("/reset")
 async def reset_graph_to_seed():
