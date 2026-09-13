@@ -92,7 +92,11 @@ if _cors_env:
         raise RuntimeError("FATAL: Insecure CORS configuration in production mode.")
 else:
     if IS_PRODUCTION:
-        ALLOWED_ORIGINS = ["https://crimenet.ai"]
+        ALLOWED_ORIGINS = [
+            "https://crimenet.ai",
+            "https://crimenet-ai-two.vercel.app",
+            "https://crimenet-ai.vercel.app"
+        ]
     else:
         ALLOWED_ORIGINS = [
             "http://localhost:5173",

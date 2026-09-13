@@ -1,5 +1,15 @@
 import os
 import sys
+
+# Ensure repository root and backend directory are in sys.path regardless of execution context
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
+BACKEND_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+
+for p in [REPO_ROOT, BACKEND_DIR]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 import time
 import logging
 from contextlib import asynccontextmanager
