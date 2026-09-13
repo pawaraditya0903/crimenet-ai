@@ -1,9 +1,13 @@
+import os
+import json
 import uuid
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api", tags=["System Settings & Investigator Roster"])
+
+SETTINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "crimenet_settings.json")
 
 # In-memory storage with high-fidelity production defaults
 SYSTEM_SETTINGS: Dict[str, Any] = {
@@ -32,6 +36,24 @@ SYSTEM_SETTINGS: Dict[str, Any] = {
     "anomaly_contamination": 0.044,
     "pmla_threshold_inr": 50000.0
 }
+
+# Try loading from disk if available
+try:
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            disk_data = json.load(f)
+            if isinstance(disk_data, dict):
+                if "settings" in disk_data:
+                    SYSTEM_SETTINGS.update(disk_data["settings"])
+except Exception:
+    pass
+
+def save_to_disk():
+    try:
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"settings": SYSTEM_SETTINGS, "investigators": INVESTIGATORS}, f, indent=2)
+    except Exception:
+        pass
 
 INVESTIGATORS: List[Dict[str, Any]] = [
     {
@@ -80,6 +102,7 @@ async def update_system_settings(payload: Dict[str, Any]):
     """Updates platform configuration and operational parameters."""
     global SYSTEM_SETTINGS
     SYSTEM_SETTINGS.update(payload)
+    save_to_disk()
     return {
         "status": "SETTINGS_SAVED",
         "settings": SYSTEM_SETTINGS
@@ -111,6 +134,7 @@ async def create_investigator(req: CreateInvestigatorRequest):
         "skills": req.skills or ["Field Investigation"]
     }
     INVESTIGATORS.append(inv_obj)
+    save_to_disk()
     return {
         "status": "INVESTIGATOR_CREATED",
         "investigator": inv_obj
@@ -124,6 +148,7 @@ async def delete_investigator(investigator_id: str):
     INVESTIGATORS = [inv for inv in INVESTIGATORS if inv["id"] != investigator_id]
     if len(INVESTIGATORS) == original_len:
         raise HTTPException(status_code=404, detail="Investigator not found.")
+    save_to_disk()
     return {
         "status": "INVESTIGATOR_DELETED",
         "id": investigator_id

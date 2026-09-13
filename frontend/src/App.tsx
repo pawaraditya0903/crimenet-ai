@@ -37,6 +37,13 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   componentDidCatch(error: any, errorInfo: any) {
     console.error("CrimeNet Module Error Caught:", error, errorInfo)
   }
+  componentDidUpdate(prevProps: any) {
+    if (this.props.children !== prevProps.children) {
+      if (this.state.hasError) {
+        this.setState({ hasError: false, error: null })
+      }
+    }
+  }
   render() {
     if (this.state.hasError) {
       return (
@@ -52,6 +59,14 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
           >
             🔄 Reload Module
           </button>
+          {this.state.error && (
+            <details style={{ textAlign: 'left', marginTop: 14, background: '#020617', padding: 10, borderRadius: 6, fontSize: 11, color: '#f87171' }}>
+              <summary style={{ cursor: 'pointer', color: '#94a3b8', fontWeight: 700 }}>Telemetry Diagnostic Details</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: 6, fontSize: 10.5 }}>
+                {String(this.state.error?.message || this.state.error)}
+              </pre>
+            </details>
+          )}
         </div>
       )
     }
@@ -131,13 +146,36 @@ export default function App() {
   const [spotlightOpen, setSpotlightOpen] = useState<boolean>(false)
   const [spotlightQuery, setSpotlightQuery] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false)
-  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'offline'>('connected')
+  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'warming' | 'offline'>('connected')
   const [activeToast, setActiveToast] = useState<ToastEvent | null>(null)
 
-  // ── REAL-TIME INVESTIGATION EVENT ENGINE (SOCKET.IO CLIENT) ──
+  // ── REAL-TIME HEALTH PING & INVESTIGATION EVENT ENGINE (SOCKET.IO CLIENT) ──
   useEffect(() => {
     if (!isAuthenticated) return
 
+    let isMounted = true
+    let isSocketConnected = false
+
+    // 1. Continuous HTTP Health Polling to wake up Render and monitor backend status
+    const pingHealth = async () => {
+      try {
+        const res = await axios.get('/api/health', { timeout: 10000 })
+        if (res.data && res.data.status) {
+          if (isMounted && !isSocketConnected) {
+            setConnectionState('connected')
+          }
+        }
+      } catch (err) {
+        if (isMounted && !isSocketConnected) {
+          setConnectionState('warming')
+        }
+      }
+    }
+
+    pingHealth()
+    const healthInterval = setInterval(pingHealth, 8000)
+
+    // 2. Socket.IO Real-time Connection
     const backendUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
       ? 'http://localhost:8000'
       : 'https://crimenet-ai.onrender.com'
@@ -148,28 +186,33 @@ export default function App() {
     try {
       socket = io(backendUrl, {
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 5,
-        reconnectionDelay: 3000,
-        timeout: 8000,
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+        timeout: 20000,
         auth: { token },
         query: { token }
       })
 
       socket.on('connect', () => {
-        setConnectionState('connected')
+        isSocketConnected = true
+        if (isMounted) setConnectionState('connected')
         try { socket.emit('join_case_room', { case_id: selectedCase, token }) } catch {}
       })
 
       socket.on('disconnect', () => {
-        setConnectionState('offline')
+        isSocketConnected = false
+        if (isMounted) setConnectionState('reconnecting')
       })
 
       socket.on('connect_error', () => {
-        setConnectionState('offline')
+        isSocketConnected = false
+        if (isMounted) setConnectionState('warming')
       })
 
       socket.on('reconnecting', () => {
-        setConnectionState('reconnecting')
+        if (isMounted) setConnectionState('reconnecting')
       })
 
       socket.on('investigation_event', (event: any) => {
@@ -185,6 +228,8 @@ export default function App() {
     } catch {}
 
     return () => {
+      isMounted = false
+      clearInterval(healthInterval)
       if (socket) socket.disconnect()
     }
   }, [selectedCase, isAuthenticated, authToken])
@@ -909,7 +954,7 @@ export default function App() {
 
         {/* 📜 MODULE CONTENT VIEW */}
         <div style={{ flex: 1, padding: '16px', overflowY: 'auto', paddingBottom: '70px' }}>
-          <ErrorBoundary>
+          <ErrorBoundary key={activeTab}>
             {activeTab === 'pipeline' && <DatasetPipeline onNavigateToGraph={() => setActiveTab('graph')} />}
             {activeTab === 'graph' && <GraphExplorer />}
             {activeTab === 'radar' && <GeospatialRadar />}

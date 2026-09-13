@@ -1,11 +1,40 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 
+const getInitialSettings = () => {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem('crimenet_platform_settings') || localStorage.getItem('crimenet_settings')
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+const getInitialInvestigators = () => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem('crimenet_investigators')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
 export default function Settings() {
   const [activeSubTab, setActiveSubTab] = useState<'security' | 'alerts' | 'theme' | 'forensics' | 'agency' | 'roster'>('security')
+  const init = getInitialSettings()
   
   // Investigators
-  const [investigators, setInvestigators] = useState<any[]>([])
+  const [investigators, setInvestigators] = useState<any[]>(() => {
+    const saved = getInitialInvestigators()
+    if (saved && saved.length > 0) return saved
+    return [
+      { id: "inv-1", name: "Aditya Pawar", email: "aditya.pawar@crimenet.ai", badge: "INV-2026-AP01", role: "Chief Intelligence Architect & Lead", clearance: "Top Secret / Level 5", skills: ["Telecom CDR & Tower Triangulation", "Cyber Forensics & Dark Web Tracing", "PMLA & Hawala Financial Auditing"] },
+      { id: "inv-2", name: "Ramesh Sharma", email: "ramesh.sharma@crimenet.ai", badge: "INV-2026-RS02", role: "Hawala & PMLA Financial Auditor", clearance: "Secret / Level 4", skills: ["PMLA & Hawala Financial Auditing", "Cryptocurrency & Blockchain Forensics"] },
+      { id: "inv-3", name: "Suresh Kadam", email: "suresh.kadam@crimenet.ai", badge: "INV-2026-SK03", role: "Cellular CDR & Tower Analyst", clearance: "Secret / Level 4", skills: ["Telecom CDR & Tower Triangulation", "ANPR Vehicle Toll Interception"] }
+    ]
+  })
   const [showAddModal, setShowAddModal] = useState(false)
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
@@ -14,38 +43,38 @@ export default function Settings() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   
   // 1. Security & Biometrics
-  const [faceSensitivity, setFaceSensitivity] = useState(62)
-  const [autoLockTimeout, setAutoLockTimeout] = useState(30)
-  const [requirePasswordComplexity, setRequirePasswordComplexity] = useState(true)
-  const [multiFrameAveraging, setMultiFrameAveraging] = useState(true)
+  const [faceSensitivity, setFaceSensitivity] = useState<number>(init.face_sensitivity ?? 62)
+  const [autoLockTimeout, setAutoLockTimeout] = useState<number>(init.auto_lock_timeout ?? 30)
+  const [requirePasswordComplexity, setRequirePasswordComplexity] = useState<boolean>(init.require_password_complexity ?? true)
+  const [multiFrameAveraging, setMultiFrameAveraging] = useState<boolean>(init.multi_frame_averaging ?? true)
 
   // 2. Audio & Alerts
-  const [soundEnabled, setSoundEnabled] = useState(true)
-  const [audioTheme, setAudioTheme] = useState('tactical')
-  const [desktopNotifications, setDesktopNotifications] = useState(true)
-  const [toastDuration, setToastDuration] = useState(6)
-  const [criticalAlertsOnlySound, setCriticalAlertsOnlySound] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(init.sound_enabled ?? true)
+  const [audioTheme, setAudioTheme] = useState<string>(init.audio_theme ?? 'tactical')
+  const [desktopNotifications, setDesktopNotifications] = useState<boolean>(init.desktop_notifications ?? true)
+  const [toastDuration, setToastDuration] = useState<number>(init.toast_duration ?? 6)
+  const [criticalAlertsOnlySound, setCriticalAlertsOnlySound] = useState<boolean>(init.critical_alerts_only_sound ?? false)
 
   // 3. Visual & HUD
-  const [accentTheme, setAccentTheme] = useState('cyan')
-  const [compactMode, setCompactMode] = useState(false)
-  const [scanlinesEffect, setScanlinesEffect] = useState(true)
-  const [reduceMotion, setReduceMotion] = useState(false)
-  const [highContrast, setHighContrast] = useState(false)
+  const [accentTheme, setAccentTheme] = useState<string>(init.accent_theme ?? 'cyan')
+  const [compactMode, setCompactMode] = useState<boolean>(init.compact_mode ?? false)
+  const [scanlinesEffect, setScanlinesEffect] = useState<boolean>(init.scanlines_effect ?? true)
+  const [reduceMotion, setReduceMotion] = useState<boolean>(init.reduce_motion ?? false)
+  const [highContrast, setHighContrast] = useState<boolean>(init.high_contrast ?? false)
 
   // 4. Forensics & Analytics Engine
-  const [defaultCase, setDefaultCase] = useState('c1')
-  const [graphLayout, setGraphLayout] = useState('cose')
-  const [simulationTickRate, setSimulationTickRate] = useState(4)
-  const [anomalyContamination, setAnomalyContamination] = useState(0.05)
-  const [pmlaThresholdInr, setPmlaThresholdInr] = useState(50000)
+  const [defaultCase, setDefaultCase] = useState<string>(init.default_case ?? 'c1')
+  const [graphLayout, setGraphLayout] = useState<string>(init.graph_layout ?? 'cose')
+  const [simulationTickRate, setSimulationTickRate] = useState<number>(init.simulation_tick_rate ?? 4)
+  const [anomalyContamination, setAnomalyContamination] = useState<number>(init.anomaly_contamination ?? 0.05)
+  const [pmlaThresholdInr, setPmlaThresholdInr] = useState<number>(init.pmla_threshold_inr ?? 50000)
 
   // 5. Agency & Jurisdiction
-  const [agency, setAgency] = useState('State Crime Branch — Cyber & Financial Crime Cell')
-  const [jurisdiction, setJurisdiction] = useState('Western Region Headquarters (Mumbai)')
-  const [retention, setRetention] = useState('90 Days Active Buffer')
-  const [telegramAlerts, setTelegramAlerts] = useState(true)
-  const [smsRaidBroadcast, setSmsRaidBroadcast] = useState(true)
+  const [agency, setAgency] = useState<string>(init.agency ?? 'State Crime Branch — Cyber & Financial Crime Cell')
+  const [jurisdiction, setJurisdiction] = useState<string>(init.jurisdiction ?? 'Western Region Headquarters (Mumbai)')
+  const [retention, setRetention] = useState<string>(init.retention ?? '90 Days Active Buffer')
+  const [telegramAlerts, setTelegramAlerts] = useState<boolean>(init.telegram_alerts ?? true)
+  const [smsRaidBroadcast, setSmsRaidBroadcast] = useState<boolean>(init.sms_raid_broadcast ?? true)
   
   const [saved, setSaved] = useState(false)
 
@@ -61,60 +90,55 @@ export default function Settings() {
   ]
 
   useEffect(() => {
-    // Load Investigators
+    // Load Investigators from backend if local is empty
     axios.get('/api/investigators')
       .then(r => {
         if (r.data && r.data.investigators && r.data.investigators.length > 0) {
-          setInvestigators(r.data.investigators)
-        } else {
-          setInvestigators([
-            { id: "inv-1", name: "Aditya Pawar", email: "aditya.pawar@crimenet.ai", badge: "INV-2026-AP01", role: "Chief Intelligence Architect & Lead", clearance: "Top Secret / Level 5", skills: ["Telecom CDR & Tower Triangulation", "Cyber Forensics & Dark Web Tracing", "PMLA & Hawala Financial Auditing"] },
-            { id: "inv-2", name: "Ramesh Sharma", email: "ramesh.sharma@crimenet.ai", badge: "INV-2026-RS02", role: "Hawala & PMLA Financial Auditor", clearance: "Secret / Level 4", skills: ["PMLA & Hawala Financial Auditing", "Cryptocurrency & Blockchain Forensics"] },
-            { id: "inv-3", name: "Suresh Kadam", email: "suresh.kadam@crimenet.ai", badge: "INV-2026-SK03", role: "Cellular CDR & Tower Analyst", clearance: "Secret / Level 4", skills: ["Telecom CDR & Tower Triangulation", "ANPR Vehicle Toll Interception"] }
-          ])
+          const savedLocal = getInitialInvestigators()
+          if (!savedLocal || savedLocal.length === 0) {
+            setInvestigators(r.data.investigators)
+            try { localStorage.setItem('crimenet_investigators', JSON.stringify(r.data.investigators)) } catch {}
+          }
         }
       })
-      .catch(() => {
-        setInvestigators([
-          { id: "inv-1", name: "Aditya Pawar", email: "aditya.pawar@crimenet.ai", badge: "INV-2026-AP01", role: "Chief Intelligence Architect & Lead", clearance: "Top Secret / Level 5", skills: ["Telecom CDR & Tower Triangulation", "Cyber Forensics & Dark Web Tracing", "PMLA & Hawala Financial Auditing"] },
-          { id: "inv-2", name: "Ramesh Sharma", email: "ramesh.sharma@crimenet.ai", badge: "INV-2026-RS02", role: "Hawala & PMLA Financial Auditor", clearance: "Secret / Level 4", skills: ["PMLA & Hawala Financial Auditing", "Cryptocurrency & Blockchain Forensics"] },
-          { id: "inv-3", name: "Suresh Kadam", email: "suresh.kadam@crimenet.ai", badge: "INV-2026-SK03", role: "Cellular CDR & Tower Analyst", clearance: "Secret / Level 4", skills: ["Telecom CDR & Tower Triangulation", "ANPR Vehicle Toll Interception"] }
-        ])
-      })
+      .catch(() => {})
 
-    // Load Settings
+    // Load Settings from backend if local settings not yet customized
     axios.get('/api/settings')
       .then(r => {
         if (r.data) {
           const d = r.data
-          if (d.agency) setAgency(d.agency)
-          if (d.jurisdiction) setJurisdiction(d.jurisdiction)
-          if (d.retention) setRetention(d.retention)
-          if (d.telegram_alerts !== undefined) setTelegramAlerts(d.telegram_alerts)
-          if (d.sms_raid_broadcast !== undefined) setSmsRaidBroadcast(d.sms_raid_broadcast)
-          
-          if (d.face_sensitivity !== undefined) setFaceSensitivity(d.face_sensitivity)
-          if (d.auto_lock_timeout !== undefined) setAutoLockTimeout(d.auto_lock_timeout)
-          if (d.require_password_complexity !== undefined) setRequirePasswordComplexity(d.require_password_complexity)
-          if (d.multi_frame_averaging !== undefined) setMultiFrameAveraging(d.multi_frame_averaging)
+          const savedLocal = getInitialSettings()
+          if (!savedLocal || Object.keys(savedLocal).length === 0) {
+            if (d.agency) setAgency(d.agency)
+            if (d.jurisdiction) setJurisdiction(d.jurisdiction)
+            if (d.retention) setRetention(d.retention)
+            if (d.telegram_alerts !== undefined) setTelegramAlerts(d.telegram_alerts)
+            if (d.sms_raid_broadcast !== undefined) setSmsRaidBroadcast(d.sms_raid_broadcast)
+            
+            if (d.face_sensitivity !== undefined) setFaceSensitivity(d.face_sensitivity)
+            if (d.auto_lock_timeout !== undefined) setAutoLockTimeout(d.auto_lock_timeout)
+            if (d.require_password_complexity !== undefined) setRequirePasswordComplexity(d.require_password_complexity)
+            if (d.multi_frame_averaging !== undefined) setMultiFrameAveraging(d.multi_frame_averaging)
 
-          if (d.sound_enabled !== undefined) setSoundEnabled(d.sound_enabled)
-          if (d.audio_theme) setAudioTheme(d.audio_theme)
-          if (d.desktop_notifications !== undefined) setDesktopNotifications(d.desktop_notifications)
-          if (d.toast_duration !== undefined) setToastDuration(d.toast_duration)
-          if (d.critical_alerts_only_sound !== undefined) setCriticalAlertsOnlySound(d.critical_alerts_only_sound)
+            if (d.sound_enabled !== undefined) setSoundEnabled(d.sound_enabled)
+            if (d.audio_theme) setAudioTheme(d.audio_theme)
+            if (d.desktop_notifications !== undefined) setDesktopNotifications(d.desktop_notifications)
+            if (d.toast_duration !== undefined) setToastDuration(d.toast_duration)
+            if (d.critical_alerts_only_sound !== undefined) setCriticalAlertsOnlySound(d.critical_alerts_only_sound)
 
-          if (d.accent_theme) setAccentTheme(d.accent_theme)
-          if (d.compact_mode !== undefined) setCompactMode(d.compact_mode)
-          if (d.scanlines_effect !== undefined) setScanlinesEffect(d.scanlines_effect)
-          if (d.reduce_motion !== undefined) setReduceMotion(d.reduce_motion)
-          if (d.high_contrast !== undefined) setHighContrast(d.high_contrast)
+            if (d.accent_theme) setAccentTheme(d.accent_theme)
+            if (d.compact_mode !== undefined) setCompactMode(d.compact_mode)
+            if (d.scanlines_effect !== undefined) setScanlinesEffect(d.scanlines_effect)
+            if (d.reduce_motion !== undefined) setReduceMotion(d.reduce_motion)
+            if (d.high_contrast !== undefined) setHighContrast(d.high_contrast)
 
-          if (d.default_case) setDefaultCase(d.default_case)
-          if (d.graph_layout) setGraphLayout(d.graph_layout)
-          if (d.simulation_tick_rate !== undefined) setSimulationTickRate(d.simulation_tick_rate)
-          if (d.anomaly_contamination !== undefined) setAnomalyContamination(d.anomaly_contamination)
-          if (d.pmla_threshold_inr !== undefined) setPmlaThresholdInr(d.pmla_threshold_inr)
+            if (d.default_case) setDefaultCase(d.default_case)
+            if (d.graph_layout) setGraphLayout(d.graph_layout)
+            if (d.simulation_tick_rate !== undefined) setSimulationTickRate(d.simulation_tick_rate)
+            if (d.anomaly_contamination !== undefined) setAnomalyContamination(d.anomaly_contamination)
+            if (d.pmla_threshold_inr !== undefined) setPmlaThresholdInr(d.pmla_threshold_inr)
+          }
         }
       })
       .catch(() => {})
@@ -130,26 +154,25 @@ export default function Settings() {
 
   const handleAddInvestigator = async () => {
     if (!newName.trim()) return
-    try {
-      const res = await axios.post('/api/investigators', {
-        name: newName,
-        email: newEmail || `${newName.toLowerCase().replace(/\s+/g, '')}@crimenet.ai`,
-        role: newRole,
-        clearance: newClearance,
-        skills: selectedSkills.length > 0 ? selectedSkills : ["Field Investigation"]
-      })
-      setInvestigators([...investigators, res.data.investigator])
-    } catch {
-      setInvestigators([...investigators, {
-        id: `inv-${Date.now()}`,
-        name: newName,
-        email: newEmail || `${newName.toLowerCase().replace(/\s+/g, '')}@crimenet.ai`,
-        badge: `INV-2026-${newName.substring(0, 2).toUpperCase()}${Math.floor(Math.random() * 89 + 10)}`,
-        role: newRole,
-        clearance: newClearance,
-        skills: selectedSkills.length > 0 ? selectedSkills : ["Field Investigation"]
-      }])
+    const newInv = {
+      id: `inv-${Date.now()}`,
+      name: newName,
+      email: newEmail || `${newName.toLowerCase().replace(/\s+/g, '')}@crimenet.ai`,
+      badge: `INV-2026-${newName.substring(0, 2).toUpperCase()}${Math.floor(Math.random() * 89 + 10)}`,
+      role: newRole,
+      clearance: newClearance,
+      skills: selectedSkills.length > 0 ? selectedSkills : ["Field Investigation"]
     }
+    const updated = [...investigators, newInv]
+    setInvestigators(updated)
+    try {
+      localStorage.setItem('crimenet_investigators', JSON.stringify(updated))
+    } catch {}
+
+    try {
+      await axios.post('/api/investigators', newInv)
+    } catch {}
+
     setNewName('')
     setNewEmail('')
     setSelectedSkills([])
@@ -157,8 +180,12 @@ export default function Settings() {
   }
 
   const handleDeleteInvestigator = async (id: string) => {
+    const updated = investigators.filter(i => i.id !== id)
+    setInvestigators(updated)
+    try {
+      localStorage.setItem('crimenet_investigators', JSON.stringify(updated))
+    } catch {}
     try { await axios.delete(`/api/investigators/${id}`) } catch {}
-    setInvestigators(investigators.filter(i => i.id !== id))
   }
 
   const handleSaveSettings = async () => {
@@ -189,10 +216,21 @@ export default function Settings() {
       pmla_threshold_inr: pmlaThresholdInr
     }
 
+    // 1. Immediately persist to localStorage so settings are never lost on logout or reload
+    try {
+      localStorage.setItem('crimenet_platform_settings', JSON.stringify(payload))
+      localStorage.setItem('crimenet_settings', JSON.stringify(payload))
+      localStorage.setItem('crimenet_investigators', JSON.stringify(investigators))
+    } catch (e) {
+      console.warn("Local storage write failed", e)
+    }
+
+    // 2. Sync with backend API
     try {
       await axios.post('/api/settings', payload)
-      localStorage.setItem('crimenet_settings', JSON.stringify(payload))
-    } catch {}
+    } catch {
+      console.log("Backend offline or warming up, saved locally to browser storage.")
+    }
 
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)

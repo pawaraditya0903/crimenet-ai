@@ -4,7 +4,7 @@ import axios from 'axios'
 interface CommandBarProps {
   selectedCase: string
   onSelectCase: (caseId: string) => void
-  connectionState: 'connected' | 'reconnecting' | 'offline'
+  connectionState: 'connected' | 'reconnecting' | 'warming' | 'offline'
   onToggleCopilot: () => void
   copilotOpen: boolean
   onSelectEntity?: (name: string) => void
@@ -222,14 +222,43 @@ export default function CommandBar({
             gap: 5,
             padding: '3px 8px',
             borderRadius: 4,
-            background: connectionState === 'connected' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-            border: `1px solid ${connectionState === 'connected' ? '#10b981' : '#ef4444'}`,
-            color: connectionState === 'connected' ? '#34d399' : '#f87171',
+            background: connectionState === 'connected' 
+              ? 'rgba(16, 185, 129, 0.15)' 
+              : connectionState === 'warming' || connectionState === 'reconnecting'
+              ? 'rgba(245, 158, 11, 0.15)'
+              : 'rgba(239, 68, 68, 0.15)',
+            border: `1px solid ${
+              connectionState === 'connected' 
+                ? '#10b981' 
+                : connectionState === 'warming' || connectionState === 'reconnecting'
+                ? '#f59e0b'
+                : '#ef4444'
+            }`,
+            color: connectionState === 'connected' 
+              ? '#34d399' 
+              : connectionState === 'warming' || connectionState === 'reconnecting'
+              ? '#fbbf24'
+              : '#f87171',
             fontWeight: 800,
             fontSize: 10
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: connectionState === 'connected' ? '#34d399' : '#f87171' }}></span>
-            {connectionState === 'connected' ? 'SOCKET LIVE' : connectionState.toUpperCase()}
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: connectionState === 'connected' 
+                ? '#34d399' 
+                : connectionState === 'warming' || connectionState === 'reconnecting'
+                ? '#fbbf24'
+                : '#f87171'
+            }}></span>
+            {connectionState === 'connected' 
+              ? 'SOCKET LIVE' 
+              : connectionState === 'warming' 
+              ? 'WAKING BACKEND...' 
+              : connectionState === 'reconnecting'
+              ? 'RECONNECTING...'
+              : 'OFFLINE'}
           </div>
 
           {/* Dual Clocks */}
