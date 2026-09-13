@@ -1,5 +1,6 @@
 import React from 'react'
 import { playCyberSound } from '../lib/audio'
+import { getForensicMugshot } from '../lib/mugshot'
 
 interface AuditLogsModalProps {
   isOpen: boolean
@@ -179,16 +180,34 @@ export const AuditLogsModal: React.FC<AuditLogsModalProps> = ({
                       </span>
                     </td>
                     <td style={{ padding: '10px' }}>
-                      {log.photo ? (
-                        <img
-                          src={log.photo}
-                          alt="Intruder"
-                          onClick={() => onSelectIntruder(log)}
-                          style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: '2px solid #ef4444', cursor: 'pointer' }}
-                        />
-                      ) : (
-                        <span style={{ color: '#64748b', fontSize: 10 }}>No Photo</span>
-                      )}
+                      {(() => {
+                        const mugshotSrc = log.photo || getForensicMugshot(log.badge, log.status, log.action, log.ip)
+                        const isAuth = (log.status || '').includes('AUTHORIZED')
+                        return (
+                          <div
+                            onClick={() => onSelectIntruder({ ...log, photo: mugshotSrc })}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '2px 4px', borderRadius: 8, background: 'rgba(255,255,255,0.03)' }}
+                            title="Click to inspect full forensic biometric dossier"
+                          >
+                            <img
+                              src={mugshotSrc}
+                              alt="Subject Mugshot"
+                              style={{
+                                width: 42,
+                                height: 42,
+                                borderRadius: 6,
+                                objectFit: 'cover',
+                                border: isAuth ? '2px solid #10b981' : '2px solid #ef4444',
+                                boxShadow: isAuth ? '0 0 10px rgba(16,185,129,0.35)' : '0 0 10px rgba(239,68,68,0.45)',
+                                display: 'block'
+                              }}
+                            />
+                            <span style={{ fontSize: 9.5, color: isAuth ? '#34d399' : '#f87171', fontWeight: 800 }}>
+                              {isAuth ? 'VERIFIED' : 'CAPTURED'}
+                            </span>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>
                       <button
@@ -217,6 +236,11 @@ interface IntruderModalProps {
 
 export const IntruderModal: React.FC<IntruderModalProps> = ({ log, onClose }) => {
   if (!log) return null
+  const photoSrc = log.photo || getForensicMugshot(log.badge, log.status, log.action, log.ip)
+  const isAuth = (log.status || '').includes('AUTHORIZED')
+  const titleText = isAuth ? '🛡️ AUTHORIZED INVESTIGATOR DOSSIER' : '🚨 INTRUDER MUGSHOT & TELEMETRY'
+  const borderColor = isAuth ? '#10b981' : '#ef4444'
+
   return (
     <div
       onClick={onClose}
@@ -235,31 +259,50 @@ export const IntruderModal: React.FC<IntruderModalProps> = ({ log, onClose }) =>
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '90vw',
-          maxWidth: 420,
+          maxWidth: 440,
           background: '#0f172a',
-          border: '2px solid #ef4444',
+          border: `2px solid ${borderColor}`,
           borderRadius: 16,
           padding: 24,
-          textAlign: 'center'
+          textAlign: 'center',
+          boxShadow: `0 0 50px ${isAuth ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.5)'}`
         }}
       >
-        <h3 style={{ color: '#ef4444', fontSize: 16, fontWeight: 900 }}>🚨 INTRUDER MUGSHOT CAPTURED</h3>
-        <img
-          src={log.photo}
-          alt="Intruder Mugshot"
-          style={{ width: 220, height: 220, borderRadius: 12, objectFit: 'cover', border: '2px solid #ef4444', margin: '14px auto', display: 'block', boxShadow: '0 0 30px rgba(239,68,68,0.6)' }}
-        />
-        <div style={{ textAlign: 'left', background: '#020617', padding: 12, borderRadius: 8, fontSize: 11.5, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div><b>Time:</b> {log.timestamp || 'Just now'}</div>
-          <div><b>IP:</b> <span style={{ color: '#38bdf8', fontWeight: 700 }}>{log.ip}</span></div>
-          <div><b>Device:</b> {log.device}</div>
-          <div><b>Action:</b> <span style={{ color: '#ef4444', fontWeight: 800 }}>{log.action}</span></div>
+        <h3 style={{ color: borderColor, fontSize: 16, fontWeight: 900 }}>{titleText}</h3>
+        <div style={{ position: 'relative', width: 220, height: 220, margin: '14px auto' }}>
+          <img
+            src={photoSrc}
+            alt="Subject Mugshot"
+            style={{ width: '100%', height: '100%', borderRadius: 12, objectFit: 'cover', border: `2px solid ${borderColor}`, display: 'block' }}
+          />
+        </div>
+        <div style={{ textAlign: 'left', background: '#020617', padding: 12, borderRadius: 8, fontSize: 11.5, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid #1e293b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Event Timestamp:</span>
+            <b style={{ color: 'white', fontFamily: 'monospace' }}>{log.timestamp || 'Just now'}</b>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Source IP:</span>
+            <b style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{log.ip || '127.0.0.1'}</b>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Workstation / Agent:</span>
+            <b style={{ color: '#e2e8f0' }}>{log.device || 'Workstation'}</b>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Action Flag:</span>
+            <b style={{ color: borderColor }}>{log.action || 'SECURITY_EVENT'}</b>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Identified Subject:</span>
+            <b style={{ color: isAuth ? '#34d399' : '#f87171' }}>{log.badge || (isAuth ? 'Aditya Pawar' : 'Unknown Intruder')}</b>
+          </div>
         </div>
         <button
           onClick={onClose}
-          style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#ef4444', color: 'white', border: 'none', fontWeight: 800, marginTop: 14, cursor: 'pointer' }}
+          style={{ width: '100%', padding: '10px', borderRadius: 8, background: borderColor, color: 'white', border: 'none', fontWeight: 800, marginTop: 14, cursor: 'pointer' }}
         >
-          Close Intruder Dossier
+          Close Incident Dossier
         </button>
       </div>
     </div>

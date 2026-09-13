@@ -23,6 +23,7 @@ import type { ToastEvent } from './components/NotificationToast'
 import SecurityGate from './components/SecurityGate'
 import { AuditLogsModal, IntruderModal } from './components/SecurityModals'
 import { playCyberSound } from './lib/audio'
+import { getForensicMugshot } from './lib/mugshot'
 
 // ── ERROR BOUNDARY DEFENSE COMPONENT ──
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
@@ -542,21 +543,24 @@ export default function App() {
       })
       const fetchedLogs = res.data?.logs || []
       if (fetchedLogs.length > 0) {
-        setAuditLogs(fetchedLogs)
+        setAuditLogs(fetchedLogs.map((l: any) => ({
+          ...l,
+          photo: l.photo || getForensicMugshot(l.badge, l.status, l.action, l.ip)
+        })))
       } else {
         setAuditLogs([
-          { id: 'log-01', timestamp: '2026-09-13 02:14:22', ip: '198.51.100.42', device: 'Linux x86_64 / Tor Relay Node', action: 'BRUTE_FORCE_PROBE', status: 'BLOCKED (429 Rate Limit)', badge: 'UNKNOWN-INTRUDER', photo: '', epoch: 1773281062.0 },
-          { id: 'log-02', timestamp: '2026-09-13 03:45:10', ip: '203.0.113.19', device: 'Win32 / Chrome 122 (Unverified)', action: 'PASSCODE_FAILED', status: 'BLOCKED (5 Fails Lockdown)', badge: 'PROBE-ATTEMPT', photo: '', epoch: 1773286510.0 },
-          { id: 'log-03', timestamp: '2026-09-13 10:15:00', ip: '127.0.0.1', device: 'CRIMENET-FORENSIC-STATION-01', action: 'BIOMETRIC_ZNCC_SCAN', status: 'AUTHORIZED (Match: 89%)', badge: 'Chief Officer Aditya Pawar', photo: '', epoch: 1773309900.0 },
-          { id: 'log-04', timestamp: '2026-09-13 12:58:29', ip: '103.21.244.0', device: 'Android 14 / Burner Proxy', action: 'PROBE_API_INTRUSION', status: 'BLOCKED (Bearer Missing)', badge: 'UNAUTHORIZED', photo: '', epoch: 1773364365.0 }
+          { id: 'log-01', timestamp: '2026-09-13 02:14:22', ip: '198.51.100.42', device: 'Linux x86_64 / Tor Relay Node', action: 'BRUTE_FORCE_PROBE', status: 'BLOCKED (429 Rate Limit)', badge: 'UNKNOWN-INTRUDER', photo: getForensicMugshot('UNKNOWN-INTRUDER', 'BLOCKED (429 Rate Limit)', 'BRUTE_FORCE_PROBE', '198.51.100.42'), epoch: 1773281062.0 },
+          { id: 'log-02', timestamp: '2026-09-13 03:45:10', ip: '203.0.113.19', device: 'Win32 / Chrome 122 (Unverified)', action: 'PASSCODE_FAILED', status: 'BLOCKED (5 Fails Lockdown)', badge: 'PROBE-ATTEMPT', photo: getForensicMugshot('PROBE-ATTEMPT', 'BLOCKED (5 Fails Lockdown)', 'PASSCODE_FAILED', '203.0.113.19'), epoch: 1773286510.0 },
+          { id: 'log-03', timestamp: '2026-09-13 10:15:00', ip: '127.0.0.1', device: 'CRIMENET-FORENSIC-STATION-01', action: 'BIOMETRIC_ZNCC_SCAN', status: 'AUTHORIZED (Match: 89%)', badge: 'Chief Officer Aditya Pawar', photo: getForensicMugshot('Chief Officer Aditya Pawar', 'AUTHORIZED (Match: 89%)', 'BIOMETRIC_ZNCC_SCAN', '127.0.0.1'), epoch: 1773309900.0 },
+          { id: 'log-04', timestamp: '2026-09-13 12:58:29', ip: '103.21.244.0', device: 'Android 14 / Burner Proxy', action: 'PROBE_API_INTRUSION', status: 'BLOCKED (Bearer Missing)', badge: 'UNAUTHORIZED', photo: getForensicMugshot('UNAUTHORIZED', 'BLOCKED (Bearer Missing)', 'PROBE_API_INTRUSION', '103.21.244.0'), epoch: 1773364365.0 }
         ])
       }
     } catch(e) {
       setAuditLogs([
-        { id: 'log-01', timestamp: '2026-09-13 02:14:22', ip: '198.51.100.42', device: 'Linux x86_64 / Tor Relay Node', action: 'BRUTE_FORCE_PROBE', status: 'BLOCKED (429 Rate Limit)', badge: 'UNKNOWN-INTRUDER', photo: '', epoch: 1773281062.0 },
-        { id: 'log-02', timestamp: '2026-09-13 03:45:10', ip: '203.0.113.19', device: 'Win32 / Chrome 122 (Unverified)', action: 'PASSCODE_FAILED', status: 'BLOCKED (5 Fails Lockdown)', badge: 'PROBE-ATTEMPT', photo: '', epoch: 1773286510.0 },
-        { id: 'log-03', timestamp: '2026-09-13 10:15:00', ip: '127.0.0.1', device: 'CRIMENET-FORENSIC-STATION-01', action: 'BIOMETRIC_ZNCC_SCAN', status: 'AUTHORIZED (Match: 89%)', badge: 'Chief Officer Aditya Pawar', photo: '', epoch: 1773309900.0 },
-        { id: 'log-04', timestamp: '2026-09-13 12:58:29', ip: '103.21.244.0', device: 'Android 14 / Burner Proxy', action: 'PROBE_API_INTRUSION', status: 'BLOCKED (Bearer Missing)', badge: 'UNAUTHORIZED', photo: '', epoch: 1773364365.0 }
+        { id: 'log-01', timestamp: '2026-09-13 02:14:22', ip: '198.51.100.42', device: 'Linux x86_64 / Tor Relay Node', action: 'BRUTE_FORCE_PROBE', status: 'BLOCKED (429 Rate Limit)', badge: 'UNKNOWN-INTRUDER', photo: getForensicMugshot('UNKNOWN-INTRUDER', 'BLOCKED (429 Rate Limit)', 'BRUTE_FORCE_PROBE', '198.51.100.42'), epoch: 1773281062.0 },
+        { id: 'log-02', timestamp: '2026-09-13 03:45:10', ip: '203.0.113.19', device: 'Win32 / Chrome 122 (Unverified)', action: 'PASSCODE_FAILED', status: 'BLOCKED (5 Fails Lockdown)', badge: 'PROBE-ATTEMPT', photo: getForensicMugshot('PROBE-ATTEMPT', 'BLOCKED (5 Fails Lockdown)', 'PASSCODE_FAILED', '203.0.113.19'), epoch: 1773286510.0 },
+        { id: 'log-03', timestamp: '2026-09-13 10:15:00', ip: '127.0.0.1', device: 'CRIMENET-FORENSIC-STATION-01', action: 'BIOMETRIC_ZNCC_SCAN', status: 'AUTHORIZED (Match: 89%)', badge: 'Chief Officer Aditya Pawar', photo: getForensicMugshot('Chief Officer Aditya Pawar', 'AUTHORIZED (Match: 89%)', 'BIOMETRIC_ZNCC_SCAN', '127.0.0.1'), epoch: 1773309900.0 },
+        { id: 'log-04', timestamp: '2026-09-13 12:58:29', ip: '103.21.244.0', device: 'Android 14 / Burner Proxy', action: 'PROBE_API_INTRUSION', status: 'BLOCKED (Bearer Missing)', badge: 'UNAUTHORIZED', photo: getForensicMugshot('UNAUTHORIZED', 'BLOCKED (Bearer Missing)', 'PROBE_API_INTRUSION', '103.21.244.0'), epoch: 1773364365.0 }
       ])
     }
     setAuditModalOpen(true)

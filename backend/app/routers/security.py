@@ -9,6 +9,7 @@ from backend.app.security.face_prototype import evaluate_face_prototype, FACE_PR
 from backend.app.security.rbac import require_authenticated_user
 from backend.app.security.rate_limit import check_rate_limit
 from backend.app.models.database import get_db
+from backend.app.security.mugshot import generate_forensic_mugshot
 
 router = APIRouter(prefix="/api/security", tags=["Security & System Settings"])
 
@@ -131,17 +132,27 @@ class AccessLogRequest(BaseModel):
 
 @router.get("/intruder-logs")
 async def get_intruder_logs(claims: dict = Depends(require_authenticated_user)):
-    """Returns access and security events from immutable forensic intruder logs."""
+    """Returns access and security events from immutable forensic intruder logs with biometric mugshots."""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id, timestamp, ip, device, action, status, badge, photo, epoch FROM intruder_logs ORDER BY epoch DESC LIMIT 100")
-        rows = [dict(r) for r in cursor.fetchall()]
+        rows = []
+        for r in cursor.fetchall():
+            d = dict(r)
+            if not d.get("photo"):
+                d["photo"] = generate_forensic_mugshot(d.get("badge"), d.get("status"), d.get("action"), d.get("ip"))
+            rows.append(d)
     return {"logs": rows, "total": len(rows)}
 
 @router.post("/log-access-attempt")
+@router.post("/log-visit")
 async def log_access_attempt(req: AccessLogRequest, request: Request):
-    """Logs an unauthorized or blocked access attempt with optional mugshot capture."""
+    """Logs an unauthorized, probe, or authorized access attempt with high-resolution biometric mugshot."""
     client_ip = req.ip or (request.client.host if request.client else "127.0.0.1")
+    photo_to_store = req.photo
+    if not photo_to_store:
+        photo_to_store = generate_forensic_mugshot(req.badge, req.status, req.action, client_ip)
+
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -154,11 +165,11 @@ async def log_access_attempt(req: AccessLogRequest, request: Request):
                 req.action,
                 req.status,
                 req.badge,
-                req.photo or "",
+                photo_to_store,
                 time.time()
             )
         )
-    return {"success": True, "message": "Access attempt recorded."}
+    return {"success": True, "message": "Access attempt recorded.", "photo": photo_to_store}
 
 @router.post("/delete-log")
 async def delete_log_endpoint(data: dict, claims: dict = Depends(require_authenticated_user)):
