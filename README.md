@@ -13,6 +13,12 @@
 
 ---
 
+> [!TIP]
+> **🚀 Live SIH Evaluation Access**:
+> - **Direct 1-Click Jury Access (No Password)**: [https://crimenet-ai-two.vercel.app/jury](https://crimenet-ai-two.vercel.app/jury) *(or `?demo=sih2026`)*
+> - **Standard Security Portal**: [https://crimenet-ai-two.vercel.app](https://crimenet-ai-two.vercel.app) *(Credentials: Officer: `Aditya Pawar` · Passcode: `Aditya@4912`)*
+> - **Interactive Swagger API Docs**: [https://crimenet-ai.onrender.com/docs](https://crimenet-ai.onrender.com/docs)
+
 > [!IMPORTANT]
 > **Ethical & Decision-Support Mandate**: CrimeNet AI is strictly an **investigative decision-support system**. It **does not** determine guilt, issue legal verdicts, or replace human judgment. All generated links, anomaly flags, and forensic certificates require mandatory human-in-the-loop (HITL) review and independent legal corroboration. The system is designed to be operated exclusively by authorized personnel using legally obtained, anonymized, or synthetic benchmark datasets.
 
@@ -368,11 +374,15 @@ MAPBOX_ACCESS_TOKEN=[OPTIONAL_PUBLIC_MAPBOX_TOKEN]
 
 ## 🎯 Usage & Demonstration Flow
 
-1. **Access the Application**: Open your browser at `http://localhost:5173` (or your deployed Vercel URL: `https://crimenet-ai-two.vercel.app`).
-2. **Authenticate**: Log in using authorized officer credentials:
-   - **Officer Badge ID / Username**: `admin` or `Aditya Pawar`
-   - **Security Passcode**: `Aditya@4912`
-   *(All authentication is validated via backend PBKDF2 hashing; demo bypass buttons have been removed).*
+1. **Access the Application**:
+   - **Direct Evaluator Access (No Password Required)**: Open [https://crimenet-ai-two.vercel.app/jury](https://crimenet-ai-two.vercel.app/jury) (or `?demo=sih2026`).
+   - **Standard Security Portal**: Open [https://crimenet-ai-two.vercel.app](https://crimenet-ai-two.vercel.app).
+2. **Authenticate**:
+   - Click the green **"⚡ 1-Click Evaluator Sign-In"** button for instant jury entry.
+   - Or log in using authorized officer credentials:
+     - **Officer Badge ID / Username**: `Aditya Pawar` (or `admin`)
+     - **Security Passcode**: `Aditya@4912`
+   *(All authentication is validated via backend PBKDF2 hashing; 1-click Evaluator mode issues a legitimate server-side JWT session).*
 3. **Open Ingestion Pipeline**: Select **Data Ingestion & Links** from the left navigation sidebar.
 4. **Load Benchmark Intelligence**:
    - Click **"✨ Load All 5 Datasets & Auto-Generate Links"** to process the unified syndicate dataset.
@@ -394,7 +404,9 @@ MAPBOX_ACCESS_TOKEN=[OPTIONAL_PUBLIC_MAPBOX_TOKEN]
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/health` | Service health, version (v2.1.0), and active subsystem status | Public |
 | `POST` | `/api/auth/token` | Authenticates investigator credentials and returns JWT token | Public |
+| `POST` | `/api/auth/biometric-token` | Verifies 576-D face vector server-side against prototype | Public |
 | `POST` | `/api/pipeline/load-all-samples` | Loads 5 synthetic datasets and runs cross-domain link generation | Authenticated |
+| `POST` | `/api/pipeline/upload-csv` | Validates domain CSV schema and executes cross-domain entity resolution | Authenticated |
 | `POST` | `/api/pipeline/ingest` | Ingests custom record batches or CSV content across any domain | Authenticated |
 | `GET` | `/api/pipeline/summary` | Returns entity, edge, and cross-domain correlation counts | Authenticated |
 | `GET` | `/api/graph/network` | Returns full graph topology (nodes, edges, risk scores) | Authenticated |
@@ -403,6 +415,10 @@ MAPBOX_ACCESS_TOKEN=[OPTIONAL_PUBLIC_MAPBOX_TOKEN]
 | `GET` | `/api/analytics/cycles` | Discovers closed circular financial loops (Johnson's algorithm) | Authenticated |
 | `GET` | `/api/alerts` | Lists all detected anomaly alerts and risk vectors | Authenticated |
 | `PATCH` | `/api/alerts/{id}/review` | Human-in-the-loop alert review (Confirm / Suppress / Escalate) | Investigator |
+| `POST` | `/api/alerts/{id}/acknowledge` | Fast investigator alert confirmation alias | Investigator |
+| `POST` | `/api/cases/{id}/comments` | Appends investigative notes and comments to case audit trail | Investigator |
+| `POST` | `/api/osint/ingest-entity` | Ingests dark web intelligence entity and links to target suspect | Authenticated |
+| `GET` | `/api/security/master-profile` | Returns enrolled master biometric prototype and audit metadata | Public |
 | `GET` | `/api/evidence/merkle-root` | Computes binary Merkle root hash for all ingested evidence | Auditor |
 | `GET` | `/api/audit/trail` | Verifies cryptographic integrity of the hash-linked audit chain | Auditor |
 | `POST` | `/api/reports/generate` | Generates forensic PDF report with cryptographic digests | Investigator |
