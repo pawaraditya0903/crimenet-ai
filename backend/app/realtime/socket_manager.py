@@ -154,9 +154,11 @@ async def emit_investigation_event(
             logger.error(f"Error persisting notification: {e}")
 
     try:
-        await sio.emit("investigation_event", event_obj)
         if case_id:
+            await sio.emit("investigation_event", event_obj, room=f"case_{case_id}")
             await sio.emit("case_event", event_obj, room=f"case_{case_id}")
+        else:
+            await sio.emit("investigation_event", event_obj)
     except Exception as e:
         logger.error(f"Socket emit error: {e}")
 

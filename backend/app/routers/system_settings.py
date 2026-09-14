@@ -2,8 +2,9 @@ import os
 import json
 import uuid
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from backend.app.security.rbac import require_authenticated_user, require_roles, ForensicRole
 
 router = APIRouter(prefix="/api", tags=["System Settings & Investigator Roster"])
 
@@ -93,13 +94,13 @@ class CreateInvestigatorRequest(BaseModel):
     skills: Optional[List[str]] = ["Field Investigation"]
 
 @router.get("/settings")
-async def get_system_settings():
+async def get_system_settings(claims: dict = Depends(require_authenticated_user)):
     """Returns platform configuration, UI themes, and security parameters."""
     return SYSTEM_SETTINGS
 
 @router.post("/settings")
-async def update_system_settings(payload: Dict[str, Any]):
-    """Updates platform configuration and operational parameters."""
+async def update_system_settings(payload: Dict[str, Any], claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Updates platform configuration and operational parameters. Restricted to Supervisory Officers."""
     global SYSTEM_SETTINGS
     SYSTEM_SETTINGS.update(payload)
     save_to_disk()
@@ -109,7 +110,7 @@ async def update_system_settings(payload: Dict[str, Any]):
     }
 
 @router.get("/investigators")
-async def list_investigators():
+async def list_investigators(claims: dict = Depends(require_authenticated_user)):
     """Returns active roster of registered intelligence investigators and clearances."""
     return {
         "total": len(INVESTIGATORS),
@@ -117,8 +118,8 @@ async def list_investigators():
     }
 
 @router.post("/investigators")
-async def create_investigator(req: CreateInvestigatorRequest):
-    """Adds a new sworn investigator to the active clearance roster."""
+async def create_investigator(req: CreateInvestigatorRequest, claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Adds a new sworn investigator to the active clearance roster. Restricted to Supervisory Officers."""
     new_id = f"inv-{uuid.uuid4().hex[:6]}"
     badge_prefix = req.name[:2].upper() if len(req.name) >= 2 else "IN"
     badge = f"INV-2026-{badge_prefix}{uuid.uuid4().hex[:3].upper()}"
@@ -141,8 +142,8 @@ async def create_investigator(req: CreateInvestigatorRequest):
     }
 
 @router.delete("/investigators/{investigator_id}")
-async def delete_investigator(investigator_id: str):
-    """Revokes credentials and removes investigator from the roster."""
+async def delete_investigator(investigator_id: str, claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Revokes credentials and removes investigator from the roster. Restricted to Supervisory Officers."""
     global INVESTIGATORS
     original_len = len(INVESTIGATORS)
     INVESTIGATORS = [inv for inv in INVESTIGATORS if inv["id"] != investigator_id]

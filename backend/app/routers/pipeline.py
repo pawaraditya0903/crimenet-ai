@@ -1,6 +1,6 @@
 import csv
 import io
-from fastapi import APIRouter, HTTPException, Query, Body, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Query, Body, UploadFile, File, Form, Depends
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from backend.app.pipeline.ingestion import (
@@ -13,6 +13,7 @@ from backend.app.pipeline.ingestion import (
 )
 from backend.app.models.database import get_db
 from backend.app.models.tables import DEFAULT_ENTITIES, DEFAULT_RELATIONSHIPS
+from backend.app.security.rbac import require_authenticated_user, require_roles, ForensicRole
 
 router = APIRouter(prefix="/api/pipeline", tags=["Data Ingestion & Entity Resolution Pipeline"])
 
@@ -93,7 +94,7 @@ async def get_pipeline_summary():
     }
 
 @router.post("/load-all-samples")
-async def load_all_sample_datasets():
+async def load_all_sample_datasets(claims: dict = Depends(require_authenticated_user)):
     """Loads all 5 synthetic benchmark datasets (CDR, Banking, FIR, ANPR, Wallet),
     executes multi-source entity resolution, discovers cross-domain links,
     and updates the database graph topology.
@@ -109,7 +110,7 @@ async def load_all_sample_datasets():
     return result
 
 @router.post("/ingest")
-async def ingest_dataset_batch(req: IngestBatchRequest):
+async def ingest_dataset_batch(req: IngestBatchRequest, claims: dict = Depends(require_authenticated_user)):
     """Ingests records or CSV content from one or more datasets and executes entity resolution."""
     cdr = req.cdr_records or []
     banking = req.banking_records or []
@@ -145,7 +146,8 @@ async def ingest_dataset_batch(req: IngestBatchRequest):
 @router.post("/upload-csv")
 async def upload_csv_dataset(
     file: UploadFile = File(...),
-    dataset_type: str = Form(...)
+    dataset_type: str = Form(...),
+    claims: dict = Depends(require_authenticated_user)
 ):
     """Uploads an investigator's CSV file for a specific intelligence domain,
     validates headers against domain schema, normalizes identifiers,
@@ -286,8 +288,8 @@ async def upload_csv_dataset(
 
 
 @router.post("/reset")
-async def reset_graph_to_seed():
-    """Resets the graph database back to verified initial demonstration baseline."""
+async def reset_graph_to_seed(claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Resets the graph database back to verified initial demonstration baseline. Restricted to Supervisory Officers."""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM graph_relationships")

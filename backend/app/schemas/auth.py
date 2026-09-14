@@ -26,5 +26,9 @@ class UserResponse(BaseModel):
     created_at: str
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
+    current_password: Optional[str] = None
     new_password: str
+    key: Optional[str] = None
+
+    def get_current_password(self) -> str:
+        return (self.current_password or self.key or "").strip()

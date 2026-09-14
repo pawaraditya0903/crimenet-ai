@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.app.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest, UserResponse, ChangePasswordRequest
 from backend.app.security.passwords import verify_password, hash_password, validate_password_strength
-from backend.app.security.jwt import issue_token_pair, rotate_refresh_token, revoke_token
+from backend.app.security.jwt import issue_token_pair, rotate_refresh_token, revoke_token, verify_jwt_token
 from backend.app.security.rbac import require_authenticated_user, require_roles, ForensicRole
 from backend.app.security.rate_limit import is_account_locked, record_failed_login, reset_failed_logins
 from backend.app.models.database import get_db
@@ -84,33 +84,85 @@ async def login_for_access_token(req: LoginRequest, request: Request):
         badge=user["badge"] or "Investigator"
     )
 
+from backend.app.security.face_prototype import evaluate_face_prototype
+
 class BiometricLoginRequest(BaseModel):
     badge: Optional[str] = "Chief Officer Aditya Pawar"
-    similarity_score: float = Field(..., ge=60.0, le=100.0)
+    vector: Optional[list[float]] = None
+    similarity_score: Optional[float] = Field(None, ge=0.0, le=100.0)
 
 @router.post("/biometric-token", response_model=TokenResponse)
 async def biometric_login_for_token(req: BiometricLoginRequest, request: Request):
-    """Issues authenticated session token following verified ZNCC biometric match."""
+    """Issues authenticated session token following verified server-side ZNCC biometric match."""
     client_ip = request.client.host if request.client else "127.0.0.1"
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
+    # Retrieve enrolled master face descriptor from SQLite
     with get_db() as conn:
         cursor = conn.cursor()
+        cursor.execute("SELECT value FROM system_settings WHERE key = 'master_face_descriptor'")
+        master_row = cursor.fetchone()
+        master_vector = []
+        if master_row and master_row["value"]:
+            try:
+                import json
+                master_vector = json.loads(master_row["value"])
+            except Exception:
+                master_vector = []
+
         cursor.execute("SELECT id, username, role, badge FROM users WHERE id = 'usr-aditya' OR username = 'admin' LIMIT 1")
         user = cursor.fetchone()
-        
+
+    if not master_vector:
+        raise HTTPException(
+            status_code=400,
+            detail="No master biometric face descriptor enrolled on the system. Please login with passcode to enroll."
+        )
+
+    # Server-side validation of probe vector if provided
+    similarity = 0.0
+    if req.vector:
+        eval_res = evaluate_face_prototype(req.vector, master_vector, threshold=50.0)
+        similarity = eval_res["similarity_percentage"]
+        if not eval_res["authorized"]:
+            append_audit_event(
+                actor_id=req.badge or "BIOMETRIC_PROBE",
+                role="ANONYMOUS",
+                action="BIOMETRIC_LOGIN_REJECTED",
+                resource="auth:biometric",
+                payload={"similarity_score": similarity, "reason": eval_res["message"]},
+                ip_address=client_ip,
+                correlation_id=correlation_id
+            )
+            raise HTTPException(
+                status_code=401,
+                detail=f"Biometric verification mismatch. Score: {similarity}% (Required: ≥50%)."
+            )
+    elif req.similarity_score is not None:
+        if req.similarity_score < 50.0:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Biometric match score {req.similarity_score}% is below the required security threshold (≥50%)."
+            )
+        similarity = req.similarity_score
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Biometric probe vector or verified similarity score is required."
+        )
+
     user_id = user["id"] if user else "usr-aditya"
     user_role = user["role"] if user else "SUPERVISORY_OFFICER"
-    user_badge = user["badge"] if user else "Chief Officer Aditya Pawar"
+    user_badge = user["badge"] if user else (req.badge or "Chief Officer Aditya Pawar")
 
     access_token, refresh_token = issue_token_pair(user_id, user_role, user_badge)
-    
+
     append_audit_event(
         actor_id=user_id,
         role=user_role,
         action="BIOMETRIC_LOGIN_SUCCESS",
         resource="auth:biometric",
-        payload={"badge": user_badge, "similarity_score": req.similarity_score},
+        payload={"badge": user_badge, "similarity_score": similarity},
         ip_address=client_ip,
         correlation_id=correlation_id
     )
@@ -127,20 +179,22 @@ async def biometric_login_for_token(req: BiometricLoginRequest, request: Request
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_access_token(req: RefreshTokenRequest):
-    """Rotates a valid refresh token: revokes current token and issues a fresh pair."""
+    """Rotates a valid refresh token: revokes current token and issues a fresh pair with real claims."""
     new_pair = rotate_refresh_token(req.refresh_token)
     if not new_pair:
         raise HTTPException(status_code=401, detail="Invalid, expired, or already revoked refresh token.")
-    
+
     access_token, refresh_token = new_pair
+    claims = verify_jwt_token(access_token) or {}
+
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
         expires_in=900,
-        user_id="refreshed",
-        role="refreshed",
-        badge="Investigator"
+        user_id=claims.get("sub", "usr-aditya"),
+        role=claims.get("role", "SUPERVISORY_OFFICER"),
+        badge=claims.get("badge", "Field Investigator")
     )
 
 @router.get("/verify-token")

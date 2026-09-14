@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 
 from backend.app.models.database import get_db
+from backend.app.security.rbac import require_authenticated_user
 
 router = APIRouter(prefix="/api/osint", tags=["Dark Web & OSINT Intelligence"])
 
@@ -211,7 +212,7 @@ async def scan_osint_network(req: OSINTScanRequest):
     }
 
 @router.post("/ingest-entity")
-async def ingest_osint_entity(req: IngestEntityRequest):
+async def ingest_osint_entity(req: IngestEntityRequest, claims: dict = Depends(require_authenticated_user)):
     """Ingests an OSINT extracted entity and links it directly into the master knowledge graph."""
     with get_db() as conn:
         cursor = conn.cursor()
@@ -228,26 +229,36 @@ async def ingest_osint_entity(req: IngestEntityRequest):
             }
         
         new_entity_id = f"osint-{uuid.uuid4().hex[:6]}"
-        tier = "operations" if req.risk_score < 80 else "leadership"
+        tier = "operations" if (req.risk_score or 85.0) < 80 else "leadership"
         category = "suspect" if req.type.lower() == "person" else "shell_company"
         
         cursor.execute(
             """INSERT INTO graph_entities (id, name, type, tier, category, risk_score, city, phone, dossier)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (new_entity_id, req.name.strip(), req.type, tier, category, float(req.risk_score), req.city, "", req.dossier)
+            (new_entity_id, req.name.strip(), req.type, tier, category, float(req.risk_score or 85.0), req.city, "", req.dossier)
         )
         
+        # Ensure target suspect exists in graph_entities before linking
+        target_name = (req.connect_to_suspect or "Arjun Mehta").strip()
+        cursor.execute("SELECT id FROM graph_entities WHERE LOWER(name) = LOWER(?)", (target_name,))
+        if not cursor.fetchone():
+            cursor.execute(
+                """INSERT INTO graph_entities (id, name, type, tier, category, risk_score, city, phone, dossier)
+                   VALUES (?, ?, 'Person', 'leadership', 'suspect', 85.0, 'Mumbai', '', 'Referenced investigative target')""",
+                (f"node-{uuid.uuid4().hex[:6]}", target_name)
+            )
+
         # Create edge linking to suspect
         rel_id = f"rel-osint-{uuid.uuid4().hex[:6]}"
         cursor.execute(
             """INSERT INTO graph_relationships (id, source, target, label, type, confidence, weight)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (rel_id, req.name.strip(), req.connect_to_suspect.strip(), req.relation_label, "INTELLIGENCE", 0.92, 2.5)
+            (rel_id, req.name.strip(), target_name, req.relation_label or "OSINT_DISCOVERED_LINK", "INTELLIGENCE", 0.92, 2.5)
         )
 
     return {
         "status": "ENTITY_INGESTED_TO_GRAPH",
-        "message": f"Entity '{req.name}' successfully ingested and linked to '{req.connect_to_suspect}'.",
+        "message": f"Entity '{req.name}' successfully ingested and linked to '{target_name}'.",
         "entity_id": new_entity_id,
         "relationship_id": rel_id
     }

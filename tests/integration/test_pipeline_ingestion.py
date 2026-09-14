@@ -65,9 +65,16 @@ def test_pipeline_sample_data_endpoint():
     assert len(data["samples"]["anpr"]) > 0
     assert len(data["samples"]["wallet"]) > 0
 
+def get_auth_headers():
+    res = client.post("/api/auth/token", json={"username": "admin", "password": "Aditya@4912"})
+    assert res.status_code == 200
+    token = res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 def test_pipeline_load_all_samples_api():
     """Verify POST /api/pipeline/load-all-samples endpoint."""
-    response = client.post("/api/pipeline/load-all-samples")
+    headers = get_auth_headers()
+    response = client.post("/api/pipeline/load-all-samples", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "PIPELINE_EXECUTED_SUCCESS"
@@ -85,13 +92,14 @@ def test_pipeline_summary_endpoint():
 
 def test_pipeline_csv_ingestion():
     """Verify CSV string parsing and ingestion."""
+    headers = get_auth_headers()
     csv_text = """caller,receiver,duration_sec,timestamp,tower_name,lat,lng
 +91-9876543210,+91-9123456789,180,2026-03-12 10:00:00,Colaba Tower,18.9067,72.8147
 """
     response = client.post("/api/pipeline/ingest", json={
         "csv_content": csv_text,
         "csv_dataset_type": "cdr"
-    })
+    }, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "PIPELINE_EXECUTED_SUCCESS"

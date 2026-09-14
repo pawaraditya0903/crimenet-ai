@@ -1,5 +1,6 @@
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, Request
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 from backend.app.schemas.cases import CaseCreateRequest, CaseStageUpdateRequest, CaseResponse
 from backend.app.security.rbac import require_authenticated_user, require_roles, require_case_access, ForensicRole
@@ -29,7 +30,13 @@ async def list_cases(claims: dict = Depends(require_authenticated_user)):
                 ORDER BY c.updated_at DESC
             """, (user_id, user_id))
         
-        rows = [dict(r) for r in cursor.fetchall()]
+        case_rows = cursor.fetchall()
+        rows = []
+        for r in case_rows:
+            c_dict = dict(r)
+            cursor.execute("SELECT name FROM suspects WHERE case_id = ?", (c_dict["id"],))
+            c_dict["suspects"] = [s["name"] for s in cursor.fetchall()]
+            rows.append(c_dict)
 
     return {"cases": rows, "total": len(rows)}
 
@@ -145,10 +152,17 @@ async def delete_case(
 
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, title FROM cases WHERE id = ?", (case_id,))
+        cursor.execute("SELECT id, title, lead_investigator_id FROM cases WHERE id = ?", (case_id,))
         case_row = cursor.fetchone()
         if not case_row:
             raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found.")
+        
+        # IDOR prevention: Lead investigators can only delete cases they lead or are assigned to
+        if role == ForensicRole.LEAD_INVESTIGATOR and case_row["lead_investigator_id"] != user_id:
+            cursor.execute("SELECT 1 FROM case_assignments WHERE case_id = ? AND user_id = ?", (case_id, user_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=403, detail=f"Access Denied: You are not assigned to case '{case_id}'.")
+
         title = case_row["title"]
 
         cursor.execute("DELETE FROM case_assignments WHERE case_id = ?", (case_id,))
@@ -166,4 +180,39 @@ async def delete_case(
     )
 
     return {"status": "deleted", "case_id": case_id}
+
+class CaseCommentRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+@router.post("/{case_id}/comments")
+async def add_case_comment(
+    case_id: str,
+    req: CaseCommentRequest,
+    request: Request,
+    claims: dict = Depends(require_case_access)
+):
+    """Appends an investigative note/comment to a case log."""
+    user_id = claims.get("sub")
+    role = claims.get("role")
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title FROM cases WHERE id = ?", (case_id,))
+        case_row = cursor.fetchone()
+        if not case_row:
+            raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found.")
+
+    append_audit_event(
+        actor_id=user_id,
+        role=role,
+        action="CASE_NOTE_ADDED",
+        resource=f"case:{case_id}",
+        payload={"comment": req.content},
+        ip_address=client_ip,
+        correlation_id=correlation_id
+    )
+
+    return {"status": "success", "case_id": case_id, "comment": req.content, "author": user_id}
 

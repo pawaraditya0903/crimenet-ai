@@ -38,6 +38,7 @@ def test_analytics_disrupt_simulation():
     assert data["remaining_edges"] < data["original_edges"]
 
 def test_osint_lifecycle():
+    headers = get_auth_headers()
     # 1. Fetch feeds
     feeds_res = client.get("/api/osint/feeds")
     assert feeds_res.status_code == 200
@@ -58,7 +59,7 @@ def test_osint_lifecycle():
         "dossier": "OSINT discovered automated escrow node.",
         "connect_to_suspect": "Mohammed Rafiq",
         "relation_label": "ESCROW_CLEARANCE"
-    })
+    }, headers=headers)
     assert ingest_res.status_code == 200
     assert ingest_res.json()["status"] in ["ENTITY_INGESTED_TO_GRAPH", "ALREADY_EXISTS"]
 
@@ -124,17 +125,18 @@ def test_responsible_ai_diagnostics():
     assert ddata["pass_percentage"] == 100
 
 def test_system_settings_and_investigators():
+    headers = get_auth_headers()
     # 1. Settings read & update
-    s_res = client.get("/api/settings")
+    s_res = client.get("/api/settings", headers=headers)
     assert s_res.status_code == 200
     assert "agency" in s_res.json()
 
-    update_res = client.post("/api/settings", json={"compact_mode": True, "toast_duration": 6})
+    update_res = client.post("/api/settings", json={"compact_mode": True, "toast_duration": 6}, headers=headers)
     assert update_res.status_code == 200
     assert update_res.json()["settings"]["compact_mode"] is True
 
     # 2. Investigators roster
-    inv_res = client.get("/api/investigators")
+    inv_res = client.get("/api/investigators", headers=headers)
     assert inv_res.status_code == 200
     assert len(inv_res.json()["investigators"]) >= 3
 
@@ -144,12 +146,12 @@ def test_system_settings_and_investigators():
         "role": "Cyber Forensics Specialist",
         "clearance": "Secret / Level 4",
         "skills": ["Cyber Forensics & Dark Web Tracing"]
-    })
+    }, headers=headers)
     assert new_inv.status_code == 200
     created_id = new_inv.json()["investigator"]["id"]
 
     # 4. Delete investigator
-    del_res = client.delete(f"/api/investigators/{created_id}")
+    del_res = client.delete(f"/api/investigators/{created_id}", headers=headers)
     assert del_res.status_code == 200
     assert del_res.json()["status"] == "INVESTIGATOR_DELETED"
 

@@ -65,54 +65,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
     return () => { isMounted = false }
   }, [])
 
-  // 2. Initialize Optical Camera in Background to Capture Visitor Photo Seamlessly
-  const initOpticalCamera = async () => {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: 'user' }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
-      // Snap visitor photo after lighting stabilizes (650ms)
-      if (!hasLoggedVisitRef.current) {
-        hasLoggedVisitRef.current = true
-        setTimeout(() => {
-          const visitorPhoto = snapHighResPhoto()
-          const currentIp = clientIpRef.current
-          axios.post('/api/security/log-access-attempt', {
-            ip: currentIp || undefined,
-            device: `${navigator.platform || 'Workstation'} / ${navigator.userAgent?.slice(0, 80)}`,
-            action: 'PORTAL_VISITOR_CAPTURED',
-            status: 'MONITORED (Live Camera)',
-            badge: 'REMOTE_VISITOR',
-            photo: visitorPhoto
-          }).catch(() => {})
-        }, 650)
-      }
-    } catch {
-      // If camera access is denied, record visitor access telemetry
-      if (!hasLoggedVisitRef.current) {
-        hasLoggedVisitRef.current = true
-        const currentIp = clientIpRef.current
-        axios.post('/api/security/log-access-attempt', {
-          ip: currentIp || undefined,
-          device: `${navigator.platform || 'Workstation'} / ${navigator.userAgent?.slice(0, 80)}`,
-          action: 'PORTAL_VISIT',
-          status: 'MONITORED (Camera Standby)',
-          badge: 'REMOTE_VISITOR',
-          photo: ''
-        }).catch(() => {})
-      }
-    }
-  }
-
   useEffect(() => {
-    initOpticalCamera()
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop())
@@ -204,32 +157,6 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
   const captureQuickSnapshot = async (): Promise<string> => {
     const directPhoto = snapHighResPhoto()
     if (directPhoto) return directPhoto
-
-    // Fallback: request fresh stream if video wasn't active
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
-        })
-        const vid = document.createElement('video')
-        vid.srcObject = stream
-        vid.muted = true
-        vid.playsInline = true
-        await vid.play()
-        await new Promise(r => setTimeout(r, 600))
-        const c = document.createElement('canvas')
-        c.width = 360
-        c.height = 360
-        const ctx = c.getContext('2d')
-        let dataUrl = ''
-        if (ctx) {
-          ctx.drawImage(vid, 0, 0, 360, 360)
-          dataUrl = c.toDataURL('image/jpeg', 0.85)
-        }
-        stream.getTracks().forEach(t => t.stop())
-        if (dataUrl) return dataUrl
-      } catch {}
-    }
 
     try {
       const savedPhoto = localStorage.getItem('aditya_master_face_photo')
@@ -416,21 +343,35 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
         } catch {}
 
         setTimeout(async () => {
-          let token = localStorage.getItem('crimenet_jwt_token') || sessionStorage.getItem('crimenet_jwt') || ''
           try {
             const bioRes = await axios.post('/api/auth/biometric-token', {
               badge: badgeId || 'Chief Officer Aditya Pawar',
-              similarity_score: znccScore
+              similarity_score: znccScore,
+              vector: liveVec
             })
             if (bioRes.data && bioRes.data.access_token) {
-              token = bioRes.data.access_token
+              const token = bioRes.data.access_token
               sessionStorage.setItem('crimenet_authenticated', 'true')
               sessionStorage.setItem('crimenet_jwt', token)
               localStorage.setItem('crimenet_jwt_token', token)
+              localStorage.setItem('crimenet_user', JSON.stringify({
+                user_id: bioRes.data.user_id,
+                role: bioRes.data.role,
+                badge: bioRes.data.badge
+              }))
               if (photo) localStorage.setItem('aditya_master_face_photo', photo)
+              onAuthenticated(token, bioRes.data)
+              setFaceScanActive(false)
+              return
             }
-          } catch {}
-          onAuthenticated(token || 'biometric-session', { role: 'SUPERVISORY_OFFICER', badge: badgeId })
+          } catch (err: any) {
+            setAuthError(err?.response?.data?.detail || '🚨 Biometric signature verification rejected.')
+            setScanStatus('rejected')
+            setFaceScanActive(false)
+            return
+          }
+          setAuthError('🚨 Failed to obtain biometric authorization token.')
+          setScanStatus('rejected')
           setFaceScanActive(false)
         }, 800)
       } else if (!savedDescriptor) {

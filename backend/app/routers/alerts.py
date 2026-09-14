@@ -48,6 +48,19 @@ async def get_alert_explainability(alert_id: str, claims: dict = Depends(require
         raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
 
     features = [3.82, 0.88, 0.45, 4.12, 1.45]
+    if alert["feature_breakdown_json"]:
+        try:
+            parsed_fb = json.loads(alert["feature_breakdown_json"])
+            extracted = []
+            for item in parsed_fb:
+                v = item.get("value")
+                if isinstance(v, (int, float)):
+                    extracted.append(float(v))
+            if len(extracted) >= 3:
+                features = extracted[:5]
+        except Exception:
+            pass
+
     xai = generate_alert_explanation(features, alert["entity_name"])
 
     return {
@@ -106,6 +119,19 @@ async def review_alert_endpoint(
         "current_status": req.decision,
         "investigator_notes": req.note
     }
+
+@router.post("/{alert_id}/acknowledge")
+async def acknowledge_alert_endpoint(
+    alert_id: str,
+    request: Request,
+    claims: dict = Depends(require_authenticated_user)
+):
+    """Investigator acknowledges and confirms an alert."""
+    req = AlertReviewRequest(
+        decision="CONFIRMED_BY_INVESTIGATOR",
+        note="Acknowledged by investigating officer"
+    )
+    return await review_alert_endpoint(alert_id, req, request, claims)
 
 @router.post("/{alert_id}/escalate")
 async def escalate_alert_endpoint(

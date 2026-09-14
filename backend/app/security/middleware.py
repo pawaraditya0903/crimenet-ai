@@ -28,7 +28,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 pass
 
         # 3. Rate Limit Enforcement
-        client_ip = request.client.host if request.client else "127.0.0.1"
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Real-IP") or (request.client.host if request.client else "127.0.0.1")
         if not check_rate_limit(client_ip, max_requests=180, window_seconds=60):
             return JSONResponse(
                 status_code=429,

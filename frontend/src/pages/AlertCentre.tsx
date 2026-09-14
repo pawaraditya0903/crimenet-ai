@@ -11,7 +11,7 @@ const defaultAlerts = [
     anomaly_type: "LARGE_FINANCIAL_SPIKE",
     details: "₹1.50 Crore nocturnal wire transfer to Phoenix Trading LLC at 02:00 AM (Advisory Lead Only)",
     anomaly_score: 0.96,
-    timestamp: "2024-03-13 02:00:14",
+    timestamp: "2026-03-13 02:00:14",
     status: "PENDING_REVIEW",
     algorithm: "IsolationForest-v2.1",
     confidence_level: "HIGH_CONFIDENCE",
@@ -34,7 +34,7 @@ const defaultAlerts = [
     anomaly_type: "CDR_BURST_ACTIVITY",
     details: "68 outbound calls in 180 minutes prior to coordinated transit (Z-Score: 4.8 Sigma above baseline)",
     anomaly_score: 0.92,
-    timestamp: "2024-03-13 21:30:00",
+    timestamp: "2026-03-13 21:30:00",
     status: "CONFIRMED_BY_INVESTIGATOR",
     algorithm: "ZScore-Telecom-v1.4",
     confidence_level: "HIGH_CONFIDENCE",
@@ -56,7 +56,7 @@ const defaultAlerts = [
     anomaly_type: "CIRCULAR_TRANSACTIONS",
     details: "Round-tripping ₹8.75 Cr across 3 shell corporate accounts within 24 hours (Modularity Score: 0.84)",
     anomaly_score: 0.84,
-    timestamp: "2024-03-12 18:45:22",
+    timestamp: "2026-03-12 18:45:22",
     status: "PENDING_REVIEW",
     algorithm: "Johnson-SimpleCycles-v3.0",
     confidence_level: "HIGH_CONFIDENCE",
@@ -110,10 +110,15 @@ export default function AlertCentre() {
 
   const handleRecordDecision = async (decision: string) => {
     if (!selAlert) return
+    let activeBadge = 'CRIMENET-OFFICER'
+    try {
+      const u = localStorage.getItem('crimenet_user')
+      if (u) activeBadge = JSON.parse(u).badge || activeBadge
+    } catch {}
     try {
       await axios.patch(`/api/alerts/${selAlert.id}/review`, {
         decision,
-        investigator_id: 'INV-2026-AP01',
+        investigator_id: activeBadge,
         note: investigatorNote
       })
       setStatusMsg(`✓ Decision recorded: ${decision.replace(/_/g, ' ')}`)

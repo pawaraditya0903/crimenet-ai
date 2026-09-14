@@ -83,6 +83,23 @@ export default function App() {
     soundEnabledRef.current = soundEnabled
   }, [soundEnabled])
 
+  // Restore authenticated session on mount across page reloads
+  useEffect(() => {
+    const token = getStoredToken()
+    if (token) {
+      axios.get('/api/auth/verify-token', {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then((res) => {
+        if (res.data && res.data.valid) {
+          setAuthToken(token)
+          setIsAuthenticated(true)
+        }
+      }).catch(() => {
+        setIsAuthenticated(false)
+      })
+    }
+  }, [])
+
   // TIME CLOCK
   const [currentTime, setCurrentTime] = useState('')
   useEffect(() => {
@@ -192,9 +209,8 @@ export default function App() {
     const healthInterval = setInterval(pingHealth, 8000)
 
     // 2. Socket.IO Real-time Connection
-    const backendUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-      ? 'http://localhost:8000'
-      : 'https://crimenet-ai.onrender.com'
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    const backendUrl = isLocal ? 'http://localhost:8000' : window.location.origin
     
     const token = authToken || getStoredToken()
 
@@ -530,9 +546,13 @@ export default function App() {
     }
 
     try {
+      const jwt = authToken || getStoredToken()
       const res = await axios.post('/api/security/change-password', {
+        current_password: entered,
         key: entered,
         new_password: newPass
+      }, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
       })
       if (res.data && !res.data.success) {
         if (soundEnabled) playCyberSound('deny')
@@ -541,7 +561,8 @@ export default function App() {
       }
     } catch(e: any) {
       if (soundEnabled) playCyberSound('deny')
-      setPassError('🚨 Server error during password change.')
+      const msg = e?.response?.data?.detail || 'Server error during password change.'
+      setPassError(`🚨 ${msg}`)
       return
     }
 
@@ -570,29 +591,27 @@ export default function App() {
       return
     }
 
-    let isAuthorized = (
-      entered === 'Aditya@09' ||
-      entered.toLowerCase() === 'aditya@09' ||
-      entered === '2026' ||
-      entered === 'Aditya@4912'
-    )
-    let jwt = authToken || sessionStorage.getItem('crimenet_jwt') || localStorage.getItem('crimenet_jwt_token') || ''
+    let jwt = authToken || getStoredToken()
+    let isAuthorized = false
 
-    if (!isAuthorized) {
-      try {
-        const res = await axios.post('/api/auth/token', {
-          username: 'Aditya Pawar',
-          badge: 'CRIMENET-CHIEF-01',
-          role: 'Chief Intelligence Architect',
-          password: entered
-        })
-        if (res.data?.access_token) {
-          isAuthorized = true
-          jwt = res.data.access_token
-          setAuthToken(jwt)
-          try { sessionStorage.setItem('crimenet_jwt', jwt) } catch {}
-        }
-      } catch {}
+    try {
+      const res = await axios.post('/api/auth/token', {
+        username: 'Aditya Pawar',
+        badge: 'CRIMENET-CHIEF-01',
+        role: 'Chief Intelligence Architect',
+        password: entered
+      })
+      if (res.data?.access_token) {
+        isAuthorized = true
+        jwt = res.data.access_token
+        setAuthToken(jwt)
+        try {
+          sessionStorage.setItem('crimenet_jwt', jwt)
+          localStorage.setItem('crimenet_jwt_token', jwt)
+        } catch {}
+      }
+    } catch {
+      isAuthorized = false
     }
 
     if (!isAuthorized) {

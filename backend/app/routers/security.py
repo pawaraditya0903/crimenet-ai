@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from backend.app.schemas.auth import ChangePasswordRequest
 from backend.app.security.passwords import hash_password, verify_password, validate_password_strength
 from backend.app.security.face_prototype import evaluate_face_prototype, FACE_PROTOTYPE_DISCLAIMER
-from backend.app.security.rbac import require_authenticated_user
+from backend.app.security.rbac import require_authenticated_user, require_roles, ForensicRole
 from backend.app.security.jwt import verify_jwt_token
 from backend.app.security.rate_limit import check_rate_limit
 from backend.app.models.database import get_db
@@ -46,7 +46,7 @@ def extract_real_ip(request: Request, client_reported_ip: Optional[str] = None) 
     if request.client and request.client.host:
         return request.client.host
 
-    return "122.170.193.133"
+    return "127.0.0.1"
 
 @router.get("/client-ip")
 async def get_client_ip_endpoint(request: Request):
@@ -65,6 +65,7 @@ class FaceEnrollRequest(BaseModel):
     key: Optional[str] = Field(None, max_length=100)
 
 @router.get("/master-face")
+@router.get("/master-profile")
 async def get_master_face():
     """Returns enrolled master face metadata and vector for multi-device biometric sync."""
     with get_db() as conn:
@@ -85,6 +86,7 @@ async def get_master_face():
     return {
         "enrolled": bool(vector),
         "vector": vector,
+        "face_descriptor": vector,
         "photo": photo
     }
 
@@ -156,8 +158,6 @@ async def register_master_face_endpoint(
             row = cursor.fetchone()
             if row and verify_password(req.key.strip(), row["password_hash"]):
                 authenticated = True
-            elif req.key.strip() in ("Aditya@4912", "Master@2026", "Admin@123"):
-                authenticated = True
 
     if not authenticated:
         raise HTTPException(status_code=401, detail="Authentication required to enroll master biometric face.")
@@ -189,6 +189,9 @@ async def register_master_face_endpoint(
 async def change_password_endpoint(req: ChangePasswordRequest, claims: dict = Depends(require_authenticated_user)):
     """Changes password with strong password policy enforcement and PBKDF2 hashing."""
     user_id = claims.get("sub")
+    old_password = req.get_current_password()
+    if not old_password:
+        raise HTTPException(status_code=400, detail="Current password must be provided.")
     
     # 1. Validate Password Strength
     is_valid, msg = validate_password_strength(req.new_password)
@@ -199,7 +202,7 @@ async def change_password_endpoint(req: ChangePasswordRequest, claims: dict = De
         cursor = conn.cursor()
         cursor.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,))
         user = cursor.fetchone()
-        if not user or not verify_password(req.current_password, user["password_hash"]):
+        if not user or not verify_password(old_password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Current password incorrect.")
 
         new_hash, new_salt = hash_password(req.new_password)
@@ -250,8 +253,8 @@ async def log_access_attempt(req: AccessLogRequest, request: Request):
     return {"success": True, "message": "Access attempt recorded.", "photo": photo_to_store, "ip": client_ip}
 
 @router.post("/delete-log")
-async def delete_log_endpoint(data: dict, claims: dict = Depends(require_authenticated_user)):
-    """Deletes a single intruder log entry."""
+async def delete_log_endpoint(data: dict, claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Deletes a single intruder log entry. Restricted to Supervisory Officers."""
     log_id = data.get("id")
     timestamp = data.get("timestamp")
     with get_db() as conn:
@@ -263,8 +266,8 @@ async def delete_log_endpoint(data: dict, claims: dict = Depends(require_authent
     return {"success": True, "message": "Log entry deleted."}
 
 @router.post("/clear-all-logs")
-async def clear_all_logs_endpoint(claims: dict = Depends(require_authenticated_user)):
-    """Clears all entries from intruder logs."""
+async def clear_all_logs_endpoint(claims: dict = Depends(require_roles([ForensicRole.SUPERVISORY_OFFICER]))):
+    """Clears all entries from intruder logs. Restricted to Supervisory Officers."""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM intruder_logs")
