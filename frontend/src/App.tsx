@@ -75,7 +75,20 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    const path = window.location.pathname.toLowerCase()
+    const search = window.location.search.toLowerCase()
+    const hash = window.location.hash.toLowerCase()
+    const isJury = 
+      path.includes('/jury') || 
+      path.includes('/evaluator') || 
+      path.includes('/demo') ||
+      search.includes('demo=sih2026') ||
+      search.includes('access=jury') ||
+      hash.includes('jury')
+    return isJury || Boolean(getStoredToken())
+  })
   const [soundEnabled, setSoundEnabled] = useState(true)
   const soundEnabledRef = useRef(soundEnabled)
 
@@ -83,8 +96,48 @@ export default function App() {
     soundEnabledRef.current = soundEnabled
   }, [soundEnabled])
 
-  // Restore authenticated session on mount across page reloads
+  // Check if visitor arrived via passwordless Evaluator/Jury route or query param
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const path = window.location.pathname.toLowerCase()
+    const search = window.location.search.toLowerCase()
+    const hash = window.location.hash.toLowerCase()
+
+    const isJury = 
+      path.includes('/jury') || 
+      path.includes('/evaluator') || 
+      path.includes('/demo') ||
+      search.includes('demo=sih2026') ||
+      search.includes('access=jury') ||
+      hash.includes('jury')
+
+    if (isJury) {
+      // Automatically authenticate as Chief Officer with zero password barrier
+      axios.post('/api/auth/token', {
+        username: 'Aditya Pawar',
+        password: 'Aditya@4912',
+        badge: 'CRIMENET-CHIEF-01'
+      }).then((res) => {
+        if (res.data && res.data.access_token) {
+          const token = res.data.access_token
+          setAuthToken(token)
+          sessionStorage.setItem('crimenet_authenticated', 'true')
+          sessionStorage.setItem('crimenet_jwt', token)
+          localStorage.setItem('crimenet_jwt_token', token)
+          localStorage.setItem('crimenet_user', JSON.stringify({
+            user_id: res.data.user_id,
+            role: res.data.role,
+            badge: res.data.badge
+          }))
+          setIsAuthenticated(true)
+        }
+      }).catch(() => {
+        setIsAuthenticated(true)
+      })
+      return
+    }
+
+    // Otherwise restore stored session on mount across page reloads
     const token = getStoredToken()
     if (token) {
       axios.get('/api/auth/verify-token', {
@@ -93,6 +146,8 @@ export default function App() {
         if (res.data && res.data.valid) {
           setAuthToken(token)
           setIsAuthenticated(true)
+        } else {
+          setIsAuthenticated(false)
         }
       }).catch(() => {
         setIsAuthenticated(false)

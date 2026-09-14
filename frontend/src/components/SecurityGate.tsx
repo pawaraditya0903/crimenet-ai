@@ -34,13 +34,13 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
         const res = await fetch('https://api.ipify.org?format=json')
         const data = await res.json()
         if (data && data.ip) resolved = String(data.ip).trim()
-      } catch {}
+      } catch { }
 
       if (!resolved) {
         try {
           const res = await axios.get('/api/security/client-ip')
           if (res.data && res.data.ip) resolved = String(res.data.ip).trim()
-        } catch {}
+        } catch { }
       }
 
       if (isMounted && resolved) {
@@ -49,7 +49,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
       }
     }
     resolveIp()
-    
+
     // Synchronize enrolled master face profile from backend for cross-device support (mobile/desktop)
     axios.get('/api/security/master-face')
       .then((res) => {
@@ -60,7 +60,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
           }
         }
       })
-      .catch(() => {})
+      .catch(() => { })
 
     return () => { isMounted = false }
   }, [])
@@ -161,7 +161,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
     try {
       const savedPhoto = localStorage.getItem('aditya_master_face_photo')
       if (savedPhoto) return savedPhoto
-    } catch {}
+    } catch { }
     return ''
   }
 
@@ -223,7 +223,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
           if (attemptPhoto) {
             localStorage.setItem('aditya_master_face_photo', attemptPhoto)
           }
-        } catch {}
+        } catch { }
 
         setFailedAttempts(0)
         setLockoutTimer(0)
@@ -237,8 +237,8 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
             status: 'AUTHORIZED',
             badge: badgeId || 'Chief Officer Aditya Pawar',
             photo: attemptPhoto || ''
-          }).catch(() => {})
-        } catch {}
+          }).catch(() => { })
+        } catch { }
 
         onAuthenticated(token, response.data)
         return
@@ -270,8 +270,8 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
           status: newFails >= 5 ? 'BLOCKED (Hardware Lockdown)' : `BLOCKED (${newFails}/5 Fails)`,
           badge: badgeId || 'UNKNOWN-PROBE',
           photo: attemptPhoto || ''
-        }).catch(() => {})
-      } catch {}
+        }).catch(() => { })
+      } catch { }
     } finally {
       setIsSubmitting(false)
     }
@@ -308,7 +308,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
       try {
         const raw = localStorage.getItem('aditya_master_face_descriptor')
         if (raw) savedDescriptor = JSON.parse(raw)
-      } catch {}
+      } catch { }
 
       // Fallback: If not in local browser cache (e.g. fresh mobile device), fetch from database
       if (!savedDescriptor) {
@@ -319,7 +319,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
             localStorage.setItem('aditya_master_face_descriptor', JSON.stringify(res.data.vector))
             if (res.data.photo) localStorage.setItem('aditya_master_face_photo', res.data.photo)
           }
-        } catch {}
+        } catch { }
       }
 
       const znccScore = savedDescriptor ? computeZNCC(liveVec, savedDescriptor) : 0
@@ -339,8 +339,8 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
             status: `AUTHORIZED (Match: ${znccScore}%)`,
             badge: badgeId || 'Chief Officer Aditya Pawar',
             photo: photo || ''
-          }).catch(() => {})
-        } catch {}
+          }).catch(() => { })
+        } catch { }
 
         setTimeout(async () => {
           try {
@@ -391,8 +391,8 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
             status: `BLOCKED (Low Match: ${znccScore}%)`,
             badge: badgeId || 'UNAUTHORIZED-PROBE',
             photo: photo || ''
-          }).catch(() => {})
-        } catch {}
+          }).catch(() => { })
+        } catch { }
 
         setTimeout(() => {
           setFaceScanActive(false)
@@ -436,7 +436,7 @@ export const SecurityGate: React.FC<SecurityGateProps> = ({ onAuthenticated, sou
             {lockoutTimer > 0 ? '🚨' : '🔒'}
           </div>
           <h1 style={{ fontSize: 20, fontWeight: 900, color: 'white', letterSpacing: '0.08em', textTransform: 'uppercase' }}>CRIMENET AI SECURITY GATE</h1>
-          
+
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 8 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 20, background: lockoutTimer > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.15)', border: lockoutTimer > 0 ? '1px solid #ef4444' : '1px solid #38bdf8' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: lockoutTimer > 0 ? '#ef4444' : '#34d399', animation: 'pulse 1.5s infinite' }}></span>

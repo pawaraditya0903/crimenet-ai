@@ -1,0 +1,16 @@
+name: Keep Render Backend Awake 24/7
+
+on:
+  schedule:
+    # Triggers every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-awake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend Health Endpoint
+        run: |
+          echo "Pinging CrimeNet AI Backend on Render..."
+          curl -s -f --max-time 15 "https://crimenet-ai.onrender.com/api/health" || echo "Ping completed"
