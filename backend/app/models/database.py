@@ -131,6 +131,12 @@ def init_db(db_path: str = DATABASE_PATH):
             cursor.execute("ALTER TABLE evidence_items ADD COLUMN mime_type TEXT DEFAULT 'application/octet-stream'")
         if "file_size" not in ev_cols:
             cursor.execute("ALTER TABLE evidence_items ADD COLUMN file_size INTEGER DEFAULT 0")
+        if "object_key" not in ev_cols:
+            cursor.execute("ALTER TABLE evidence_items ADD COLUMN object_key TEXT")
+        if "storage_provider" not in ev_cols:
+            cursor.execute("ALTER TABLE evidence_items ADD COLUMN storage_provider TEXT DEFAULT 's3'")
+        if "storage_metadata_json" not in ev_cols:
+            cursor.execute("ALTER TABLE evidence_items ADD COLUMN storage_metadata_json TEXT")
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_evidence_case ON evidence_items(case_id);')
 
         # 7. Graph Entities Table

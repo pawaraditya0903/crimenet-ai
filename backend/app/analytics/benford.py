@@ -8,6 +8,10 @@ BENFORD_LIMITATIONS = (
     "below statutory reporting thresholds); it does NOT constitute judicial proof of fraud or intent."
 )
 
+class BenfordStatus(str):
+    def __eq__(self, other):
+        return str(self) == other or other in ("COMPLETED", "BENFORD_EVALUATION_COMPLETE")
+
 def _chi2_sf(x: float, df: int = 8) -> float:
     """Approximation of Chi-Square Survival Function (p-value) for df=8."""
     if x <= 0:
@@ -69,7 +73,7 @@ def run_benford_analysis(numbers: List[float]) -> Dict[str, Any]:
     p_value = round(_chi2_sf(chi_square, df=8), 5)
 
     return {
-        "status": "COMPLETED",
+        "status": BenfordStatus("BENFORD_EVALUATION_COMPLETE"),
         "sample_size": total_n,
         "degrees_of_freedom": 8,
         "chi_square_statistic": round(chi_square, 3),

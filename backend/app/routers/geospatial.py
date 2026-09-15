@@ -67,10 +67,53 @@ async def dispatch_tactical_unit(req: DispatchUnitRequest):
     dispatch_id = f"DISP-TAC-{uuid.uuid4().hex[:6].upper()}"
     return {
         "status": "DISPATCH_AUTHORIZED",
+        "message": f"Tactical unit {req.unit} successfully dispatched to intercept {req.target_name} at coordinates ({req.lat}, {req.lng}).",
         "dispatch_id": dispatch_id,
         "target_name": req.target_name,
         "target_coordinates": {"lat": req.lat, "lng": req.lng},
         "assigned_unit": req.unit,
-        "message": f"✓ {req.unit} dispatched to intercept {req.target_name}. Intercept perimeter locked at coordinates ({req.lat}, {req.lng}). ETA 4m 20s.",
         "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+from backend.app.services.spatial_service import SpatialService, SPATIOTEMPORAL_DISCLAIMER
+
+class DistanceCalcRequest(BaseModel):
+    lat1: float
+    lng1: float
+    lat2: float
+    lng2: float
+
+@router.get("/colocations")
+async def get_spatiotemporal_colocations(
+    max_distance_km: float = 1.5,
+    max_time_diff_minutes: float = 15.0
+):
+    """Executes PostGIS spatiotemporal proximity analysis between cellular CDR pings
+    and highway ANPR toll camera captures (Thresholds: Δt <= 15 min, distance <= 1.5 km).
+    Identifies co-location signals requiring investigator verification.
+    """
+    colocations = SpatialService.find_spatiotemporal_colocations(
+        max_distance_km=max_distance_km,
+        max_time_diff_minutes=max_time_diff_minutes
+    )
+    return {
+        "status": "COMPUTED",
+        "spatial_engine": "PostGIS_ST_DWithin",
+        "thresholds": {
+            "max_distance_km": max_distance_km,
+            "max_time_diff_minutes": max_time_diff_minutes
+        },
+        "total_signals_detected": len(colocations),
+        "colocations": colocations,
+        "disclaimer": SPATIOTEMPORAL_DISCLAIMER
+    }
+
+@router.post("/distance")
+async def calculate_distance_endpoint(req: DistanceCalcRequest):
+    """Calculates geodesic distance between two coordinate pairs using PostGIS geography."""
+    dist_m = SpatialService.calculate_distance_meters(req.lat1, req.lng1, req.lat2, req.lng2)
+    return {
+        "distance_meters": dist_m,
+        "distance_km": round(dist_m / 1000.0, 3),
+        "engine": "PostGIS_ST_Distance"
     }

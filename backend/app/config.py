@@ -23,8 +23,29 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(APP_DIR)
 WORKSPACE_ROOT = os.path.dirname(BACKEND_DIR)
 
-# Database Configuration
+# Database Configuration (PostgreSQL / SQLite Dual-Engine)
 DATABASE_PATH = os.environ.get("CRIMENET_DB_PATH", os.path.join(BACKEND_DIR, "crimenet.db"))
+POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = int(os.environ.get("POSTGRES_PORT", "5432"))
+POSTGRES_DB = os.environ.get("POSTGRES_DB", "crimenet")
+
+_default_pg_url = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+# Dedicated Graph Database (Neo4j) Configuration
+NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USERNAME = os.environ.get("NEO4J_USERNAME", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "crimenet_graph_pass")
+
+# S3-Compatible Object Storage (MinIO / S3 / R2) Configuration
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", os.environ.get("S3_ENDPOINT", "http://localhost:9000"))
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY", "minioadmin")
+S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "minioadmin")
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", os.environ.get("S3_BUCKET", "crimenet-evidence"))
+S3_REGION = os.environ.get("S3_REGION", "us-east-1")
+S3_USE_SSL = os.environ.get("S3_USE_SSL", "false").lower() in ("true", "1", "yes")
 
 # Authentication & JWT Configuration
 ACCESS_TOKEN_EXPIRE_SECONDS = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15")) * 60

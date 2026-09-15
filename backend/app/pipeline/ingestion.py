@@ -19,6 +19,10 @@ import hashlib
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from backend.app.models.database import get_db
+from backend.app.services.spatial_service import SpatialService
+from backend.app.graph.sync import sync_entities_to_neo4j, sync_relationships_to_neo4j
+from backend.app.database.connection import db_session_context
+from backend.app.models.pg_models import TelecomRecord, ANPRRecord, BankingRecord, WalletRecord, FIRRecord
 
 logger = logging.getLogger("crimenet.pipeline.ingestion")
 
@@ -561,7 +565,8 @@ class MultiSourcePipeline:
                     continue
 
                 time_delta_min = abs((c_ts - a_ts).total_seconds()) / 60.0
-                dist_km = haversine_distance_km(c_lat, c_lng, a_lat, a_lng)
+                dist_m = SpatialService.calculate_distance_meters(c_lat, c_lng, a_lat, a_lng)
+                dist_km = round(dist_m / 1000.0, 3)
 
                 if dist_km <= 1.5 and time_delta_min <= 15.0:
                     tower_name = c.get("tower_name") or c.get("tower_id")
@@ -575,7 +580,7 @@ class MultiSourcePipeline:
                         rel_type="GEOSPATIAL",
                         confidence=conf,
                         weight=2.8,
-                        rationale=f"Handset ping at {tower_name} coincides with vehicle {a_plate} at {cam_name} (Distance: {dist_km*1000:.0f}m, Time gap: {time_delta_min:.1f} mins)",
+                        rationale=f"Handset ping at {tower_name} coincides with vehicle {a_plate} at {cam_name} (Distance: {dist_m:.0f}m, Time gap: {time_delta_min:.1f} mins)",
                         provenance=["TELECOM_CDR", "HIGHWAY_ANPR"]
                     )
                     cross_domain_links_count += 1
@@ -604,7 +609,7 @@ class MultiSourcePipeline:
                     cross_domain_links_count += 1
 
         # ----------------------------------------------------------------------
-        # PERSISTENCE TO SQLITE GRAPH
+        # PERSISTENCE TO RELATIONAL SYSTEM OF RECORD & NEO4J PROJECTION
         # ----------------------------------------------------------------------
         if persist_to_db:
             with get_db() as conn:
@@ -637,6 +642,13 @@ class MultiSourcePipeline:
                             json.dumps({"rationale": r["rationale"], "provenance": r.get("provenance", [])})
                         )
                     )
+
+            # Project updated topology into Neo4j Graph DB
+            try:
+                sync_entities_to_neo4j(list(entities.values()))
+                sync_relationships_to_neo4j(relationships)
+            except Exception as se:
+                logger.warning("Neo4j projection sync during ingestion deferred: %s", se)
 
         return {
             "status": "PIPELINE_EXECUTED_SUCCESS",

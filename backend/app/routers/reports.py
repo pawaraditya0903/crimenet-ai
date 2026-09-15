@@ -6,6 +6,7 @@ from backend.app.models.database import get_db
 from backend.app.forensics.report_builder import build_pdf_report, build_bsa_certificate_pdf
 from backend.app.graph.engine import build_network_graph
 from backend.app.graph.centrality import compute_centralities
+from backend.app.services.evidence_service import EvidenceService
 
 router = APIRouter(prefix="/api/reports", tags=["Forensic Reports"])
 
@@ -138,7 +139,7 @@ async def generate_report_pdf(data: dict, claims: dict = Depends(require_authent
     """Compiles a dynamic, entity-specific forensic PDF report with real graph links, anomaly alerts, and embedded SHA-256 integrity."""
     case_id = data.get("case_id", "c1")
     report_type = str(data.get("template") or data.get("report_type") or "full").lower()
-    entity_name_or_id = str(data.get("entity_id") or "Arjun Mehta").strip()
+    entity_name_or_id = str(data.get("entity_name") or data.get("entity_id") or "Arjun Mehta").strip()
     entity_type = str(data.get("entity_type") or "Person").strip()
     client_details = data.get("details") or {}
     user_name = claims.get("badge") or claims.get("sub") or "Aditya Pawar"
@@ -269,12 +270,26 @@ async def generate_report_pdf(data: dict, claims: dict = Depends(require_authent
     )
 
     clean_filename = f"CrimeNet_{report_type.upper()}_{resolved_name.replace(' ', '_')}.pdf"
+
+    # Archive generated report to S3/MinIO Object Storage & anchor metadata
+    report_record = EvidenceService.register_evidence(
+        case_id=case_id,
+        source_type="FORENSIC_DOSSIER_REPORT",
+        filename=clean_filename,
+        file_bytes=pdf_bytes,
+        collector_id=claims.get("sub", "SUPERVISORY_OFFICER"),
+        mime_type="application/pdf",
+        classification="CONFIDENTIAL_JUDICIAL_REPORT"
+    )
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f"attachment; filename={clean_filename}",
-            "Access-Control-Expose-Headers": "Content-Disposition"
+            "Access-Control-Expose-Headers": "Content-Disposition, X-Report-SHA256, X-Evidence-ID",
+            "X-Report-SHA256": report_record.get("sha256_hash", ""),
+            "X-Evidence-ID": report_record.get("evidence_id", "")
         }
     )
 

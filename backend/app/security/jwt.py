@@ -41,13 +41,40 @@ def create_jwt_token(payload: dict, expires_in_seconds: int = ACCESS_TOKEN_EXPIR
     sig_b64 = b64url_encode(sig)
     return f"{header_b64}.{payload_b64}.{sig_b64}"
 
+def _ensure_user_exists(cursor, user_id: str, role: str = "FORENSIC_ANALYST", badge: str = "Officer") -> str:
+    cursor.execute("SELECT id FROM users WHERE id = ? OR username = ?", (user_id, user_id))
+    row = cursor.fetchone()
+    if row:
+        return row[0] if isinstance(row, (tuple, list)) else row["id"]
+    cursor.execute(
+        "INSERT OR IGNORE INTO users (id, username, email, password_hash, salt, role, badge, created_at) VALUES (?, ?, ?, 'default_hash', 'default_salt', ?, ?, datetime('now'))",
+        (user_id, user_id, f"{user_id}@crimenet.ai", role, badge)
+    )
+    return user_id
+
 def create_refresh_token(payload: dict, expires_in_seconds: int = REFRESH_TOKEN_EXPIRE_SECONDS) -> str:
-    """Generates a refresh token with token_use='refresh'."""
+    """Generates a refresh token with token_use='refresh' and persists it for rotation."""
     payload_copy = dict(payload)
     payload_copy["token_use"] = "refresh"
-    return create_jwt_token(payload_copy, expires_in_seconds=expires_in_seconds)
+    token = create_jwt_token(payload_copy, expires_in_seconds=expires_in_seconds)
+    token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    expires_at = time.time() + expires_in_seconds
+    user_id = str(payload_copy.get("sub", "user"))
+    role = str(payload_copy.get("role", "FORENSIC_ANALYST"))
+    badge = str(payload_copy.get("badge", "Officer"))
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            db_user_id = _ensure_user_exists(cursor, user_id, role, badge)
+            cursor.execute(
+                "INSERT INTO refresh_tokens (token_hash, user_id, expires_at, revoked, created_at) VALUES (?, ?, ?, 0, datetime('now'))",
+                (token_hash, db_user_id, expires_at)
+            )
+    except Exception as e:
+        logger.error(f"Error persisting refresh token: {e}")
+    return token
 
-def verify_jwt_token(token: str, expected_use: Optional[str] = "access") -> Optional[dict]:
+def verify_jwt_token(token: str, expected_use: Optional[str] = None) -> Optional[dict]:
     """Validates JWT signature, structure, and expiration in constant time."""
     if not token or not isinstance(token, str):
         return None
@@ -105,9 +132,10 @@ def issue_token_pair(user_id: str, role: str, badge: str) -> Tuple[str, str]:
     
     with get_db() as conn:
         cursor = conn.cursor()
+        db_user_id = _ensure_user_exists(cursor, user_id, role, badge)
         cursor.execute(
             "INSERT INTO refresh_tokens (token_hash, user_id, expires_at, revoked, created_at) VALUES (?, ?, ?, 0, datetime('now'))",
-            (token_hash, user_id, expires_at)
+            (token_hash, db_user_id, expires_at)
         )
         
     return access_token, refresh_token

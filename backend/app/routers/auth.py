@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Optional, Union, Dict, Any
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.app.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest, UserResponse, ChangePasswordRequest
@@ -178,24 +178,25 @@ async def biometric_login_for_token(req: BiometricLoginRequest, request: Request
     )
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_access_token(req: RefreshTokenRequest):
+async def refresh_access_token(req: Union[RefreshTokenRequest, Dict[str, Any]]):
     """Rotates a valid refresh token: revokes current token and issues a fresh pair with real claims."""
-    new_pair = rotate_refresh_token(req.refresh_token)
+    tok = req.get("refresh_token") if isinstance(req, dict) else req.refresh_token
+    new_pair = rotate_refresh_token(tok)
     if not new_pair:
         raise HTTPException(status_code=401, detail="Invalid, expired, or already revoked refresh token.")
 
     access_token, refresh_token = new_pair
     claims = verify_jwt_token(access_token) or {}
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=900,
-        user_id=claims.get("sub", "usr-aditya"),
-        role=claims.get("role", "SUPERVISORY_OFFICER"),
-        badge=claims.get("badge", "Field Investigator")
-    )
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": 900,
+        "user_id": claims.get("sub", "usr-aditya"),
+        "role": claims.get("role", "SUPERVISORY_OFFICER"),
+        "badge": claims.get("badge", "Field Investigator")
+    }
 
 @router.get("/verify-token")
 async def verify_token_endpoint(claims: dict = Depends(require_authenticated_user)):

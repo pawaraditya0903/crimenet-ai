@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # 1. Primary Relational System of Record + PostGIS
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: crimenet_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crimenet}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-crimenet}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Dedicated Graph Database for Relationship Traversal & Queries
+  neo4j:
+    image: neo4j:5.20.0
+    container_name: crimenet_neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-crimenet_graph_pass}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 1G
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget http://localhost:7474 -q -O - > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # 3. S3-Compatible Object Storage for Evidence Files, PDFs, Reports & ANPR Captures
+  minio:
+    image: minio/minio:latest
+    container_name: crimenet_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "${S3_PORT:-9000}:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Bucket Provisioner
+  minio-init:
+    image: minio/mc:latest
+    container_name: crimenet_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin};
+      /usr/bin/mc mb --ignore-existing local/${S3_BUCKET_NAME:-crimenet-evidence};
+      /usr/bin/mc anonymous set download local/${S3_BUCKET_NAME:-crimenet-evidence};
+      echo '✓ MinIO bucket ${S3_BUCKET_NAME:-crimenet-evidence} configured.';
+      exit 0;
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  minio_data:
+    driver: local

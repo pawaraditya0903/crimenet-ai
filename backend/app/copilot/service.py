@@ -74,8 +74,27 @@ def process_copilot_query(
 
     citations.append(f"[Case: {case_info['id']} - {case_info['title']}]")
 
-    # 1. Case Briefing / Summary
-    if any(w in msg_lower for w in ["summar", "briefing", "overview", "what is this case"]):
+    # 1. Draft Action Proposal
+    if any(w in msg_lower for w in ["draft", "executive briefing"]):
+        action_proposal = {
+            "action_type": "DRAFT_EXECUTIVE_BRIEFING",
+            "draft_type": "EXECUTIVE_BRIEFING_DRAFT",
+            "requires_confirmation": True,
+            "case_id": case_id,
+            "target_id": case_id,
+            "parameters": {"case_id": case_id, "format": "executive_pdf"},
+            "rationale": f"Draft executive briefing for case '{case_info['title']}' requiring officer confirmation."
+        }
+        reply_text = (
+            f"Drafted executive briefing preview for **{case_info['title']}**.\n\n"
+            f"• Case: {case_info['title']} ({case_info['id']})\n"
+            f"• Priority: {case_info['priority'].upper()}\n"
+            f"• Squad: {case_info['squad']}\n\n"
+            f"Requires explicit human investigator confirmation before registering in evidence vault."
+        )
+
+    # 2. Case Briefing / Summary
+    elif any(w in msg_lower for w in ["summar", "briefing", "overview", "what is this case"]):
         suspect_names = ", ".join([s["name"] for s in suspects]) if suspects else "None registered"
         reply_text = (
             f"**Case Briefing: {case_info['title']}** [{case_info['stage'].upper()} Stage / Priority: {case_info['priority'].upper()}]\n\n"
@@ -161,7 +180,8 @@ def process_copilot_query(
             "case_id": case_id,
             "target_id": case_id,
             "parameters": {"current_stage": curr_stage, "proposed_stage": target_stage},
-            "rationale": f"Investigation progression: transition from {curr_stage} to {target_stage} stage."
+            "rationale": f"Investigation progression: transition from {curr_stage} to {target_stage} stage.",
+            "requires_confirmation": True
         }
         reply_text = (
             f"I propose advancing **{case_info['title']}** from `{curr_stage.upper()}` to `{target_stage.upper()}`.\n\n"
