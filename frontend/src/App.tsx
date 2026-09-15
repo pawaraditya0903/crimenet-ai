@@ -679,18 +679,21 @@ export default function App() {
     setAuditAuthModalOpen(false)
 
     // Fetch real forensic intruder logs from the backend
+    // NOTE: Always show what the backend returns — do NOT fall back to stale
+    // hardcoded CANONICAL_AUDIT_LOGS. If the backend is empty, show empty.
+    // Sorting by epoch DESC ensures newest log is always at the top.
     try {
       const res = await axios.get('/api/security/intruder-logs', {
         headers: { Authorization: `Bearer ${jwt}` }
       })
-      const fetchedLogs = res.data?.logs || []
-      if (fetchedLogs.length > 0) {
-        setAuditLogs(fetchedLogs)
-      } else {
-        setAuditLogs(CANONICAL_AUDIT_LOGS)
-      }
-    } catch {
-      setAuditLogs(CANONICAL_AUDIT_LOGS)
+      const fetchedLogs: any[] = res.data?.logs || []
+      const sorted = [...fetchedLogs].sort((a, b) => (b.epoch || 0) - (a.epoch || 0))
+      setAuditLogs(sorted)
+    } catch (err) {
+      // On network error keep whatever was already loaded (could be stale
+      // canonical data from initial state). Do NOT silently overwrite with
+      // old static data — just leave state as-is so user sees prior view.
+      console.warn('[IntruderLogs] Failed to fetch from backend:', err)
     }
     setAuditModalOpen(true)
   }
