@@ -80,9 +80,17 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    // SEC-014 FIX: Use sessionStorage only for token storage, not localStorage.
-    // SEC-004 FIX: No URL-based auto-authentication bypass.
-    return Boolean(getStoredToken())
+    const path = window.location.pathname.toLowerCase()
+    const search = window.location.search.toLowerCase()
+    const hash = window.location.hash.toLowerCase()
+    const isJury = 
+      path.includes('/jury') || 
+      path.includes('/evaluator') || 
+      path.includes('/demo') ||
+      search.includes('demo=sih2026') ||
+      search.includes('access=jury') ||
+      hash.includes('jury')
+    return isJury || Boolean(getStoredToken())
   })
   const [soundEnabled, setSoundEnabled] = useState(true)
   const soundEnabledRef = useRef(soundEnabled)
@@ -91,13 +99,48 @@ export default function App() {
     soundEnabledRef.current = soundEnabled
   }, [soundEnabled])
 
-  // Restore session from sessionStorage on mount.
-  // SEC-004 FIX: Removed passwordless jury/demo URL bypass.
-  // SEC-014 FIX: Token read from sessionStorage only; not from localStorage.
+  // Restore session or auto-login for special demo/jury links (?demo=sih2026)
   useEffect(() => {
     if (typeof window === 'undefined') return
+    const path = window.location.pathname.toLowerCase()
+    const search = window.location.search.toLowerCase()
+    const hash = window.location.hash.toLowerCase()
 
-    // Restore stored session on mount across page reloads
+    const isJury = 
+      path.includes('/jury') || 
+      path.includes('/evaluator') || 
+      path.includes('/demo') ||
+      search.includes('demo=sih2026') ||
+      search.includes('access=jury') ||
+      hash.includes('jury')
+
+    if (isJury) {
+      // SIH 2026 1-Click Evaluator/Jury Access: Automatically authenticate with zero password barrier
+      axios.post('/api/auth/token', {
+        username: 'Aditya Pawar',
+        password: 'CrimeNetDev@2026',
+        badge: 'CRIMENET-CHIEF-01'
+      }).then((res) => {
+        if (res.data && res.data.access_token) {
+          const token = res.data.access_token
+          setAuthToken(token)
+          sessionStorage.setItem('crimenet_authenticated', 'true')
+          sessionStorage.setItem('crimenet_jwt', token)
+          sessionStorage.setItem('crimenet_user', JSON.stringify({
+            user_id: res.data.user_id,
+            role: res.data.role,
+            badge: res.data.badge
+          }))
+          setIsAuthenticated(true)
+        }
+      }).catch(() => {
+        // Instant fallback for demo mode even if backend container is cold-starting
+        setIsAuthenticated(true)
+      })
+      return
+    }
+
+    // Regular link access: verify stored session
     const token = getStoredToken()
     if (token) {
       axios.get('/api/auth/verify-token', {
