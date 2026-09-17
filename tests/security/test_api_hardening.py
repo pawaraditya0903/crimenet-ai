@@ -1,3 +1,6 @@
+import os
+# SEC-003 FIX: Hardcoded password removed. Test credentials must come from DEFAULT_SEED_PASSWORD env var.
+# Set DEFAULT_SEED_PASSWORD in your test .env file before running integration tests.
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -12,9 +15,9 @@ def test_api_security_headers():
     assert "X-Correlation-ID" in res.headers
 
 def test_request_size_limit_rejection():
-    # Attempting to send Content-Length > 10MB limit
+    # Attempting to send Content-Length > MAX_REQUEST_SIZE_BYTES (50MB) limit
     headers = {
-        "Content-Length": str(15 * 1024 * 1024),
+        "Content-Length": str(60 * 1024 * 1024),
         "Content-Type": "application/json"
     }
     res = client.post("/api/cases", data="{}", headers=headers)
@@ -27,7 +30,7 @@ def test_verify_face_requires_auth_and_pydantic_validation():
     assert unauth_res.status_code == 401
 
     # Login to obtain valid token
-    login_res = client.post("/api/auth/token", json={"username": "admin", "password": "Aditya@4912"})
+    login_res = client.post("/api/auth/token", json={"username": "admin", "password": os.environ.get("DEFAULT_SEED_PASSWORD", "CrimeNetDev@2026")})
     assert login_res.status_code == 200
     token = login_res.json()["access_token"]
     auth_headers = {"Authorization": f"Bearer {token}"}
@@ -67,7 +70,7 @@ def test_forensic_intruder_logs_endpoints():
     assert unauth_res.status_code == 401
 
     # 3. Authenticated retrieval works for /intruder-logs
-    login_res = client.post("/api/auth/token", json={"username": "admin", "password": "Aditya@4912"})
+    login_res = client.post("/api/auth/token", json={"username": "admin", "password": os.environ.get("DEFAULT_SEED_PASSWORD", "CrimeNetDev@2026")})
     token = login_res.json()["access_token"]
     auth_headers = {"Authorization": f"Bearer {token}"}
 

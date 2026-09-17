@@ -46,8 +46,23 @@ def seed_database_if_empty():
         # 1. Seed Users
         cursor.execute("SELECT COUNT(*) as count FROM users")
         if cursor.fetchone()["count"] == 0:
-            default_pass = "Aditya@4912"
-            pass_hash, salt_hex = hash_password(default_pass)
+            # SEC-003 FIX: Seed password is read from environment variable, never hardcoded.
+            # For local development only. In production, users must be provisioned through
+            # the admin interface with individually strong passwords.
+            import os, secrets as _sec
+            from backend.app.config import IS_PRODUCTION
+            _seed_pass = os.environ.get("DEFAULT_SEED_PASSWORD", "")
+            if not _seed_pass:
+                if not IS_PRODUCTION:
+                    _seed_pass = "CrimeNetDev@2026"
+                else:
+                    _seed_pass = _sec.token_urlsafe(16)
+                    logger.warning(
+                        "DEFAULT_SEED_PASSWORD not set. Generated random dev seed password: %s  "
+                        "(Set DEFAULT_SEED_PASSWORD in .env to persist this across restarts.)",
+                        _seed_pass
+                    )
+            pass_hash, salt_hex = hash_password(_seed_pass)
 
             users_to_seed = [
                 ("usr-01", "admin", "aditya@crimenet.ai", pass_hash, salt_hex, "SUPERVISORY_OFFICER", "Chief Officer Aditya Pawar"),
@@ -61,6 +76,7 @@ def seed_database_if_empty():
                 users_to_seed
             )
             logger.info("Default RBAC users seeded successfully.")
+
 
         # 2. Seed Cases
         cursor.execute("SELECT COUNT(*) as count FROM cases")

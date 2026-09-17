@@ -65,7 +65,7 @@ async def get_sample_data(dataset_type: str):
         raise HTTPException(status_code=400, detail=f"Unknown dataset type '{dataset_type}'. Supported: cdr, banking, fir, anpr, wallet, all")
 
 @router.get("/summary")
-async def get_pipeline_summary():
+async def get_pipeline_summary(claims: dict = Depends(require_authenticated_user)):
     """Returns current counts of entities, relationships, and cross-domain links in the graph database."""
     with get_db() as conn:
         cursor = conn.cursor()

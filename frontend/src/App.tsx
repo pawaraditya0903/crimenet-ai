@@ -46,12 +46,15 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
   render() {
     if (this.state.hasError) {
+      // SEC-026 FIX: Never expose raw error messages/stack traces to end users.
+      // Debug details only shown in development mode (NODE_ENV check).
+      const isDev = import.meta.env?.DEV === true
       return (
         <div style={{ padding: 30, background: '#0f172a', border: '1px solid #38bdf8', borderRadius: 14, margin: '20px auto', maxWidth: 600, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
           <div style={{ fontSize: 36, marginBottom: 10 }}>🛡️</div>
           <h3 style={{ color: '#38bdf8', fontSize: 16, fontWeight: 900 }}>TACTICAL MODULE LIVE STANDBY</h3>
           <p style={{ color: '#94a3b8', fontSize: 12, margin: '8px 0 16px', lineHeight: 1.5 }}>
-            The module is refreshing its intelligence telemetry stream. Click below to reload.
+            The module encountered an issue and has been isolated. Click below to reload.
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
@@ -59,9 +62,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
           >
             🔄 Reload Module
           </button>
-          {this.state.error && (
+          {isDev && this.state.error && (
             <details style={{ textAlign: 'left', marginTop: 14, background: '#020617', padding: 10, borderRadius: 6, fontSize: 11, color: '#f87171' }}>
-              <summary style={{ cursor: 'pointer', color: '#94a3b8', fontWeight: 700 }}>Telemetry Diagnostic Details</summary>
+              <summary style={{ cursor: 'pointer', color: '#94a3b8', fontWeight: 700 }}>Developer Details (dev mode only)</summary>
               <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: 6, fontSize: 10.5 }}>
                 {String(this.state.error?.message || this.state.error)}
               </pre>
@@ -77,17 +80,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    const path = window.location.pathname.toLowerCase()
-    const search = window.location.search.toLowerCase()
-    const hash = window.location.hash.toLowerCase()
-    const isJury = 
-      path.includes('/jury') || 
-      path.includes('/evaluator') || 
-      path.includes('/demo') ||
-      search.includes('demo=sih2026') ||
-      search.includes('access=jury') ||
-      hash.includes('jury')
-    return isJury || Boolean(getStoredToken())
+    // SEC-014 FIX: Use sessionStorage only for token storage, not localStorage.
+    // SEC-004 FIX: No URL-based auto-authentication bypass.
+    return Boolean(getStoredToken())
   })
   const [soundEnabled, setSoundEnabled] = useState(true)
   const soundEnabledRef = useRef(soundEnabled)
@@ -96,48 +91,13 @@ export default function App() {
     soundEnabledRef.current = soundEnabled
   }, [soundEnabled])
 
-  // Check if visitor arrived via passwordless Evaluator/Jury route or query param
+  // Restore session from sessionStorage on mount.
+  // SEC-004 FIX: Removed passwordless jury/demo URL bypass.
+  // SEC-014 FIX: Token read from sessionStorage only; not from localStorage.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const path = window.location.pathname.toLowerCase()
-    const search = window.location.search.toLowerCase()
-    const hash = window.location.hash.toLowerCase()
 
-    const isJury = 
-      path.includes('/jury') || 
-      path.includes('/evaluator') || 
-      path.includes('/demo') ||
-      search.includes('demo=sih2026') ||
-      search.includes('access=jury') ||
-      hash.includes('jury')
-
-    if (isJury) {
-      // Automatically authenticate as Chief Officer with zero password barrier
-      axios.post('/api/auth/token', {
-        username: 'Aditya Pawar',
-        password: 'Aditya@4912',
-        badge: 'CRIMENET-CHIEF-01'
-      }).then((res) => {
-        if (res.data && res.data.access_token) {
-          const token = res.data.access_token
-          setAuthToken(token)
-          sessionStorage.setItem('crimenet_authenticated', 'true')
-          sessionStorage.setItem('crimenet_jwt', token)
-          localStorage.setItem('crimenet_jwt_token', token)
-          localStorage.setItem('crimenet_user', JSON.stringify({
-            user_id: res.data.user_id,
-            role: res.data.role,
-            badge: res.data.badge
-          }))
-          setIsAuthenticated(true)
-        }
-      }).catch(() => {
-        setIsAuthenticated(true)
-      })
-      return
-    }
-
-    // Otherwise restore stored session on mount across page reloads
+    // Restore stored session on mount across page reloads
     const token = getStoredToken()
     if (token) {
       axios.get('/api/auth/verify-token', {
@@ -148,9 +108,11 @@ export default function App() {
           setIsAuthenticated(true)
         } else {
           setIsAuthenticated(false)
+          sessionStorage.removeItem('crimenet_jwt')
         }
       }).catch(() => {
         setIsAuthenticated(false)
+        sessionStorage.removeItem('crimenet_jwt')
       })
     }
   }, [])
@@ -553,10 +515,12 @@ export default function App() {
     setMasterFaceDescriptor(descriptor)
     setMasterFacePhoto(photo)
 
-    const jwt = authToken || localStorage.getItem('crimenet_jwt_token') || sessionStorage.getItem('crimenet_jwt') || ''
+    const jwt = authToken || sessionStorage.getItem('crimenet_jwt') || ''
     try {
       await axios.post('/api/security/register-master-face', {
-        key: faceAuthKey.trim() || 'Aditya@4912',
+        // SEC-003 FIX: Removed hardcoded password fallback.
+        // faceAuthKey must be provided by the user; empty string is rejected server-side.
+        key: faceAuthKey.trim(),
         vector: descriptor,
         photo: photo
       }, {

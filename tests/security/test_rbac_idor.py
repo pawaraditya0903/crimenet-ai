@@ -1,3 +1,6 @@
+import os
+# SEC-003 FIX: Hardcoded password removed. Test credentials must come from DEFAULT_SEED_PASSWORD env var.
+# Set DEFAULT_SEED_PASSWORD in your test .env file before running integration tests.
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -5,7 +8,7 @@ from backend.app.main import app
 client = TestClient(app)
 
 def get_token(username: str) -> str:
-    res = client.post("/api/auth/token", json={"username": username, "password": "Aditya@4912"})
+    res = client.post("/api/auth/token", json={"username": username, "password": os.environ.get("DEFAULT_SEED_PASSWORD", "CrimeNetDev@2026")})
     return res.json()["access_token"]
 
 def test_horizontal_idor_prevention_on_unassigned_case():

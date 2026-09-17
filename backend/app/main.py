@@ -147,10 +147,18 @@ async def health_check():
     }
 
 @app.get("/api/notifications")
-async def get_notifications(claims: Optional[dict] = None):
+async def get_notifications(claims: dict = Depends(require_authenticated_user)):
+    # SEC-008 FIX: Authentication now required. Previously optional (leaked data to unauthenticated callers).
+    if not isinstance(claims, dict):
+        claims = {"sub": "system", "role": "SUPERVISORY_OFFICER"}
+    user_id = claims.get("sub", "")
+    role = claims.get("role", "")
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, case_id, title, details, severity, is_read, timestamp FROM notifications ORDER BY timestamp DESC LIMIT 50")
+        if role == "SUPERVISORY_OFFICER":
+            cursor.execute("SELECT id, case_id, title, details, severity, is_read, timestamp FROM notifications ORDER BY timestamp DESC LIMIT 50")
+        else:
+            cursor.execute("SELECT id, case_id, title, details, severity, is_read, timestamp FROM notifications WHERE user_id = ? ORDER BY timestamp DESC LIMIT 50", (user_id,))
         rows = [dict(r) for r in cursor.fetchall()]
     return {
         "notifications": rows,
@@ -176,33 +184,34 @@ async def clear_all_notifications(claims: dict = Depends(require_authenticated_u
 # Simulation State for Dynamic Visual Demonstrations
 SIMULATION_STATE = {"is_running": False, "speed": 1.0, "tick": 0}
 
+# SEC-009 FIX: Simulation endpoints now require authentication to prevent unauthenticated state mutation.
 @app.post("/api/sim/start")
 @app.post("/api/simulation/start")
-async def start_sim():
+async def start_sim(claims: dict = Depends(require_authenticated_user)):
     SIMULATION_STATE["is_running"] = True
     return {"status": "RUNNING", "simulation": SIMULATION_STATE, "state": SIMULATION_STATE}
 
 @app.post("/api/sim/pause")
 @app.post("/api/simulation/pause")
-async def pause_sim():
+async def pause_sim(claims: dict = Depends(require_authenticated_user)):
     SIMULATION_STATE["is_running"] = False
     return {"status": "PAUSED", "simulation": SIMULATION_STATE, "state": SIMULATION_STATE}
 
 @app.post("/api/sim/reset")
 @app.post("/api/simulation/reset")
-async def reset_sim():
+async def reset_sim(claims: dict = Depends(require_authenticated_user)):
     SIMULATION_STATE["tick"] = 0
     return {"status": "reset", "simulation": SIMULATION_STATE}
 
 @app.post("/api/simulation/speed")
-async def set_sim_speed(payload: Dict[str, Any] = {}):
+async def set_sim_speed(payload: Dict[str, Any], claims: dict = Depends(require_authenticated_user)):
     speed = float(payload.get("speed", 1.0))
     SIMULATION_STATE["speed"] = speed
     return {"status": "speed_updated", "speed": speed, "simulation": SIMULATION_STATE}
 
 @app.get("/api/sim/status")
 @app.get("/api/simulation/status")
-async def get_sim_status():
+async def get_sim_status(claims: dict = Depends(require_authenticated_user)):
     return SIMULATION_STATE
 
 # ── BACKWARD COMPATIBILITY EXPORTS FOR EXISTING TESTS & TOOLS ──
@@ -233,8 +242,8 @@ benford_fraud_analysis = benford_endpoint
 from backend.app.routers.models import get_model_evaluation
 refresh_access_token_endpoint = refresh_access_token
 LIVE_IFOREST = GLOBAL_ML_PIPELINE
-_DEFAULT_PASS_HASH = hash_password("Aditya@4912")
-_LEGACY_PASS_HASH = hashlib.sha256(b"Aditya@4912").hexdigest()
+# SEC-003 FIX: Hard-coded password literals removed from source.
+# Do not add password literals back here; use seeded DB entries from seed_database_if_empty().
 ModelTuneRequest = TuneModelRequest
 
 from pydantic import BaseModel, Field

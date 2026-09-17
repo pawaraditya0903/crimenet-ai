@@ -15,8 +15,9 @@ else:
 logger = logging.getLogger("crimenet.config")
 
 # Execution Environment
+# SEC-025 FIX: 'enterprise' is now treated as production (same security constraints).
 ENVIRONMENT = os.environ.get("CRIMENET_ENV", "development").strip().lower()
-IS_PRODUCTION = ENVIRONMENT == "production"
+IS_PRODUCTION = ENVIRONMENT in ("production", "enterprise")
 
 # Base Paths
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,24 +26,23 @@ WORKSPACE_ROOT = os.path.dirname(BACKEND_DIR)
 
 # Database Configuration (PostgreSQL / SQLite Dual-Engine)
 DATABASE_PATH = os.environ.get("CRIMENET_DB_PATH", os.path.join(BACKEND_DIR, "crimenet.db"))
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
+POSTGRES_USER = os.environ.get("POSTGRES_USER", "")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "")
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = int(os.environ.get("POSTGRES_PORT", "5432"))
 POSTGRES_DB = os.environ.get("POSTGRES_DB", "crimenet")
 
-_default_pg_url = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 # Dedicated Graph Database (Neo4j) Configuration
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USERNAME = os.environ.get("NEO4J_USERNAME", "neo4j")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "crimenet_graph_pass")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
 
 # S3-Compatible Object Storage (MinIO / S3 / R2) Configuration
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", os.environ.get("S3_ENDPOINT", "http://localhost:9000"))
-S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY", "minioadmin")
-S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "minioadmin")
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY", "")
+S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "")
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", os.environ.get("S3_BUCKET", "crimenet-evidence"))
 S3_REGION = os.environ.get("S3_REGION", "us-east-1")
 S3_USE_SSL = os.environ.get("S3_USE_SSL", "false").lower() in ("true", "1", "yes")
@@ -54,37 +54,43 @@ PBKDF2_ITERATIONS = int(os.environ.get("PBKDF2_ITERATIONS", "100000"))
 MAX_LOGIN_ATTEMPTS = int(os.environ.get("MAX_LOGIN_ATTEMPTS", "5"))
 LOCKOUT_DURATION_SECONDS = int(os.environ.get("LOCKOUT_DURATION_SECONDS", "900"))  # 15 minutes
 
-# JWT Secret Resolution
+# ──────────────────────────────────────────────────────────────────────────────
+# INSECURE / WEAK DEFAULT CREDENTIAL DETECTION
+# SEC-002 / SEC-011: Fail fast in production/enterprise if weak defaults are used.
+# ──────────────────────────────────────────────────────────────────────────────
+INSECURE_TEST_SEEDS = {
+    "", "REPLACE_WITH_64_HEX_CHARS_cryptographically_random_secret_key",
+    "REPLACE_WITH_64_HEX_CHARS_jwt_signing_secret_key_minimum_32_bytes",
+    "REPLACE_WITH_64_HEX_CHARS_aes256_pii_encryption_key_32_bytes",
+    "secret", "changeme", "password", "letmein", "admin", "test",
+    "CRIMENET_DEFAULT_DEV_SECRET_KEY_REPLACE_IN_PRODUCTION",
+}
+WEAK_DB_PASSWORDS = {"", "postgres", "password", "changeme", "admin", "test", "1234"}
+WEAK_NEO4J_PASSWORDS = {"", "password", "admin", "test", "neo4j", "changeme"}
+WEAK_MINIO_CREDENTIALS = {"", "minioadmin", "admin", "password", "test", "changeme"}
+
+# ── JWT Secret Resolution ──
 _raw_jwt_secret = os.environ.get("CRIMENET_JWT_SECRET", "") or os.environ.get("JWT_SECRET_KEY", "")
 
-# Predictable / insecure seeds that must NEVER be used in production
-INSECURE_TEST_SEEDS = [
-    "CRIMENET_DEFAULT_DEV_SECRET_KEY_REPLACE_IN_PRODUCTION",
-    "secret",
-    "changeme",
-    "password"
-]
-
 if IS_PRODUCTION:
-    if not _raw_jwt_secret or _raw_jwt_secret in INSECURE_TEST_SEEDS:
-        logger.critical("FATAL: CRIMENET_JWT_SECRET must be set in production mode. Startup aborted.")
-        raise RuntimeError("FATAL: Insecure or missing CRIMENET_JWT_SECRET in production mode.")
+    if not _raw_jwt_secret or _raw_jwt_secret in INSECURE_TEST_SEEDS or len(_raw_jwt_secret) < 32:
+        logger.critical("FATAL: CRIMENET_JWT_SECRET must be a strong random secret (>=32 bytes) in production mode. Startup aborted.")
+        raise RuntimeError("FATAL: Insecure or missing CRIMENET_JWT_SECRET in production/enterprise mode.")
     JWT_SECRET_KEY = _raw_jwt_secret
 else:
-    if not _raw_jwt_secret:
-        # Cryptographically secure random secret generated for the development session
+    if not _raw_jwt_secret or _raw_jwt_secret in INSECURE_TEST_SEEDS:
         JWT_SECRET_KEY = secrets.token_hex(32)
         logger.warning("Development mode: ephemeral JWT_SECRET_KEY generated. Set CRIMENET_JWT_SECRET for persistence.")
     else:
         JWT_SECRET_KEY = _raw_jwt_secret
 
-# PII Encryption Key Resolution (AES-256-GCM requires 32 bytes)
+# ── PII Encryption Key Resolution (AES-256-GCM requires 32 bytes) ──
 _raw_pii_key = os.environ.get("CRIMENET_PII_ENCRYPTION_KEY", "")
 
 if IS_PRODUCTION:
-    if not _raw_pii_key or len(_raw_pii_key) < 32:
+    if not _raw_pii_key or _raw_pii_key in INSECURE_TEST_SEEDS or len(_raw_pii_key) < 32:
         logger.critical("FATAL: CRIMENET_PII_ENCRYPTION_KEY (>= 32 bytes) must be set in production mode. Startup aborted.")
-        raise RuntimeError("FATAL: Insecure or missing CRIMENET_PII_ENCRYPTION_KEY in production mode.")
+        raise RuntimeError("FATAL: Insecure or missing CRIMENET_PII_ENCRYPTION_KEY in production/enterprise mode.")
     if len(_raw_pii_key) == 64:
         try:
             PII_KEY_BYTES = bytes.fromhex(_raw_pii_key)
@@ -93,7 +99,7 @@ if IS_PRODUCTION:
     else:
         PII_KEY_BYTES = _raw_pii_key.encode("utf-8")[:32]
 else:
-    if not _raw_pii_key:
+    if not _raw_pii_key or _raw_pii_key in INSECURE_TEST_SEEDS:
         PII_KEY_BYTES = secrets.token_bytes(32)
         logger.warning("Development mode: ephemeral PII_KEY_BYTES generated. Set CRIMENET_PII_ENCRYPTION_KEY for persistence.")
     elif len(_raw_pii_key) == 64:
@@ -103,6 +109,29 @@ else:
             PII_KEY_BYTES = _raw_pii_key.encode("utf-8")[:32]
     else:
         PII_KEY_BYTES = _raw_pii_key.encode("utf-8")[:32]
+
+# ── Production Credential Validation ──
+if IS_PRODUCTION:
+    # SEC-011: Fail fast on weak DB password
+    if POSTGRES_PASSWORD in WEAK_DB_PASSWORDS or POSTGRES_USER in ("", "postgres"):
+        logger.critical("FATAL: Weak or default PostgreSQL credentials detected. Startup aborted.")
+        raise RuntimeError("FATAL: POSTGRES_USER and POSTGRES_PASSWORD must be set to strong non-default values in production.")
+
+    # SEC-011: Fail fast on weak Neo4j password
+    if NEO4J_PASSWORD in WEAK_NEO4J_PASSWORDS:
+        logger.critical("FATAL: Weak or default Neo4j password detected. Startup aborted.")
+        raise RuntimeError("FATAL: NEO4J_PASSWORD must be set to a strong non-default value in production.")
+
+    # SEC-011: Fail fast on default MinIO credentials
+    if S3_ACCESS_KEY in WEAK_MINIO_CREDENTIALS or S3_SECRET_KEY in WEAK_MINIO_CREDENTIALS:
+        logger.critical("FATAL: Default MinIO credentials (minioadmin) detected in production. Startup aborted.")
+        raise RuntimeError("FATAL: S3_ACCESS_KEY and S3_SECRET_KEY must not use default values in production.")
+else:
+    # Development: Warn about weak credentials but don't fail
+    if POSTGRES_PASSWORD in WEAK_DB_PASSWORDS:
+        logger.warning("Development mode: using default PostgreSQL password. Never use in production.")
+    if S3_ACCESS_KEY in WEAK_MINIO_CREDENTIALS or S3_SECRET_KEY in WEAK_MINIO_CREDENTIALS:
+        logger.warning("Development mode: using default MinIO credentials. Never use in production.")
 
 # CORS Allowed Origins
 _cors_env = os.environ.get("CORS_ORIGINS", "")
@@ -128,5 +157,5 @@ else:
             "https://crimenet-ai.vercel.app"
         ]
 
-# Maximum Request Body Size (10 MB)
-MAX_REQUEST_SIZE_BYTES = 10 * 1024 * 1024
+# Maximum Request Body Size (50 MB to match evidence upload limit)
+MAX_REQUEST_SIZE_BYTES = 50 * 1024 * 1024

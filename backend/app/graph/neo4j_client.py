@@ -53,17 +53,28 @@ def init_neo4j_constraints(driver: Driver):
         logger.warning("Could not create Neo4j constraints: %s", e)
 
 def check_neo4j_status() -> Dict[str, Any]:
-    """Returns connection telemetry, node counts, and relationship counts."""
+    """Returns connection telemetry, node counts, and relationship counts.
+
+    SEC-018 FIX: Explicitly surfaces degraded mode when NetworkX fallback is active.
+    """
     driver = get_neo4j_driver()
+    # SEC-018: Public flag indicating whether Neo4j is actually connected or running in degraded mode
+    NEO4J_DEGRADED_MODE = not _is_connected
     if not driver:
         return {
             "status": "UNREACHABLE_FALLBACK_ACTIVE",
-            "uri": NEO4J_URI,
+            # SEC-027: Do not expose internal URI / credentials in health check
             "is_connected": False,
+            "degraded_mode": True,
             "engine": "NetworkX_Relational_Fallback",
+            "warning": (
+                "Neo4j is unavailable. Graph analytics are served from the NetworkX/PostgreSQL projection. "
+                "Results may be less real-time than the dedicated graph engine."
+            ),
             "node_count": 0,
             "relationship_count": 0
         }
+
     try:
         with driver.session() as session:
             nodes = session.run("MATCH (n:Entity) RETURN count(n) as count").single()["count"]

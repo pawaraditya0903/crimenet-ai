@@ -1,4 +1,10 @@
-from fastapi import APIRouter
+"""
+CrimeNet AI — Advanced Analytics Router
+
+SEC-006 FIX: All analytics endpoints now require authentication.
+SEC-015 FIX: Responsible-AI disclaimers added to all ML score outputs.
+"""
+from fastapi import APIRouter, Depends
 from backend.app.graph.engine import build_network_graph
 from backend.app.graph.cycles import detect_financial_cycles
 from backend.app.analytics.financial import detect_smurfing
@@ -6,11 +12,21 @@ from backend.app.analytics.benford import run_benford_analysis
 from backend.app.ml.pipeline import GLOBAL_ML_PIPELINE
 from backend.app.ml.evaluation import run_synthetic_benchmark_evaluation
 from backend.app.models.database import get_db
+from backend.app.security.rbac import require_authenticated_user
 
 router = APIRouter(prefix="/api/analytics", tags=["Advanced Analytics"])
 
+# SEC-015: Mandatory responsible-AI disclaimer for all ML outputs
+ML_DISCLAIMER = (
+    "Anomaly scores and ML outputs are statistical prioritization signals for investigative review only. "
+    "A high score does NOT establish guilt, criminal activity, or fraud. "
+    "All findings MUST be independently corroborated and reviewed by a qualified human supervisor "
+    "before any enforcement, surveillance, or legal action is taken."
+)
+
+
 @router.get("/anomalies")
-async def anomalies():
+async def anomalies(claims: dict = Depends(require_authenticated_user)):
     """Returns anomalies detected across multi-sensor telemetry."""
     with get_db() as conn:
         cursor = conn.cursor()
@@ -20,17 +36,23 @@ async def anomalies():
     return {
         "summary": {"total": len(rows), "critical": sum(1 for r in rows if r["severity"] == "critical")},
         "anomalies": rows,
-        "active_sklearn_engine": GLOBAL_ML_PIPELINE.get_status()
+        "active_sklearn_engine": GLOBAL_ML_PIPELINE.get_status(),
+        "disclaimer": ML_DISCLAIMER
     }
 
+
 @router.get("/cycles")
-async def cycles_endpoint():
+async def cycles_endpoint(claims: dict = Depends(require_authenticated_user)):
     """Detects circular financial layering cycles using Johnson's simple cycles algorithm."""
     G, _, _ = build_network_graph()
-    return detect_financial_cycles(G)
+    result = detect_financial_cycles(G)
+    if isinstance(result, dict):
+        result["disclaimer"] = ML_DISCLAIMER
+    return result
+
 
 @router.get("/smurfing")
-async def smurfing_endpoint():
+async def smurfing_endpoint(claims: dict = Depends(require_authenticated_user)):
     """Evaluates sub-50k structured smurfing transactions designed to evade reporting thresholds."""
     sample_smurf_txs = [
         {"account": "Rohan Gupta (Mule Lead)", "amount": 49500},
@@ -44,35 +66,51 @@ async def smurfing_endpoint():
         {"account": "Indus Export LLP", "amount": 48500},
         {"account": "Indus Export LLP", "amount": 49000},
     ] * 5
-    return detect_smurfing(sample_smurf_txs, threshold_limit=50000.0)
+    result = detect_smurfing(sample_smurf_txs, threshold_limit=50000.0)
+    if isinstance(result, dict):
+        result["disclaimer"] = ML_DISCLAIMER
+    return result
+
 
 @router.get("/benford")
-async def benford_endpoint():
+async def benford_endpoint(claims: dict = Depends(require_authenticated_user)):
     """Applies Benford's Law First-Digit Analysis to financial transaction amounts."""
-    # Build sample transactions with synthetic smurfing clustering on digits 4 and 9
     amounts = [49500, 48200, 47000, 49900, 48800, 95000, 92000, 98000, 94500] * 10
     amounts.extend([1250, 18500, 14200, 23000, 31000, 150000, 240000, 110000] * 5)
-    return run_benford_analysis(amounts)
+    result = run_benford_analysis(amounts)
+    if isinstance(result, dict):
+        result["disclaimer"] = ML_DISCLAIMER
+    return result
+
 
 @router.get("/model-evaluation")
-async def model_evaluation_endpoint():
+async def model_evaluation_endpoint(claims: dict = Depends(require_authenticated_user)):
     """Returns empirical benchmark metrics and confusion matrix evaluated on synthetic ground truth."""
-    return run_synthetic_benchmark_evaluation(n_samples=2000, contamination=0.05)
+    result = run_synthetic_benchmark_evaluation(n_samples=2000, contamination=0.05)
+    if isinstance(result, dict):
+        result["disclaimer"] = ML_DISCLAIMER
+    return result
+
 
 from pydantic import BaseModel
 from typing import List
 import networkx as nx
 
+
 class DisruptSimulationRequest(BaseModel):
     target_nodes: List[str] = []
 
+
 @router.post("/disrupt-simulation")
-async def disrupt_simulation_endpoint(req: DisruptSimulationRequest):
+async def disrupt_simulation_endpoint(
+    req: DisruptSimulationRequest,
+    claims: dict = Depends(require_authenticated_user)
+):
     """Simulates targeted kingpin arrests & asset freezes to calculate graph percolation fracture."""
     G, _, _ = build_network_graph()
     n_original = G.number_of_nodes()
     e_original = G.number_of_edges()
-    
+
     if n_original == 0:
         return {
             "syndicate_operational_fracture_pct": 0.0,
@@ -80,16 +118,16 @@ async def disrupt_simulation_endpoint(req: DisruptSimulationRequest):
             "original_nodes": 0,
             "remaining_nodes": 0,
             "original_edges": 0,
-            "remaining_edges": 0
+            "remaining_edges": 0,
+            "disclaimer": ML_DISCLAIMER
         }
 
     c_before = nx.number_weakly_connected_components(G)
     G_disrupted = G.copy()
     matched_targets = []
 
-    for target in req.target_nodes:
-        cleaned_target = target.strip()
-        # Look for exact or substring match in graph nodes
+    for target in req.target_nodes[:20]:  # Limit to 20 targets to prevent DoS
+        cleaned_target = target.strip()[:128]
         matching_node = None
         for node in G_disrupted.nodes:
             if cleaned_target.lower() in node.lower() or node.lower() in cleaned_target.lower():
@@ -109,8 +147,7 @@ async def disrupt_simulation_endpoint(req: DisruptSimulationRequest):
     else:
         edges_lost = max(0, e_original - e_remaining)
         edge_loss_ratio = edges_lost / max(1, e_original)
-        
-        # Calculate impact based on removed kingpins' importance and topological fracture
+
         target_threat_weight = sum(
             float(G.nodes[node].get("risk_score", 85.0)) for node in matched_targets if G.has_node(node)
         )
@@ -141,6 +178,6 @@ async def disrupt_simulation_endpoint(req: DisruptSimulationRequest):
         "remaining_edges": e_remaining,
         "components_before": c_before,
         "components_after": c_after,
-        "disrupted_targets": matched_targets
+        "disrupted_targets": matched_targets,
+        "disclaimer": ML_DISCLAIMER
     }
-

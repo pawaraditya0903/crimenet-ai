@@ -27,33 +27,63 @@ _DIALECT: str = "sqlite"
 
 def resolve_database_url() -> str:
     """Resolves the database URL prioritizing explicit DATABASE_URL env var,
-    attempting PostgreSQL if configured, or gracefully falling back to SQLite.
+    attempting PostgreSQL if configured, or falling back to SQLite in dev mode only.
+
+    SEC-017 FIX: In production/enterprise mode, fails fast if PostgreSQL is unavailable.
+    SQLite fallback is only permitted when CRIMENET_ENV=development.
     """
+    from backend.app.config import IS_PRODUCTION
     global _DIALECT
     explicit_url = DATABASE_URL.strip() if DATABASE_URL else ""
     if explicit_url:
         if "postgres" in explicit_url:
             _DIALECT = "postgresql"
+        elif "sqlite" in explicit_url:
+            if IS_PRODUCTION:
+                logger.critical("FATAL: SQLite database URL detected in production mode. PostgreSQL is required.")
+                raise RuntimeError("FATAL: SQLite is not permitted as the database backend in production mode.")
+            _DIALECT = "sqlite"
         else:
             _DIALECT = "sqlite"
         return explicit_url
 
     # Check if PostgreSQL environment indicates intention to use PostgreSQL
-    pg_url = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-    
-    # Quick connectivity probe to PostgreSQL
-    try:
-        temp_engine = create_engine(pg_url, connect_args={"connect_timeout": 2}, pool_pre_ping=True)
-        with temp_engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        logger.info("Successfully connected to primary PostgreSQL instance at %s:%s/%s", POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB)
-        _DIALECT = "postgresql"
-        return pg_url
-    except Exception as e:
-        logger.warning("PostgreSQL unreachable at %s:%s (%s). Falling back to SQLite at %s", POSTGRES_HOST, POSTGRES_PORT, e, DATABASE_PATH)
-        _DIALECT = "sqlite"
-        os.makedirs(os.path.dirname(os.path.abspath(DATABASE_PATH)), exist_ok=True)
-        return f"sqlite:///{os.path.abspath(DATABASE_PATH)}"
+    if POSTGRES_USER and POSTGRES_PASSWORD:
+        pg_url = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
+        # Quick connectivity probe to PostgreSQL
+        try:
+            temp_engine = create_engine(pg_url, connect_args={"connect_timeout": 2}, pool_pre_ping=True)
+            with temp_engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("Successfully connected to primary PostgreSQL instance at %s:%s/%s", POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB)
+            _DIALECT = "postgresql"
+            return pg_url
+        except Exception as e:
+            if IS_PRODUCTION:
+                logger.critical(
+                    "FATAL: PostgreSQL unreachable at %s:%s in production mode. "
+                    "SQLite fallback is prohibited. Startup aborted. Error: %s",
+                    POSTGRES_HOST, POSTGRES_PORT, type(e).__name__
+                )
+                raise RuntimeError(
+                    f"FATAL: PostgreSQL is required in production mode but is unreachable at {POSTGRES_HOST}:{POSTGRES_PORT}."
+                )
+            logger.warning(
+                "PostgreSQL unreachable at %s:%s (%s). "
+                "Falling back to SQLite at %s (development mode only).",
+                POSTGRES_HOST, POSTGRES_PORT, type(e).__name__, DATABASE_PATH
+            )
+
+    if IS_PRODUCTION:
+        logger.critical("FATAL: PostgreSQL credentials not configured in production mode. Startup aborted.")
+        raise RuntimeError("FATAL: POSTGRES_USER and POSTGRES_PASSWORD must be set in production mode.")
+
+    # Development fallback only
+    _DIALECT = "sqlite"
+    os.makedirs(os.path.dirname(os.path.abspath(DATABASE_PATH)), exist_ok=True)
+    return f"sqlite:///{os.path.abspath(DATABASE_PATH)}"
+
 
 def get_engine() -> Engine:
     """Returns singleton SQLAlchemy Engine with configured connection pooling."""

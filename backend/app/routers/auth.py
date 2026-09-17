@@ -138,18 +138,14 @@ async def biometric_login_for_token(req: BiometricLoginRequest, request: Request
                 status_code=401,
                 detail=f"Biometric verification mismatch. Score: {similarity}% (Required: ≥50%)."
             )
-    elif req.similarity_score is not None:
-        if req.similarity_score < 50.0:
-            raise HTTPException(
-                status_code=401,
-                detail=f"Biometric match score {req.similarity_score}% is below the required security threshold (≥50%)."
-            )
-        similarity = req.similarity_score
     else:
+        # SEC-012 FIX: Client-supplied similarity_score is NOT accepted.
+        # Server-side vector evaluation is mandatory. Rejecting request without probe vector.
         raise HTTPException(
             status_code=400,
-            detail="Biometric probe vector or verified similarity score is required."
+            detail="Biometric probe vector is required for server-side verification. Client-supplied scores are not accepted."
         )
+
 
     user_id = user["id"] if user else "usr-aditya"
     user_role = user["role"] if user else "SUPERVISORY_OFFICER"

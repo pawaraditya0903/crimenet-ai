@@ -10,5 +10,4 @@ CRIMENET_AI_COMPLETE_MASTER_GUIDE.md
 *DOCUMENTATION*.md
 *MASTER_GUIDE*.md
 .pytest_cache
-backend/data/evidence_vault/test_evidence/
-backend/data/evidence_vault/**/*.pdf
+backend/data/evidence_vault/

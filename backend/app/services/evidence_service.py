@@ -35,7 +35,10 @@ class EvidenceService:
         """
         evidence_id = f"ev-{uuid.uuid4().hex[:6]}"
         storage = get_storage_client()
-        object_key = f"evidence/{case_id}/{evidence_id}_{filename}"
+        # SEC-024 FIX: Object key is server-generated UUID-based path.
+        # User-supplied filename is stored as display metadata only — never in the storage key.
+        from backend.app.storage.s3_client import generate_object_key
+        object_key = generate_object_key(case_id, evidence_id)
 
         # 1. Upload to Object Storage & compute SHA-256
         upload_result = storage.upload_file(

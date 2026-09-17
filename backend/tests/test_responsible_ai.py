@@ -38,8 +38,6 @@ from app.main import (
     get_notifications,
     hash_password,
     verify_password,
-    _DEFAULT_PASS_HASH,
-    _LEGACY_PASS_HASH,
     encrypt_pii,
     decrypt_pii,
     create_jwt_token,
@@ -214,9 +212,9 @@ async def test_pbkdf2_password_hashing_and_salt_uniqueness():
     assert verify_password(password, h2) is True
     assert verify_password("WrongPassword123", h1) is False
     
-    # Assert dual-mode legacy SHA-256 support
-    assert verify_password("Aditya@4912", _LEGACY_PASS_HASH) is True
-    assert verify_password("Aditya@4912", _DEFAULT_PASS_HASH) is True
+    # SEC-003 FIX: The legacy hardcoded-password hash tests have been removed.
+    # The _DEFAULT_PASS_HASH and _LEGACY_PASS_HASH symbols no longer exist in main.py
+    # as the hardcoded password was eliminated. Seed password is now env-var sourced.
 
 @pytest.mark.asyncio
 async def test_aes_gcm_pii_envelope_encryption_and_tamper_resistance():

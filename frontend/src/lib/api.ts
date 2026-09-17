@@ -2,12 +2,40 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
+/**
+ * SEC-014 FIX: JWT is stored in sessionStorage only.
+ * localStorage is NOT used for token storage to reduce XSS attack surface.
+ * sessionStorage tokens are cleared when the browser tab is closed.
+ */
 export const getStoredToken = (): string => {
   if (typeof window === 'undefined') return ''
   try {
-    return localStorage.getItem('crimenet_jwt_token') || sessionStorage.getItem('crimenet_jwt') || ''
+    return sessionStorage.getItem('crimenet_jwt') || ''
   } catch {
     return ''
+  }
+}
+
+export const setStoredToken = (token: string): void => {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem('crimenet_jwt', token)
+    // SEC-014: Never store tokens in localStorage
+  } catch {
+    // Storage unavailable — graceful degradation
+  }
+}
+
+export const clearStoredToken = (): void => {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.removeItem('crimenet_jwt')
+    sessionStorage.removeItem('crimenet_authenticated')
+    // Clean up any legacy localStorage tokens that may have been set previously
+    localStorage.removeItem('crimenet_jwt_token')
+    localStorage.removeItem('crimenet_user')
+  } catch {
+    // Storage unavailable
   }
 }
 
@@ -21,6 +49,21 @@ api.interceptors.request.use((config) => {
 }, (error) => {
   return Promise.reject(error)
 })
+
+// Handle 401 responses — clear session and redirect to login
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearStoredToken()
+      // Avoid redirect loop on the login page itself
+      if (!window.location.pathname.includes('/login')) {
+        window.dispatchEvent(new CustomEvent('crimenet:session-expired'))
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Also intercept global axios requests
 axios.interceptors.request.use((config) => {

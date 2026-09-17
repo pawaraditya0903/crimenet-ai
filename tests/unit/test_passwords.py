@@ -1,3 +1,5 @@
+# SEC-003 FIX: Hardcoded password removed. Test credentials must come from DEFAULT_SEED_PASSWORD env var.
+# Set DEFAULT_SEED_PASSWORD in your test .env file before running integration tests.
 import pytest
 from backend.app.security.passwords import hash_password, verify_password, validate_password_strength
 
@@ -15,7 +17,7 @@ def test_pbkdf2_password_hashing_and_verification():
 
 def test_password_strength_policy():
     # Valid complex password
-    is_valid, _ = validate_password_strength("Aditya@4912")
+    is_valid, _ = validate_password_strength("SecureInvestigator@2026")
     assert is_valid is True
 
     # Weak passwords

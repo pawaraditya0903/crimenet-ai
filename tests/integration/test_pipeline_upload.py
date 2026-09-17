@@ -1,3 +1,6 @@
+import os
+# SEC-003 FIX: Hardcoded password removed. Test credentials must come from DEFAULT_SEED_PASSWORD env var.
+# Set DEFAULT_SEED_PASSWORD in your test .env file before running integration tests.
 import io
 import pytest
 from starlette.testclient import TestClient
@@ -6,7 +9,7 @@ from backend.app.main import app
 client = TestClient(app)
 
 def get_auth_headers():
-    res = client.post("/api/auth/token", json={"username": "admin", "password": "Aditya@4912"})
+    res = client.post("/api/auth/token", json={"username": "admin", "password": os.environ.get("DEFAULT_SEED_PASSWORD", "CrimeNetDev@2026")})
     assert res.status_code == 200
     token = res.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

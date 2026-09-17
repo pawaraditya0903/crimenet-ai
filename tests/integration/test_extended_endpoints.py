@@ -1,3 +1,6 @@
+import os
+# SEC-003 FIX: Hardcoded password removed. Test credentials must come from DEFAULT_SEED_PASSWORD env var.
+# Set DEFAULT_SEED_PASSWORD in your test .env file before running integration tests.
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -5,7 +8,7 @@ from backend.app.main import app
 client = TestClient(app)
 
 def get_auth_headers():
-    res = client.post("/api/auth/token", json={"username": "admin", "password": "Aditya@4912"})
+    res = client.post("/api/auth/token", json={"username": "admin", "password": os.environ.get("DEFAULT_SEED_PASSWORD", "CrimeNetDev@2026")})
     assert res.status_code == 200
     token = res.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -21,15 +24,16 @@ def test_alerts_explainability_alias():
     assert data["alert_id"] == "a1"
 
 def test_analytics_disrupt_simulation():
+    headers = get_auth_headers()
     # Empty targets test
-    empty_res = client.post("/api/analytics/disrupt-simulation", json={"target_nodes": []})
+    empty_res = client.post("/api/analytics/disrupt-simulation", json={"target_nodes": []}, headers=headers)
     assert empty_res.status_code == 200
     assert empty_res.json()["syndicate_operational_fracture_pct"] == 0.0
 
     # Targeted kingpin disruption
     disrupt_res = client.post("/api/analytics/disrupt-simulation", json={
         "target_nodes": ["Arjun Mehta", "Mohammed Rafiq"]
-    })
+    }, headers=headers)
     assert disrupt_res.status_code == 200
     data = disrupt_res.json()
     assert data["syndicate_operational_fracture_pct"] > 50.0
@@ -195,26 +199,32 @@ def test_dynamic_pdf_generation_content():
     assert len(priya_pdf.content) > 1000
 
 def test_simulation_controls_and_notifications():
+    headers = get_auth_headers()
     # 1. Simulation start, speed, pause, status
-    start_res = client.post("/api/simulation/start")
+    start_res = client.post("/api/simulation/start", headers=headers)
     assert start_res.status_code == 200
     assert start_res.json()["simulation"]["is_running"] is True
 
-    speed_res = client.post("/api/simulation/speed", json={"speed": 2.5})
+    speed_res = client.post("/api/simulation/speed", json={"speed": 2.5}, headers=headers)
     assert speed_res.status_code == 200
     assert speed_res.json()["speed"] == 2.5
 
-    pause_res = client.post("/api/simulation/pause")
+    pause_res = client.post("/api/simulation/pause", headers=headers)
     assert pause_res.status_code == 200
     assert pause_res.json()["simulation"]["is_running"] is False
 
-    status_res = client.get("/api/simulation/status")
+    status_res = client.get("/api/simulation/status", headers=headers)
     assert status_res.status_code == 200
+
+    # Enroll master face first (vector with non-zero variance for ZNCC calculation)
+    sample_vec = [float(i) for i in range(32)]
+    reg_res = client.post("/api/security/register-master-face", json={"vector": sample_vec}, headers=headers)
+    assert reg_res.status_code == 200
 
     # 2. Biometric token login
     bio_res = client.post("/api/auth/biometric-token", json={
         "badge": "Chief Officer Aditya Pawar",
-        "similarity_score": 84.5
+        "vector": sample_vec
     })
     assert bio_res.status_code == 200
     assert "access_token" in bio_res.json()

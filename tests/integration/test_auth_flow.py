@@ -1,3 +1,6 @@
+import os
+# SEC-003 FIX: Hardcoded password removed. Test credentials must come from DEFAULT_SEED_PASSWORD env var.
+# Set DEFAULT_SEED_PASSWORD in your test .env file before running integration tests.
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -8,7 +11,7 @@ def test_complete_authentication_and_rotation_lifecycle():
     # 1. Login with seeded admin credentials
     login_res = client.post("/api/auth/token", json={
         "username": "admin",
-        "password": "Aditya@4912"
+        "password": os.environ.get("DEFAULT_SEED_PASSWORD", "CrimeNetDev@2026")
     })
     assert login_res.status_code == 200
     data = login_res.json()
